@@ -3,7 +3,7 @@ import "../styles/GamePage.css";
 
 const correctAnswer = "Cactus"; // replace with actual game logic
 
-const Chat = () => {
+const ChatBox = ({ isDrawer, wordToDraw }) => {
     const [messages, setMessages] = useState([
         { sender: "Sarah", text: "Palm Tree"},
         { sender: "John", text: "Idk"}
@@ -26,24 +26,29 @@ const Chat = () => {
 
   return (
     <div className="chat-background">
-        <div className="round-info">Round 1/3</div>
-        <div className="message-container">
+      <div className="message-container">
             {messages.map((msg, index) => (
-            <div key={index} className={`message ${msg.correct ? "correct-message" : ""}`}>
-                {msg.correct ? msg.text : <> <strong>{msg.sender}: </strong>{msg.text}</>} 
-            </div>
+                <div key={index} className={`message ${msg.correct ? "correct-message" : ""}`}>
+                    {msg.correct ? msg.text : <> <strong>{msg.sender}: </strong>{msg.text}</>} 
+                </div>
             ))}
-        </div>
-        <input
+      </div>
+      <div className="input-container">
+        {!isDrawer ? (
+          <input
             type="text"
             className="text-box"
             placeholder="Enter a guess..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-        />
-        </div>
+          />
+        ) : (
+          <div className="word-box">The word is: <strong>{wordToDraw}</strong></div>
+        )}
+      </div>
+    </div>
   );
 };
 
-export default Chat;
+export default ChatBox;

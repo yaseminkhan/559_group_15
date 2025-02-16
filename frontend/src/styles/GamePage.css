@@ -146,3 +146,72 @@ body {
     text-align:left;
     padding: 5px 0;
 }
+
+.word-popup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.input-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+}
+
+.word-box {
+    background-color: #76B1C7;
+    color: black;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    width: 100%;
+}
+
+.empty-placeholder {
+    width: 130px; 
+    height: auto;
+}
+
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+
+.word-popup {
+    background-color: #F4A261;
+    color: black;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.clear-btn {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold; 
+    position: absolute;
+}
