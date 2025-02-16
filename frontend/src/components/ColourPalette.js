@@ -1,20 +1,21 @@
-import React, { useState } from "react";
+import React from "react";
 import "../styles/GamePage.css";
 
-const colours = ["#000000", "#522504", "#007BFF", "#34C759", "#FFCC00", "#FF9500", "#FF3B30", "#AF52DE", "#FA96A9", "#FFFFFF"];
+const colours = ["#000000", "#A52A2A", "#007BFF", "#34C759", "#FFCC00", "#FF9500", "#FF3B30", "#AF52DE", "#FA96A9", "#FFFFFF"];
 
-const ColourPalette = () => {
-  const [selectedColour, setSelectedColour] = useState("#000000");
-
+const ColourPalette = ({ selectedColour, setSelectedColour }) => {
   return (
     <div className="palette">
       {colours.map((colour) => (
         <button
-          className={`oval-btn ${selectedColour === colour ? "selected" : ""}`}
           key={colour}
+          className={`oval-btn ${selectedColour === colour ? "selected" : ""}`}
           onClick={() => setSelectedColour(colour)}
-          style={{ backgroundColor: colour }}
-        ></button>
+          style={{
+            backgroundColor: colour,
+            border: selectedColour === colour ? "2px solid white" : "none",
+          }}
+        />
       ))}
     </div>
   );

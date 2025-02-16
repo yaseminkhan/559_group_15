@@ -63,17 +63,18 @@ body {
     border: 2px solid black;
 }
 
-.blank-canvas{
+.drawing-canvas {
     width: 1200px; 
-    height: 930px;
+    height: 690px;
     background-color: white;
     border-radius: 10px; 
     box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3);
+    cursor: crosshair; 
 }
 
 .chat-background {
     width: 500px; 
-    height: 900px;
+    height: 660px;
     background-color: #E9C46A;
     border-radius: 10px; 
     box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3);
