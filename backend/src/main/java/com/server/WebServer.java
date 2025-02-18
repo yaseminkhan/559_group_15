@@ -5,7 +5,7 @@
  * @version 0.0.1
  * Simple implementation using java websocket library
  */
-package com.example;
+package com.server;
 
 import org.java_websocket.server.WebSocketServer;
 import org.java_websocket.handshake.ClientHandshake;

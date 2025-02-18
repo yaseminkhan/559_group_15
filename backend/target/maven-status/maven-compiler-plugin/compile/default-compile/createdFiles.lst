@@ -1,3 +1,3 @@
 ServerProto$ClientHandler.class
 ServerProto.class
-com/example/WebServer.class
+com/server/WebServer.class

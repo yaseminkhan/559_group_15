@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   
   <!-- 1) Basic project info -->
-  <groupId>com.example</groupId>  <!-- choose your own groupId -->
+  <groupId>com.server</groupId>  <!-- choose your own groupId -->
   <artifactId>my-websocket-app</artifactId>
   <version>1.0-SNAPSHOT</version>
 
@@ -58,7 +58,7 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.1.0</version>
         <configuration>
-          <mainClass>com.example.WebServer</mainClass>
+          <mainClass>com.server.WebServer</mainClass>
         </configuration>
       </plugin>
     </plugins>
