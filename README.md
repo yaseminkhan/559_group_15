@@ -25,4 +25,4 @@ websocat ws://localhost:8887
 ```
  OR
 
-You could set up a basic javascript webpage to send messages over to localhost:8887
+You could set up a basic javascript webpage to send messages over to `localhost:8887`
