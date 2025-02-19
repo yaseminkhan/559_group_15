@@ -16,7 +16,7 @@ const Canvas = ({ selectedColour, isDrawer, sendStroke, strokes, clearStrokes })
   useEffect(() => {
     const canvas = canvasRef.current;
     canvas.width = 800;
-    canvas.height = 690;
+    canvas.height = 600;
     canvas.style.width = "100%";
     canvas.style.height = "100%";
 
