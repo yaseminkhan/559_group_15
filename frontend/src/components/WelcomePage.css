@@ -4,7 +4,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    height: 100vh;
+    min-height: 100vh;
     background: linear-gradient(to bottom, #2a9d8f, #0f3732);
     color: white;
     text-align: center;
