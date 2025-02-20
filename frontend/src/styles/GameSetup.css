@@ -1,0 +1,184 @@
+/* src/components/GameSetup.css */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100vh;
+  background: linear-gradient(to bottom, #2a9d8f, #0f3732);
+  color: white;
+  text-align: center;
+  gap: 20px;
+}
+  
+.content-box {
+  display: flex;
+  flex-direction: row;
+  align-items: center; /* Aligns items vertically */
+  justify-content: center; /* Centers content horizontally */
+  gap: 100px;
+}
+.logo {
+  font-family: 'Irish Grover';
+  font-size: 100px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  position: relative;
+  display: inline-block;
+}
+
+.underline {
+  width: 100%; /* Adjust the width as needed */
+  border: none;
+  height: 1px; /* Thickness */
+  background-color: white; /* Line color */
+  margin-top: -5px; /* Adjust positioning */
+}
+.setup-heading {
+  font-family: 'Inknut Antiqua';
+  font-size: 35px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+  
+.setup-box {
+  padding: 20px;
+  font-family: 'Inknut Antiqua';
+  border: 2px solid white;
+  border-radius: 15px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+  width: 700px;
+}
+
+.user-card {
+  display: flex;
+  flex-direction: row; 
+  align-items: center;
+  background: #faba18;
+  color: black;
+  padding: 10px;
+  gap: 40px;
+  width: 400px;
+  border-radius: 10px;
+  margin-bottom: 380px;
+}
+
+.user-card img {
+  width: 120px;
+  height: auto;
+}
+.user-name {
+  font-size: 40px;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.user-points {
+  margin-top: 0px;
+  font-size: 20px;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px;
+  border-radius: 5px;
+  margin: 0 50px 0 50px;
+}
+
+.setting-item p {
+  flex: 1;
+  text-align: left;
+  font-size: 20px;
+}
+
+.setting-icon {
+  width: 50px;
+  height: auto;
+  margin-right: 10px;
+}
+
+  /* Dropdown Styling */
+select {
+  font-family: 'Inter';
+  background: white;
+  font-size: 20px;
+  color: black;
+  border: none;
+  padding: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 120px;
+  text-align: center;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 50px 0 50px;
+}
+
+.btn {
+  background-color: #f4a261;
+  padding: 5px 50px;
+  font-family: 'Inknut Antiqua';
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+  margin: 0 15px;
+}
+
+.invite-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #93d0ee;
+  padding: 10px 50px;
+  font-family: 'Inknut Antiqua';
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0 15px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+  gap: 20px;
+}
+.invite-btn img {
+  width: 40px;
+  height: auto;
+}
+
+.btn:hover, .invite-btn:hover {
+  opacity: 0.8;
+}
+
+/* Position the images */
+.left-top-image{
+  position: absolute;
+  top: 10px; 
+  width: 200px; 
+  height: auto;
+  left: 10px; 
+}
+
+/* Position the images */
+.right-top-image {
+  position: absolute;
+  top: 10px; 
+  width: 120px; 
+  height: auto;
+  right: 20px; 
+}

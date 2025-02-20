@@ -1,6 +1,5 @@
-// src/components/WelcomePage.js
 import React from "react";
-import "./WelcomePage.css"; // Import CSS file
+import "../styles/WelcomePage.css"; 
 import palette from './assets/palette.png';
 import brush from './assets/brush.png';
 import trophy from './assets/trophy.png';
