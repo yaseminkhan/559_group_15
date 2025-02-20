@@ -10,7 +10,7 @@ import left_bkg from "./assets/left_bkg.png";
 
 const GameSetup = () => {
   const [players, setPlayers]= useState([
-    { name: "You", avatar: "🐌", score: 245 },
+    { name: "Mary", avatar: "🐌", score: 245 },
     { name: "Bob", avatar: "🌵", score: 7653 },
     { name: "Jeff", avatar: "😃", score: 176 },
     { name: "Sarah", avatar: "☀️", score: 45729 },
