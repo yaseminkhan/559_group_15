@@ -1,55 +1,58 @@
 import React, {useState} from "react";
-import "../styles/WordSelection.css";
-import userIcon from "./assets//setupPage/user.png"
-import clockIcon from "./assets//setupPage/clock.png"
-import roundsIcon from "./assets//setupPage/rounds.png"
-import gameModeIcon from "./assets//setupPage/gamemode.png"
+import "../styles/GameSetup.css";
 import avatar from "./assets/avatar.png"
-import inviteIcon from "./assets/setupPage/invite.png"
 import starIcon from "./assets/wordSelectionPage/star.png"
+import crayons from "./assets/setupPage/crayons.png"
+import hourglass from "./assets/setupPage/hourglass.png"
 import right_bkg from "./assets/right_bkg.png";
 import left_bkg from "./assets/left_bkg.png";
 
-const WordSelection = () => {
-  const [theme, setTheme] = useState("Animals");
-  const words = {
-    Animals: ["Cat", "Dog", "Horse", "Hamster"],
-    Furniture: ["Table", "Chair", "Sofa", "Bed"],
-    Food: ["Pizza", "Burger", "Apple", "Cake"],
-  };
+// temporary random words selected from list 
+const words = ["Cat", "Dog", "Horse", "Hamster", "Table", "Chair", "Sofa", "Bed", "Pizza", "Burger", "Apple", "Cake"];
+const getRandomWords = () => {
+  return words
+    .sort(() => 0.5 - Math.random()) //Shuffle array
+    .slice(0, 4); //Pick first 4 words
+};
+
+
+
+const WordSelection = ({ currentDrawer }) => {
+  // just using mary for now, need to add functionality once we have actual users
+  const drawer = currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
+
+  const [randomWords, setRandomWords] = useState(getRandomWords());
+
   return (
-    <div className="container">
-      <h1 className="logo">InkBlink</h1>
-      <hr class="underline"/>
-      <h2 className="setup-heading">Your Turn...</h2>
-      <div className="content-box">
-        <div className="user-card">
-          <img src={avatar} alt="User-Avatar" className="user-avatar"/>
-          <div>
-            <p className="user-name">Jerry</p>
-            <p className="user-points">0 points</p>
-          </div>
-        </div>
-        <div className="setup-box">
-          <div className="theme-item">
-            <img src={starIcon} alt="Theme" className="setting-icon" />
-            <p>Theme</p>
-            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
-              {Object.keys(words).map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-          <hr class="underline"/>
-          <p className="word-selection-instruction">Select one of the four words to draw</p>
-          <div className="button-group">
-            {words[theme].map((word) => (
-              <button key={word} className="btn">{word}</button>))}
-          </div>
-        </div>
-      </div>
+    <div className="setup_container">
       <img src={left_bkg} alt="Left Top" className="left-top-image" />
       <img src={right_bkg} alt="Right Top" className="right-top-image" />
+      <div className="setup_logo"><h1>InkBlink</h1></div>
+      <hr className="underline"/>
+
+      <div className="ws_content_container">
+        {/* show the actual user’s avatar, name, and score */}
+        <div className="ws_player_card">
+          <span className="wordselect-avatar">{drawer.avatar}</span>  
+          <div>
+            <div className="ws_username">{drawer.name}</div> 
+            <div className="ws_points">{drawer.score} points</div> 
+          </div>
+        </div>
+        <div className="setup_image">
+          <img src={crayons} alt="crayons" className="wordselect_image crayons" />
+          <img src={hourglass} alt="hourglass" className="wordselect_image hourglass" />
+        </div>
+        <div className="ws_box">
+          <div className="setup_join_title"> Select one of the four words to draw</div>
+          <hr className="ws_underline"/>
+          <div className="ws_button_group">
+            {randomWords.map((word, index) => (
+              <button key={index} className="ws_btn">{word}</button>
+            ))}
+          </div>
+        </div> 
+      </div>
     </div>
   );
 };
