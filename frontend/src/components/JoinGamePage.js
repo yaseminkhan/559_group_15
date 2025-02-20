@@ -24,7 +24,7 @@ const JoinGamePage = () => {
       <input type="text" placeholder="Enter Game Code..." className="wel_input-box" />
       <div className="wel_button-group">
         <button className="wel_btn wel_join-btn">Join</button>
-        <button className="wel_btn wel_invite-btn" onClick={() => navigate("/go-back")}>Go Back</button>
+        <button className="wel_btn wel_invite-btn" onClick={() => navigate("/")}>Go Back</button>
       </div>
       <img src={left_bkg} alt="Left Bottom" className="wel_left-bottom-image" />
       <img src={right_bkg} alt="Right Bottom" className="wel_right-bottom-image" />
