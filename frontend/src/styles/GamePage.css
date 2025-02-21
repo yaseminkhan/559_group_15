@@ -85,6 +85,7 @@ body {
     position: relative;
     align-items: center;
     overflow: hidden;
+    min-width: 200px;
 }
 
 .message-container {
