@@ -1,5 +1,6 @@
 import React, {useState} from "react";
 import "../styles/GameSetup.css";
+import { useNavigate } from "react-router-dom";
 import userIcon from "./assets/setupPage/user.png"
 import crayons from "./assets/setupPage/crayons.png"
 import hourglass from "./assets/setupPage/hourglass.png"
@@ -9,6 +10,7 @@ import right_bkg from "./assets/right_bkg.png";
 import left_bkg from "./assets/left_bkg.png";
 
 const GameSetup = () => {
+  const navigate = useNavigate();
   const [players, setPlayers]= useState([
     { name: "Mary", avatar: "🐌", score: 245 },
     { name: "Bob", avatar: "🌵", score: 7653 },
@@ -48,7 +50,7 @@ const GameSetup = () => {
             ))}
           </div>
           <div className="setup_btn_group">
-            <button className="setup_btn">Let's Play!</button>
+            <button className="setup_btn" onClick={() => navigate("/game")}>Let's Play!</button>
           </div>
         </div>
       </div>      
