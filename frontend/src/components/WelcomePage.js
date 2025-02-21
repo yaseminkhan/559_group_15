@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState }  from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/WelcomePage.css"; 
 import palette from './assets/palette.png';
@@ -10,6 +10,8 @@ import left_bkg from './assets/left_bkg.png';
 
 const WelcomePage = () => {
   const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+
   return (
     <div className="wel_container">
       <h1 className="wel_logo">InkBlink</h1>
@@ -20,10 +22,28 @@ const WelcomePage = () => {
         <img src={trophy} alt="Trophy" className="wel_icon" />
       </div>
       <h2 className="wel_subtitle">Multiplayer Game</h2>
-      <input type="text" placeholder="Enter your username..." className="wel_input-box" />
+      <input 
+        type="text" 
+        placeholder="Enter your username..." 
+        className="wel_input-box" 
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+      />
       <div className="wel_button-group">
-        <button className="wel_btn wel_invite-btn">Invite Friends</button>
-        <button className="wel_btn wel_join-btn" onClick={() => navigate("/join-game")}>Join a Game</button>
+        <button 
+          className="wel_btn wel_invite-btn" 
+          disabled={!username.trim()}
+          onClick={() => navigate("/setup", { state: { username } })}
+          >
+            Invite Friends
+        </button>
+        <button 
+          className="wel_btn wel_join-btn" 
+          disabled={!username.trim()} 
+          onClick={() => navigate("/join-game", { state: { username } })}
+          >
+            Join a Game
+        </button>
       </div>
       {/* Left and Right Bottom Images */}
       <img src={left_bkg} alt="Left Bottom" className="wel_left-bottom-image" />
