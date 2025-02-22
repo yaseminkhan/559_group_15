@@ -1,6 +1,8 @@
 package com.server;
 
 import java.util.*;
+import com.google.gson.Gson;
+import com.server.Words;
 
 /*
  * Game instance
@@ -16,23 +18,24 @@ public class Game {
     private String wordToDraw;
     private boolean gameStarted;
     private boolean gameEnded;
-    private List<Stroke> strokes;
+    // private List<Stroke> strokes;
     private List<String> chatMessages;
     private int drawerIndex;
 
     /*
      * constructor creates new instance of a game
      */
-    public Game(){
-        this.gameCode = UUID.randomUUID().toString();
+    public Game(String gameCode) {
+        this.gameCode = gameCode; 
         this.players = new ArrayList<>();
         this.round = 0;
         this.gameStarted = false;
         this.gameEnded = false;
-        this.strokes = new ArrayList<>();
+        // this.strokes = new ArrayList<>();
         this.chatMessages = new ArrayList<>();
-        this.drawer = null; // no drawer initially 
+        this.drawer = null;
         this.drawerIndex = -1;
+        this.wordToDraw = Words.getRandomWord();
     }
 
     /*
@@ -49,6 +52,13 @@ public class Game {
             return true;
         }
         return false;
+    }
+
+    /*
+     * Checks if the given player is already in the game.
+     */
+    public boolean hasPlayer(User player) {
+        return players.contains(player);  
     }
 
     /*
@@ -113,6 +123,14 @@ public class Game {
         }
         assignNextDrawer();
         round++;
+    }
+
+    /*
+     * Converts player list to JSON format for frontend.
+     */
+    public String getPlayersJson() {
+        Gson gson = new Gson();
+        return gson.toJson(players);
     }
 
     /*

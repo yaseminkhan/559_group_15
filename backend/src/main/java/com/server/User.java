@@ -1,11 +1,20 @@
 package com.server;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 /*
  * Represents players 
  */
 public class User {
+    // list of emojis to randomly assign to users 
+    private static final List<String> EMOJIS = Arrays.asList(
+        "🐌", "🌵", "😃", "☀️", "🦃", "💬", "📚", "🥶",
+        "🚀", "🎸", "🎨", "⚡", "🎭", "🍕", "🐙"
+    );
+
     private String id;
     private String username;
     private String icon;
@@ -15,12 +24,27 @@ public class User {
     /*
      * Contructor to create a new user 
      */
-    public User(String username, String icon){
+    public User(String username){
         this.id = UUID.randomUUID().toString(); 
         this.username = username;
-        this.icon = icon;
+        this.icon = getRandomEmoji();
         this.score = 0;
         this.isDrawer = false; // default
+    }
+
+    /*
+     * Returns a random emoji from the list
+     */
+    private String getRandomEmoji() {
+        Random rand = new Random();
+        return EMOJIS.get(rand.nextInt(EMOJIS.size()));
+    }
+
+    /*
+     * sets username
+     */
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     // functions to return information about users 

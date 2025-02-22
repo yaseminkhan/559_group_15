@@ -1,3 +1,8 @@
-ServerProto$ClientHandler.class
-ServerProto.class
+com/server/ServerProto$ClientHandler.class
 com/server/WebServer.class
+com/server/Words.class
+com/server/Point.class
+com/server/Game.class
+com/server/ServerProto.class
+com/server/User.class
+com/server/Stroke.class
