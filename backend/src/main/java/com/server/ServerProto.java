@@ -1,5 +1,9 @@
+package com.server;
+
 /**
  * ServerProto.java
+ * 
+ * Testing file - implementations should be handled in a different file 
  *
  * @author Jin Song
  * @version 0.0.1
