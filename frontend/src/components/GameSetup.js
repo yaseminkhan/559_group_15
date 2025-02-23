@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { useWebSocket } from "../WebSocketContext"; 
 import "../styles/GameSetup.css";
 import userIcon from "./assets/setupPage/user.png";
 import crayons from "./assets/setupPage/crayons.png";
@@ -8,41 +9,34 @@ import right_bkg from "./assets/right_bkg.png";
 import left_bkg from "./assets/left_bkg.png";
 
 const GameSetup = () => {
-    const { gameCode } = useParams(); // Get game code from URL
+    const { gameCode } = useParams(); 
     const [players, setPlayers] = useState([]);
-    const [socket, setSocket] = useState(null);
+    const socket = useWebSocket(); 
 
     useEffect(() => {
-        const ws = new WebSocket("ws://localhost:8887");
+        if (!socket) return;
 
-        ws.onopen = () => {
-            console.log("Connected to server!");
-            ws.send(`/getgame ${gameCode}`); // Request game info
-        };
+        console.log("Connected to server!");
+        socket.send(`/getgame ${gameCode}`); 
 
-        ws.onmessage = (event) => {
+        socket.onmessage = (event) => {
             console.log("Received:", event.data);
         
             try {
                 if (event.data.startsWith("GAME_PLAYERS:")) {
                     const jsonString = event.data.substring(13);
                     const gamePlayers = JSON.parse(jsonString);
-                    console.log("Parsed players:", gamePlayers);
-                    setPlayers(gamePlayers); 
-                } else {
-                    console.log("Other message received:", event.data);
+                    setPlayers(gamePlayers);
                 }
             } catch (error) {
                 console.error("Error parsing JSON:", error);
             }
         };
 
-        setSocket(ws);
-
         return () => {
-            ws.close();
+            socket.onmessage = null; 
         };
-    }, [gameCode]);
+    }, [socket, gameCode]);
 
     return (
         <div className="setup_container">

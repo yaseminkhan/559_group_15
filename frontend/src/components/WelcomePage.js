@@ -1,59 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/WelcomePage.css"; 
-import palette from './assets/palette.png';
-import brush from './assets/brush.png';
-import trophy from './assets/trophy.png';
-import friends from './assets/friends.png';
-import right_bkg from './assets/right_bkg.png';
-import left_bkg from './assets/left_bkg.png';
+import { useWebSocket } from "../WebSocketContext"; 
+import "../styles/WelcomePage.css";
+import palette from "./assets/palette.png";
+import brush from "./assets/brush.png";
+import trophy from "./assets/trophy.png";
+import friends from "./assets/friends.png";
+import right_bkg from "./assets/right_bkg.png";
+import left_bkg from "./assets/left_bkg.png";
 
 const WelcomePage = () => {
-    const [username, setUsername] = useState("");  
-    const [userId, setUserId] = useState(null);  
-    const [socket, setSocket] = useState(null);
-    const [gameCode, setGameCode] = useState(null);  // ✅ New state for game code
+    const [username, setUsername] = useState("");
+    const [userId, setUserId] = useState(null);
+    const [gameCode, setGameCode] = useState(null);
+    const socket = useWebSocket(); 
     const navigate = useNavigate();
 
     useEffect(() => {
-        const ws = new WebSocket("ws://localhost:8887");
-
-        ws.onopen = () => console.log("Connected to server!");
-
-        ws.onmessage = (event) => {
+        if (!socket) return;
+        
+        socket.onmessage = (event) => {
             console.log("Received:", event.data);
 
             if (event.data.startsWith("USER_ID:")) {
                 const receivedId = event.data.split(":")[1];
                 setUserId(receivedId);
                 localStorage.setItem("userId", receivedId);
-                console.log("Assigned User ID:", receivedId);
             } else if (event.data.startsWith("GAME_CREATED:")) {
                 const newGameCode = event.data.split(":")[1];
-                console.log("Game created with code:", newGameCode);
-
-                setGameCode(newGameCode);  // ✅ Store in state
+                setGameCode(newGameCode);
                 localStorage.setItem("gameCode", newGameCode);
-            } else {
-                console.log("Non-JSON message:", event.data);
             }
         };
 
-        ws.onerror = (error) => console.error("WebSocket Error:", error);
-        setSocket(ws);
-
         return () => {
-            ws.close();
+            socket.onmessage = null; 
         };
-    }, []);
+    }, [socket]);
 
-    // ✅ This useEffect ensures navigation happens AFTER state is updated
     useEffect(() => {
         if (gameCode) {
             console.log("Navigating to:", `/setup/${gameCode}`);
             navigate(`/setup/${gameCode}`);
         }
-    }, [gameCode, navigate]);  // ✅ Triggers when gameCode updates
+    }, [gameCode, navigate]);
 
     const handleCreateGame = () => {
         if (!username.trim()) {
@@ -62,12 +52,9 @@ const WelcomePage = () => {
         }
 
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(`/setname ${username}`);  
-            console.log(`Sent username: ${username}`);
-
+            socket.send(`/setname ${username}`);
             setTimeout(() => {
-                socket.send("/creategame");  // ✅ Create the game after setting username
-                console.log("Requested to create a game.");
+                socket.send("/creategame");
             }, 500);
         } else {
             alert("WebSocket is not connected!");
