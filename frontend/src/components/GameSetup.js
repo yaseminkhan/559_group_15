@@ -15,28 +15,31 @@ const GameSetup = () => {
 
     useEffect(() => {
         if (!socket) return;
-
+    
         console.log("Connected to server!");
-        socket.send(`/getgame ${gameCode}`); 
-
-        socket.onmessage = (event) => {
+        socket.send(`/getgame ${gameCode}`); // Initial request to get players
+    
+        const handleMessage = (event) => {
             console.log("Received:", event.data);
-        
+            
             try {
-                if (event.data.startsWith("GAME_PLAYERS:")) {
-                    const jsonString = event.data.substring(13);
-                    const gamePlayers = JSON.parse(jsonString);
+                const message = JSON.parse(event.data);
+                if (message.type === "GAME_PLAYERS") {
+                    const gamePlayers = JSON.parse(message.data); // Parse player list
                     setPlayers(gamePlayers);
                 }
             } catch (error) {
                 console.error("Error parsing JSON:", error);
             }
         };
-
+    
+        socket.addEventListener("message", handleMessage);
+    
         return () => {
-            socket.onmessage = null; 
+            socket.removeEventListener("message", handleMessage);
         };
     }, [socket, gameCode]);
+    
 
     return (
         <div className="setup_container">

@@ -126,6 +126,13 @@ public class Game {
     }
 
     /*
+     * Get the list of players in the game.
+     */
+    public List<User> getPlayers() {
+        return players;
+    }
+    
+    /*
      * Converts player list to JSON format for frontend.
      */
     public String getPlayersJson() {

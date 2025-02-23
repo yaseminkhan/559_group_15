@@ -57,6 +57,9 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("/getgame ")) {
             String gameCode = message.substring(9).trim();
             handleGetGame(conn, gameCode);
+        } else if(message.startsWith("/join-game ")) {
+            String gameCode = message.substring(11).trim();
+            handleJoinGame(conn, gameCode);
         } else {
             conn.send("Unknown command.");
         }
@@ -75,6 +78,63 @@ public class WebServer extends WebSocketServer {
 
         String playersJson = game.getPlayersJson();
         conn.send(new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson)));
+    }
+
+    /*
+    * Handles joining game information.
+    */
+    private void handleJoinGame(WebSocket conn, String gameCode) {
+        Game game = activeGames.get(gameCode);
+        System.out.println("Retrieving game: " + gameCode);
+        System.out.println("Available games: " + activeGames.keySet());
+
+        if (game == null) {
+            System.out.println("Game not found.");
+            conn.send("ERROR: Game not found.");
+            return;
+        }
+
+        User user = connectedUsers.get(conn);
+        if (user == null) {
+            System.out.println("User not found.");
+            conn.send("ERROR: User not found.");
+            return;
+        }
+
+        // Add user to the game
+        game.addPlayer(user);
+
+        // Send updated player list to all players in the game
+        broadcastGamePlayers(game);
+    
+        conn.send("JOIN_SUCCESS:" + gameCode);
+    }
+
+    /**
+    * Broadcasts the current player list to all players in the game.
+    */
+    private void broadcastGamePlayers(Game game) {
+        String playersJson = game.getPlayersJson();
+        String message = new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson));
+
+        for (User player : game.getPlayers()) {
+            WebSocket conn = getConnectionByUser(player);
+            if (conn != null) {
+                conn.send(message);
+            }
+        }
+    }
+
+    /**
+    * Retrieves the WebSocket connection for a given user.
+    */
+    private WebSocket getConnectionByUser(User user) {
+        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+            if (entry.getValue().equals(user)) {
+                return entry.getKey();
+            }
+        }
+        return null;
     }
 
     /*
@@ -97,6 +157,7 @@ public class WebServer extends WebSocketServer {
     
         // Store the game
         activeGames.put(gameCode, newGame);
+        System.out.println("Game stored: " + gameCode);
     
         // Send game code back to user
         conn.send("GAME_CREATED:" + gameCode);

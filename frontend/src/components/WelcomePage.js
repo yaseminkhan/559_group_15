@@ -26,10 +26,12 @@ const WelcomePage = () => {
                 const receivedId = event.data.split(":")[1];
                 setUserId(receivedId);
                 localStorage.setItem("userId", receivedId);
+                console.log("Assigned User ID:", receivedId);
             } else if (event.data.startsWith("GAME_CREATED:")) {
                 const newGameCode = event.data.split(":")[1];
                 setGameCode(newGameCode);
                 localStorage.setItem("gameCode", newGameCode);
+                console.log("Game created with code:", newGameCode);
             }
         };
 
@@ -61,6 +63,26 @@ const WelcomePage = () => {
         }
     };
 
+    const handleJoinGame = () => {
+        if (!username.trim()) {
+            alert("Please enter a username!");
+            return;
+        }
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(`/setname ${username}`);  
+            console.log(`Sent username: ${username}`);
+
+            setTimeout(() => {
+                navigate("/join-game");
+                //socket.send("/join-game");  // ✅ Create the game after setting username
+                console.log("Requested to join a game.");
+            }, 500);
+        } else {
+            alert("WebSocket is not connected!");
+        }
+    };
+
     return (
         <div className="wel_container">
             <h1 className="wel_logo">InkBlink</h1>
@@ -79,7 +101,9 @@ const WelcomePage = () => {
                 onChange={(e) => setUsername(e.target.value)}
             />
             <div className="wel_button-group">
-                <button className="wel_btn wel_invite-btn">Invite Friends</button>
+                <button className="wel_btn wel_invite-btn" onClick={handleJoinGame}>
+                    Join a Game
+                </button>
                 <button className="wel_btn wel_join-btn" onClick={handleCreateGame}>
                     Create Game
                 </button>
