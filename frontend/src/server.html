@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Client</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      color: #333;
+    }
+    #message {
+      padding: 5px;
+      margin: 10px 0;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Connect to WebSocket on localhost:8887</h1>
+  <input id="message" type="text" placeholder="Type a message" />
+  <button onclick="sendMessage()">Send</button>
+  <p id="response">Waiting for connection...</p>
+
+  <script>
+    // Create WebSocket connection to localhost:8887
+    const ws = new WebSocket('ws://localhost:8887');
+
+    // When the connection opens
+    ws.onopen = () => {
+      console.log('Connected to WebSocket server');
+      document.getElementById('response').textContent = 'Connected to WebSocket server!';
+    };
+
+    // When a message is received from the server
+    ws.onmessage = (event) => {
+      console.log('Server says:', event.data);
+      document.getElementById('response').textContent = `Server says: ${event.data}`;
+    };
+
+    // When there is an error with the connection
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    // When the connection is closed
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      document.getElementById('response').textContent = 'WebSocket connection closed';
+    };
+
+    // Function to send a message to the server
+    function sendMessage() {
+      const message = document.getElementById('message').value;
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+        console.log('Sent:', message);
+      } else {
+        console.log('WebSocket is not open.');
+      }
+    }
+  </script>
+</body>
+</html>
