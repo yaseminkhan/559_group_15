@@ -11,6 +11,8 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
 
 public class WebServer extends WebSocketServer {
 
@@ -36,6 +38,8 @@ public class WebServer extends WebSocketServer {
         conn.send("USER_ID:" + newUser.getId());
 
         System.out.println("New user connected: " + newUser.getUsername() + " (" + newUser.getId() + ")");
+
+        System.out.println("onOpen triggered for: " + conn.getRemoteSocketAddress());
     }
 
     @Override
@@ -57,6 +61,8 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("/getgame ")) {
             String gameCode = message.substring(9).trim();
             handleGetGame(conn, gameCode);
+        } else if (message.equals("/getclients")) {
+            handleGetClients(conn);            
         } else {
             conn.send("Unknown command.");
         }
@@ -133,6 +139,13 @@ public class WebServer extends WebSocketServer {
     @Override
     public void onStart() {
         System.out.println("WebSocket server started successfully on " + getPort() + ".");
+    }
+
+    private void handleGetClients(WebSocket conn) {
+        String usersJson = new Gson().toJson(connectedUsers.values().stream()
+            .map(User::getId)
+            .collect(Collectors.toList()));
+        conn.send("CONNECTED_USERS:" + usersJson);
     }
 
     public static void main(String[] args) {

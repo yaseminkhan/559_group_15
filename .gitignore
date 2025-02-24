@@ -1,3 +1,4 @@
 *.class
-
+.vscode
+frontend/yarn.lock
 backend/target/
