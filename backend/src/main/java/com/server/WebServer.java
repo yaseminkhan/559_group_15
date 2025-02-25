@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -98,6 +99,9 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("/join-game ")) {
             String gameCode = message.substring(11).trim();
             handleJoinGame(conn, gameCode);
+        } else if (message.startsWith("/word-selection ")) {
+            String gameCode = message.substring(15).trim();
+            handleGetWords(conn, gameCode);
         } else {
             conn.send("Unknown command.");
         }
@@ -289,6 +293,16 @@ public class WebServer extends WebSocketServer {
         user.setUsername(newUsername);
         conn.send("USERNAME_SET:" + newUsername);
         System.out.println("User set name: " + newUsername);
+    }
+
+    private void handleGetWords(WebSocket conn, String gameCode) {
+        List<String> randomWords = Words.getRandomWordChoices();
+        String jsonResponse = new Gson().toJson(Map.of("type", "WORDS", "data", randomWords));
+        System.out.println("\n========== Sending Words ==========");
+        System.out.println("Game Code: " + gameCode);
+        System.out.println("Generated Words: " + randomWords);
+        System.out.println("JSON Sent: " + jsonResponse);
+        conn.send(jsonResponse);
     }
 
     @Override
