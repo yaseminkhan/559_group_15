@@ -1,3 +1,5 @@
+package com.server;
+
 /**
  * ServerProto.java
  *
@@ -12,7 +14,7 @@ import java.net.*;
 public class ServerProto {
 
     private int port;
-    
+
     public ServerProto(int port) {
         this.port = port;
     }
@@ -24,7 +26,7 @@ public class ServerProto {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Client connected: " + clientSocket.getInetAddress());
-                
+
                 Thread clientThread = new Thread(new ClientHandler(clientSocket));
                 clientThread.start();
             }
@@ -38,7 +40,7 @@ public class ServerProto {
         int port = 12345;
         ServerProto server = new ServerProto(port);
         server.start();
-    
+
     }
 
     // For demonstration
