@@ -11,6 +11,17 @@
     overflow: hidden; 
 }
 
+.crown {
+    position: absolute;
+    top: -13px;  /* Adjust to fit better */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px; /* Reduce size */
+    color: #FFFF00; 
+    z-index: 10;
+}
+
+
 .clock {
     font-size: 64px;
     background: rgba(255, 255, 255, 0.75);
@@ -26,26 +37,16 @@
     margin-left: 20px;
 }
 
-/* Prevents wrapping but allows crown to be visible */
+
 .player-container {
     display: flex;
-    flex-wrap: nowrap;  
+    flex-wrap: wrap;  
     flex-grow: 1; 
-    justify-content: space-evenly; 
+    justify-content: flex-start; 
     align-items: center;
     padding: 0 10px; 
-    min-width: 0; 
+    gap: 10px; 
     overflow: visible; 
-}
-
-.crown {
-    position: absolute;
-    top: -15px;  
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 25px;
-    color: #FFFF00; 
-    z-index: 10;
 }
 
 .player {
@@ -63,6 +64,7 @@
     min-width: 60px; 
     max-width: 90px; 
     overflow: visible; 
+    margin-top: 5px;
 }
 
 .avatar {

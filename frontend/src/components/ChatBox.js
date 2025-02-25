@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import "../styles/GamePage.css";
 
-const correctAnswer = "Cactus"; // replace with actual game logic
-
 const ChatBox = ({ isDrawer, wordToDraw }) => {
+    // can be removed when chat functionality added 
     const [messages, setMessages] = useState([
         { sender: "Sarah", text: "Palm Tree"},
         { sender: "John", text: "Idk"}
@@ -15,7 +14,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             if (newMessage.trim() !== "") {
-                const isCorrect = newMessage.trim().toLowerCase() === correctAnswer.toLowerCase();
+                const isCorrect = newMessage.trim().toLowerCase() === wordToDraw.toLowerCase();
                 const displayText = isCorrect ? `${senderName} got it!` : newMessage;
 
                 setMessages([...messages, { sender: senderName, text: displayText, correct: isCorrect }]);

@@ -17,7 +17,7 @@ const GamePage = () => {
   
   const location = useLocation();
   const userId = localStorage.getItem("userId");
-  const gameCode = location.state?.gameCode;
+  const gameCode = location.state?.gameCode || localStorage.getItem("gameCode");
   
   // Ensure the correct role is assigned based on navigation state
   const [isDrawer, setIsDrawer] = useState(location.state?.isDrawer || false);
@@ -60,7 +60,7 @@ const GamePage = () => {
 
   return (
     <div className="game-page">
-      <Header isChoosingWord={isChoosingWord} />
+      <Header isChoosingWord={isChoosingWord} gameCode={gameCode} />
 
       <div className="game-content">
         {isDrawer ? (
