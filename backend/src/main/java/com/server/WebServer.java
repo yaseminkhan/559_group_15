@@ -106,6 +106,19 @@ public class WebServer extends WebSocketServer {
             String gameCode = message.split(" ")[1];
             String userId = message.split(" ")[2];
             handleStartGame(conn, gameCode, userId);
+        } else if (message.startsWith("/select-word ")) {
+            String[] parts = message.split(" ");
+            if (parts.length < 3) {
+                conn.send("ERROR: Invalid word selection format.");
+                return;
+            }
+            String gameCode = parts[1];
+            String selectedWord = parts[2];
+    
+            handleWordSelection(conn, gameCode, selectedWord);
+        } else if (message.startsWith("/drawer-joined ")) {
+            String gameCode = message.substring(15).trim();
+            handleDrawerJoined(conn, gameCode);
         } else {
             conn.send("Unknown command.");
         }
@@ -114,19 +127,30 @@ public class WebServer extends WebSocketServer {
     private void handleStartGame(WebSocket conn, String gameCode, String userId) {
         Game game = activeGames.get(gameCode);
         if (game != null) {
-            User hostUser = getUserById(userId);
-            hostUser.setHost();
-            hostUser.setDrawer();
-
-        //     broadcastToGame(game, "{\"type\": \"GAME_STARTED\"}");
-        //     System.out.println("Game started for game code: " + gameCode);
-        // }
-            // Broadcast the game start message with the drawer info
-            // String startGameMessage = new Gson().toJson(new GameStartMessage(hostUser.getId(), hostUser.getUsername()));
-            String startGameMessage = "GAME_STARTED: " + hostUser.getId();
+            List<User> players = game.getPlayers();
+            
+            if (players.isEmpty()) {
+                conn.send("ERROR: No players in game.");
+                return;
+            }
+    
+            // Select a random player as the first drawer
+            User firstDrawer = players.get((int) (Math.random() * players.size()));
+            firstDrawer.setDrawer(); 
+    
+            String startGameMessage = "GAME_STARTED: " + firstDrawer.getId();
             broadcastToGame(game, startGameMessage);
             System.out.println(startGameMessage);
-            System.out.println("Game started for game code: " + gameCode + ". Host is the first drawer.");
+            System.out.println("Game started for game code: " + gameCode + ". First drawer is: " + firstDrawer.getUsername());
+        }
+    }
+
+    private void handleDrawerJoined(WebSocket conn, String gameCode) {
+        Game game = activeGames.get(gameCode);
+        if (game != null) {
+            // Notify all players that the drawer has joined
+            broadcastToGame(game, "DRAWER_JOINED: " + gameCode);
+            System.out.println("Drawer has joined game: " + gameCode + ". Timer should start now.");
         }
     }
 
@@ -265,7 +289,6 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    
     private void broadcastGamePlayers(Game game) {
         String playersJson = game.getPlayersJson();
         String message = new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson));
@@ -352,6 +375,18 @@ public class WebServer extends WebSocketServer {
         System.out.println("Generated Words: " + randomWords);
         System.out.println("JSON Sent: " + jsonResponse);
         conn.send(jsonResponse);
+    }
+
+    private void handleWordSelection(WebSocket conn, String gameCode, String word) {
+        Game game = activeGames.get(gameCode);
+        if (game != null) {
+            game.setCurrentWord(word);
+    
+            // Notify all players that the word has been selected
+            String message = "WORD_SELECTED: " + word;
+            broadcastToGame(game, message);
+            System.out.println("Word selected: " + word + ". Starting round...");
+        }
     }
 
     @Override

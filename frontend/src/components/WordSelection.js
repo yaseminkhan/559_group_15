@@ -14,7 +14,23 @@ const WordSelection = ({ currentDrawer }) => {
   const drawer = currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
   const [randomWords, setRandomWords] = useState([]);
   const socket = useWebSocket(); 
+  const navigate = useNavigate();
 
+  const handleWordSelect = (word) => {
+    if (!socket) {
+        console.error("WebSocket is not connected.");
+        return;
+    }
+    
+    console.log(`Drawer selected word: ${word}`);
+    socket.send(`/select-word ${gameCode} ${word}`); // Send the word selection to the backend
+
+    // Notify backend that the drawer is now joining the game
+    socket.send(`/drawer-joined ${gameCode}`);
+
+    // Navigate to the game page after selecting a word
+    navigate(`/game/${gameCode}`, { state: { choosingWord: false, isDrawer: true } });
+  };
 
   useEffect(() => {
     console.log("WordSelection useEffect running...");
@@ -101,9 +117,11 @@ const WordSelection = ({ currentDrawer }) => {
           <div className="setup_join_title"> Select one of the four words to draw</div>
           <hr className="ws_underline"/>
           <div className="ws_button_group">
-            {randomWords.map((word, index) => (
-              <button key={index} className="ws_btn">{word}</button>
-            ))}
+              {randomWords.map((word, index) => (
+                  <button key={index} className="ws_btn" onClick={() => handleWordSelect(word)}>
+                      {word}
+                  </button>
+              ))}
           </div>
         </div> 
       </div>

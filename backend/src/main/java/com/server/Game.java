@@ -174,4 +174,11 @@ public class Game {
     public boolean hasEnded() {return gameEnded;}
     public int getCurrentRound() {return round;}
     public String getGameCode() {return this.gameCode;}
+
+    /*
+     * set current word
+     */
+    public void setCurrentWord(String word) {
+        this.wordToDraw = word;
+    }
 }

@@ -14,7 +14,7 @@ function App() {
             <Router>
                 <Routes>
                     <Route path="/" element={<WelcomePage />} />
-                    <Route path="/game" element={<GamePage />} />
+                    <Route path="/game/:gameCode" element={<GamePage />} />
                     <Route path="/setup/:gameCode" element={<SetupPage />} />
                     <Route path="/wordselection/:gameCode" element={<WordSelection />} />
                     <Route path="/join-game" element={<JoinGamePage />} />

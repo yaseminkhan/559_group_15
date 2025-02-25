@@ -40,17 +40,13 @@ const GameSetup = () => {
                     const firstDrawer = event.data.split(" ")[1];
                     console.log("Game is starting...");
                     const userId = localStorage.getItem("userId");
-
-                    // Find the first drawer's details from the gamePlayers list
-                    // const firstDrawerInfo = gamePlayers.find(player => player.id === firstDrawer);
         
                     if (firstDrawer === userId) {
                         console.log("You are the first drawer. Navigating to word selection page.");
-                        navigate(`/wordselection`);
-                        // navigate(`/wordselection`, { state: { currentDrawer: firstDrawerInfo } });
+                        navigate(`/wordselection/${gameCode}`); 
                     } else {
                         console.log(`Navigating to game page. Waiting for drawer to choose a word.`);
-                        navigate(`/game`, { state: { choosingWord: true, isDrawer: false } });
+                        navigate(`/game/${gameCode}`, { state: { choosingWord: true, isDrawer: false } });
                     }
                     return;
                 }
