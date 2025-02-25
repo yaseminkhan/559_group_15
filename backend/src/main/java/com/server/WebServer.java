@@ -98,9 +98,42 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("/join-game ")) {
             String gameCode = message.substring(11).trim();
             handleJoinGame(conn, gameCode);
+        } else if (message.startsWith("/startgame ")) {
+            String gameCode = message.split(" ")[1];
+            String userId = message.split(" ")[2];
+            handleStartGame(conn, gameCode, userId);
         } else {
             conn.send("Unknown command.");
         }
+    }
+
+    private void handleStartGame(WebSocket conn, String gameCode, String userId) {
+        Game game = activeGames.get(gameCode);
+        if (game != null) {
+            User hostUser = getUserById(userId);
+            hostUser.setHost();
+            hostUser.setDrawer();
+
+        //     broadcastToGame(game, "{\"type\": \"GAME_STARTED\"}");
+        //     System.out.println("Game started for game code: " + gameCode);
+        // }
+            // Broadcast the game start message with the drawer info
+            // String startGameMessage = new Gson().toJson(new GameStartMessage(hostUser.getId(), hostUser.getUsername()));
+            String startGameMessage = "GAME_STARTED: " + hostUser.getId();
+            broadcastToGame(game, startGameMessage);
+            System.out.println(startGameMessage);
+            System.out.println("Game started for game code: " + gameCode + ". Host is the first drawer.");
+        }
+    }
+
+    // Helper method to get a User object by userId
+    private User getUserById(String userId) {
+        for (User user : connectedUsers.values()) {
+            if (user.getId().equals(userId)) {
+                return user;
+            }
+        }
+        return null;
     }
 
     private void handleReconnect(WebSocket conn, String userId) {
@@ -213,6 +246,22 @@ public class WebServer extends WebSocketServer {
         conn.send("JOIN_SUCCESS:" + gameCode);
     }
 
+    private void broadcastToGame(Game game, String message) {
+    
+        if (game != null) {
+            for (User player : game.getPlayers()) {
+                WebSocket conn = getConnectionByUser(player);
+                if (conn != null) {
+                    conn.send(message);
+                    System.out.println("Sent start game command to: " + player.getUsername());
+                } else {
+                    System.out.println("Could not find connection for " + player.getUsername());
+                }
+            }
+        }
+    }
+
+    
     private void broadcastGamePlayers(Game game) {
         String playersJson = game.getPlayersJson();
         String message = new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson));

@@ -15,6 +15,13 @@ const GameSetup = () => {
     const [isHost, setIsHost] = useState(false);
     const socket = useWebSocket(); 
 
+    const handleStartGame = () => {
+        if (socket && isHost) {
+            const userId = localStorage.getItem("userId");
+            socket.send(`/startgame ${gameCode} ${userId}`);
+        }
+    };
+
     useEffect(() => {
         console.log("GameSetup useEffect running...");
     
@@ -22,41 +29,62 @@ const GameSetup = () => {
             console.log("WebSocket is null. Exiting useEffect.");
             return;
         }
-    
+
         const handleMessage = (event) => {
             console.log("\n========== WebSocket MESSAGE RECEIVED ==========");
             console.log("Raw Data:", event.data);
-    
+        
             try {
-                if (!event.data.startsWith("{")) {
-                    console.log("Skipping non-JSON message:", event.data);
+                // If the message is a known string-based format, handle it first
+                if (typeof event.data === "string" && event.data.startsWith("GAME_STARTED: ")) {
+                    const firstDrawer = event.data.split(" ")[1];
+                    console.log("Game is starting...");
+                    const userId = localStorage.getItem("userId");
+
+                    // Find the first drawer's details from the gamePlayers list
+                    // const firstDrawerInfo = gamePlayers.find(player => player.id === firstDrawer);
+        
+                    if (firstDrawer === userId) {
+                        console.log("You are the first drawer. Navigating to word selection page.");
+                        navigate(`/wordselection`);
+                        // navigate(`/wordselection`, { state: { currentDrawer: firstDrawerInfo } });
+                    } else {
+                        console.log(`Navigating to game page. Waiting for drawer to choose a word.`);
+                        navigate(`/game`, { state: { choosingWord: true, isDrawer: false } });
+                    }
                     return;
                 }
-                const message = JSON.parse(event.data);
-    
+        
+                // Check if event.data is JSON before parsing
+                let message;
+                try {
+                    message = JSON.parse(event.data);
+                } catch (jsonError) {
+                    console.warn("Received non-JSON WebSocket message:", event.data);
+                    return; // Skip non-JSON messages
+                }
+        
                 if (message.type === "GAME_PLAYERS") {
                     console.log("GAME_PLAYERS event received. Updating players...");
-                    const gamePlayers = JSON.parse(message.data);
-                    setPlayers(gamePlayers);
-    
-                    console.log("Updated Players List:");
-                    gamePlayers.forEach((player) => {
-                        console.log(`   - ${player.username} (ID: ${player.id})`);
-                    });
-    
-                    const userId = localStorage.getItem("userId");
-                    if (gamePlayers.length > 0 && gamePlayers[0].id === userId) {
-                        setIsHost(true);
-                        console.log("You are the host.");
-                    } else {
-                        setIsHost(false);
-                        console.log("You are not the host.");
+                    try {
+                        const gamePlayers = JSON.parse(message.data);
+                        setPlayers(gamePlayers);
+                        console.log("Updated Players List:");
+                        gamePlayers.forEach((player) => {
+                            console.log(` - ${player.username} (ID: ${player.id})`);
+                        });
+        
+                        const userId = localStorage.getItem("userId");
+                        setIsHost(gamePlayers.length > 0 && gamePlayers[0].id === userId);
+                    } catch (parseError) {
+                        console.error("Error parsing GAME_PLAYERS data:", parseError);
                     }
                 }
             } catch (error) {
-                console.error("Error parsing WebSocket message:", error);
+                console.error("Error handling WebSocket message:", error);
             }
         };
+        
     
         const attachWebSocketListeners = () => {
             console.log("Attaching WebSocket message listener...");
@@ -124,7 +152,7 @@ const GameSetup = () => {
                 {/* Show the Start Game button only if the user is the host */}
                 {isHost && (
                     <div className="setup_btn_group">
-                        <button className="setup_btn">Start Game</button>
+                        <button className="setup_btn" onClick={handleStartGame}>Start Game</button>
                     </div>
                 )}
             </div>

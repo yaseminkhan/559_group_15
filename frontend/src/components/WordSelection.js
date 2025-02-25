@@ -1,4 +1,5 @@
 import React, {useState} from "react";
+import { useLocation } from "react-router-dom"; 
 import "../styles/GameSetup.css";
 import avatar from "./assets/avatar.png"
 import starIcon from "./assets/wordSelectionPage/star.png"
@@ -15,12 +16,11 @@ const getRandomWords = () => {
     .slice(0, 4); //Pick first 4 words
 };
 
-
-
-const WordSelection = ({ currentDrawer }) => {
+const WordSelection = () => {
   // just using mary for now, need to add functionality once we have actual users
-  const drawer = currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
-
+  // const drawer = currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
+  const location = useLocation();  // ✅ Get navigation state
+  const drawer = location.state?.currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
   const [randomWords, setRandomWords] = useState(getRandomWords());
 
   return (
