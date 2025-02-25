@@ -75,7 +75,7 @@ const WelcomePage = () => {
 
             setTimeout(() => {
                 navigate("/join-game");
-                //socket.send("/join-game");  // ✅ Create the game after setting username
+                //socket.send("/join-game");  
                 console.log("Requested to join a game.");
             }, 500);
         } else {
