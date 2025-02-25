@@ -6,6 +6,7 @@ import GamePage from "./components/GamePage";
 import SetupPage from "./components/GameSetup";
 import WordSelection from "./components/WordSelection";
 import JoinGamePage from "./components/JoinGamePage";
+import EndGamePage from "./components/EndGamePage";
 
 function App() {
     return (
@@ -17,6 +18,7 @@ function App() {
                     <Route path="/setup/:gameCode" element={<SetupPage />} />
                     <Route path="/wordselection" element={<WordSelection />} />
                     <Route path="/join-game" element={<JoinGamePage />} />
+                    <Route path="/endgame" element={<EndGamePage />} />
                 </Routes>
             </Router>
         </WebSocketProvider>

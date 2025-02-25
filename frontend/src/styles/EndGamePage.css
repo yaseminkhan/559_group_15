@@ -1,0 +1,91 @@
+.endgame_container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #2a9d8f, #0f3732);
+    color: white;
+    text-align: center;
+    font-family: 'Arial', sans-serif;
+  }
+  
+  .end_logo{
+    font-family: 'Irish Grover';
+    font-size: 70px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    margin-top: 10px;
+  }
+  
+  .endgame_box {
+      background: #f4a261;
+      color: black;
+      border-radius: 15px;
+      padding: 30px;
+      width: 400px;
+      text-align: center;
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .endgame_title {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+      margin-bottom: 30px;
+  }
+  
+  .endgame_list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+      overflow-y: auto;
+  }
+  
+  .endgame_player {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #E9C46A;
+      font-size: 1.2rem;
+  }
+  
+  .endgame_rank {
+      font-weight: bold;
+      margin-right: 10px;
+  }
+  
+  .endgame_avatar {
+      font-size: 1.5rem;
+      margin-right: 10px;
+  }
+  
+  .endgame_name {
+      flex-grow: 1;
+      text-align: left;
+      font-weight: bold;
+  }
+  
+  .endgame_score {
+      font-weight: bold;
+  }
+  
+  .endgame_btn {
+      background-color: #76B1C7;
+      color: black;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .endgame_btn:hover {
+      transform: scale(1.05);
+      box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.4);
+  }
