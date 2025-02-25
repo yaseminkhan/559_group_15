@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Random;
 
 public class Words {
+    // note: implementation only works with one word entries
     private static final List<String> words = Arrays.asList(
         "Sun", "Tree", "House", "Cat", "Dog", "Fish", "Car", "Balloon", "Book", "Moon",
         "Airplane", "Elephant", "Bicycle", "Rainbow", "Guitar", "Pumpkin", "Turtle", 
@@ -12,7 +13,7 @@ public class Words {
         "Microscope", "Castle", "Volcano", "Octopus", "Dinosaur", "Robot", "Treasure", 
         "Jungle", "Island", "Fireworks", "Running", "Jumping", "Swimming", "Dancing", 
         "Flying", "Superhero", "Wizard", "Movie", "Gargoyle", "Pyramid", "Metronome", 
-        "Spaceship", "Magic Wand", "Laptop", "Smartphone", "Television", "Headphones", 
+        "Spaceship", "Magic", "Laptop", "Smartphone", "Television", "Headphones", 
         "Camera", "Halloween", "Lightning", "Tornado", "Snowman", "Waterfall", "Desert", 
         "Umbrella", "Accordion", "Parachute", "Chandelier"
     );

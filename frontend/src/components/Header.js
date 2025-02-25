@@ -38,15 +38,25 @@ const Header = ({ isChoosingWord, gameCode }) => {
         };
     }, [socket, gameCode]);
 
+    // timer use effect
     useEffect(() => {
-        if (timeLeft === 0 || isChoosingWord) return; 
-
-        const timer = setInterval(() => {
-            setTimeLeft((prevTime) => prevTime - 1);
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [timeLeft, isChoosingWord]);
+      if (!socket) return;
+  
+      const handleMessage = (event) => {
+          console.log("WebSocket message:", event.data);
+  
+          if (event.data.startsWith("TIMER_UPDATE:")) {
+              const newTime = parseInt(event.data.split(": ")[1]);
+              console.log("Updating timer in header to:", newTime);
+              setTimeLeft(newTime);
+          }
+      };
+  
+      socket.addEventListener("message", handleMessage);
+      return () => {
+          socket.removeEventListener("message", handleMessage);
+      };
+    }, [socket]);
 
     // Determine the highest score
     const highestScore = players.length > 0 ? Math.max(...players.map(player => player.score || 0)) : 0;
@@ -57,7 +67,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
             <div className="player-container">
                 {players.map((player, index) => (
                     <div key={index} className="player">
-                        {player.score === highestScore && player.score != 0 && <FontAwesomeIcon icon={faCrown} className="crown" />}
+                        {player.score === highestScore && player.score !== 0 && <FontAwesomeIcon icon={faCrown} className="crown" />}
                         <span className="avatar">{player.icon || "❓"}</span>
                         <span className="name">{player.username || "Unknown"}</span>
                         <span className="score">{player.score !== undefined ? `${player.score} pts` : "No score"}</span>

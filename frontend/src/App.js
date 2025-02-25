@@ -18,7 +18,7 @@ function App() {
                     <Route path="/setup/:gameCode" element={<SetupPage />} />
                     <Route path="/wordselection/:gameCode" element={<WordSelection />} />
                     <Route path="/join-game" element={<JoinGamePage />} />
-                    <Route path="/endgame" element={<EndGamePage />} />
+                    <Route path="/endgame/:gameCode" element={<EndGamePage />} />
                 </Routes>
             </Router>
         </WebSocketProvider>

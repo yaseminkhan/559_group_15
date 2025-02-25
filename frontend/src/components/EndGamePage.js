@@ -1,27 +1,46 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useWebSocket } from "../WebSocketContext";
 import "../styles/EndGamePage.css";
-import right_bkg from "./assets/right_bkg.png";
-import left_bkg from "./assets/left_bkg.png";
 import "../styles/WelcomePage.css";
 
 const EndGamePage = () => {
     const navigate = useNavigate();
+    const socket = useWebSocket();
+    const [players, setPlayers] = useState([]);
+    const location = useLocation();
+    const gameCode = location.state?.gameCode || localStorage.getItem("gameCode");
 
-    // temporary
-    const players = [
-        { username: "Mary", icon: "🐌", score: 245 },
-        { username: "Bob", icon: "🌵", score: 7653 },
-        { username: "Jeff", icon: "😃", score: 176 },
-        { username: "Sarah", icon: "☀️", score: 45729 },
-        { username: "James", icon: "🦃", score: 2148 },
-        { username: "Daniel", icon: "💬", score: 40652 },
-        { username: "Joe", icon: "📚", score: 4155 },
-        { username: "Olivia", icon: "🥶", score: 42385 },
-      ];
+    useEffect(() => {
+        if (!socket) return;
+        
+        console.log(`Requesting players for game: ${gameCode}`);
+        socket.send(`/getgame ${gameCode}`);
+        
+        const handleMessage = (event) => {
+            console.log("WebSocket message:", event.data);
+            
+            try {
+                const message = JSON.parse(event.data);
+
+                if (message.type === "GAME_PLAYERS") {
+                    console.log("Received final player scores.");                    
+                    setPlayers(JSON.parse(message.data));
+                }
+            } catch (error) {
+                console.error("Error parsing WebSocket message:", error);
+            }
+        };
+        
+        socket.addEventListener("message", handleMessage);
+        
+        return () => {
+            socket.removeEventListener("message", handleMessage);
+        };
+    }, [socket]);
 
     // Sort players by score (highest to lowest)
-    players.sort((a, b) => b.score - a.score);
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
     return (
         <div className="endgame_container">           
@@ -30,7 +49,7 @@ const EndGamePage = () => {
                 <h1 className="endgame_title">Game Over!</h1>
                 
                 <div className="endgame_list">
-                    {players.map((player, index) => (
+                    {sortedPlayers.map((player, index) => (
                         <div key={index} className="endgame_player">
                             <span className="endgame_rank">#{index + 1}</span>
                             <span className="endgame_avatar">{player.icon}</span>
@@ -40,9 +59,7 @@ const EndGamePage = () => {
                     ))}
                 </div>
 
-                <button className="endgame_btn" onClick={() => navigate("/")}>
-                    Back to Home
-                </button>
+                <button className="endgame_btn" onClick={() => navigate("/")}>Back to Home</button>
             </div>
         </div>
     );

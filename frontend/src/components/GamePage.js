@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useWebSocket } from "../WebSocketContext"; 
 import "../styles/GamePage.css";
 import Header from "./Header"; 
@@ -14,6 +14,8 @@ const GamePage = () => {
   const [wordToDraw, setWordToDraw] = useState("");
   const [isChoosingWord, setIsChoosingWord] = useState(true);  
   const [timeLeft, setTimeLeft] = useState(60);
+  const [round, setRound] = useState(1); 
+  const navigate = useNavigate();
   
   const location = useLocation();
   const userId = localStorage.getItem("userId");
@@ -49,6 +51,29 @@ const GamePage = () => {
               return () => clearInterval(timer); // Cleanup timer on unmount
           }
         }
+
+        if (event.data.startsWith("NEW_ROUND:")) {
+          const roundInfo = event.data.split(" ");
+          const newRound = parseInt(roundInfo[1]);
+          const newDrawerId = roundInfo[3];
+
+          console.log(`Starting Round ${newRound}, New Drawer: ${newDrawerId}`);
+
+          setRound(newRound);
+          setTimeLeft(60);
+          setIsChoosingWord(true);
+          setIsDrawer(userId === newDrawerId);
+
+          if (userId === newDrawerId) {
+              console.log("You are the new drawer. Redirecting to word selection...");
+              navigate(`/wordselection/${gameCode}`);
+          }
+        }
+
+        if (event.data.startsWith("GAME_OVER")) {
+          console.log("Game has ended. Redirecting to the end game page...");
+          navigate(`/endgame/${gameCode}`); 
+        }
     };
 
     socket.addEventListener("message", handleMessage);
@@ -56,8 +81,28 @@ const GamePage = () => {
     return () => {
         socket.removeEventListener("message", handleMessage);
     };
-  }, [socket]);
+  }, [socket, userId, navigate, gameCode, isDrawer]);
 
+  // timer use effect
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessage = (event) => {
+        console.log("WebSocket message:", event.data);
+
+        if (event.data.startsWith("TIMER_UPDATE:")) {
+            const newTime = parseInt(event.data.split(": ")[1]);
+            // console.log("Updating timer to:", newTime);
+            setTimeLeft(newTime);
+        }
+    };
+
+    socket.addEventListener("message", handleMessage);
+    return () => {
+        socket.removeEventListener("message", handleMessage);
+    };
+  }, [socket]);
+  
   return (
     <div className="game-page">
       <Header isChoosingWord={isChoosingWord} gameCode={gameCode} />

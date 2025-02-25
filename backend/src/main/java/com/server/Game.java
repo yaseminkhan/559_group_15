@@ -21,6 +21,7 @@ public class Game {
     // private List<Stroke> strokes;
     private List<String> chatMessages;
     private int drawerIndex;
+    private int timeLeft;
 
     /*
      * constructor creates new instance of a game
@@ -28,7 +29,7 @@ public class Game {
     public Game(String gameCode) {
         this.gameCode = gameCode; 
         this.players = new ArrayList<>();
-        this.round = 0;
+        this.round = 1;
         this.gameStarted = false;
         this.gameEnded = false;
         // this.strokes = new ArrayList<>();
@@ -36,6 +37,7 @@ public class Game {
         this.drawer = null;
         this.drawerIndex = -1;
         this.wordToDraw = Words.getRandomWord();
+        this.timeLeft = 60;
     }
 
     /*
@@ -122,12 +124,15 @@ public class Game {
      * moves to next round 
      */
     public void nextTurn() {
-        if (round >= MAX_ROUNDS) {
+        if (round > MAX_ROUNDS) {
             endGame();
             return;
         }
-        assignNextDrawer();
-        round++;
+    
+        round++; // Increase round count
+        System.out.println("Starting round " + round);
+        assignNextDrawer(); // Assign new drawer
+        this.timeLeft = 60;
     }
 
     /*
@@ -135,6 +140,13 @@ public class Game {
      */
     public List<User> getPlayers() {
         return players;
+    }
+
+    /*
+     * Sets the time left for the round
+     */
+    public void setTimeLeft(int time) {
+        this.timeLeft = time;
     }
     
     /*
@@ -158,7 +170,7 @@ public class Game {
     }
 
     /*
-     * ends the game - we need to create a page for this 
+     * ends the game
      */
     public void endGame() {
         gameEnded = true;
@@ -174,6 +186,9 @@ public class Game {
     public boolean hasEnded() {return gameEnded;}
     public int getCurrentRound() {return round;}
     public String getGameCode() {return this.gameCode;}
+    public User getDrawer() {return this.drawer; }
+    public int getTimeLeft() { return this.timeLeft; }
+    public static int getMaxRounds() {return MAX_ROUNDS; }
 
     /*
      * set current word

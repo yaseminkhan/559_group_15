@@ -119,6 +119,12 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("/drawer-joined ")) {
             String gameCode = message.substring(15).trim();
             handleDrawerJoined(conn, gameCode);
+        } else if (message.startsWith("/round-over ")) {
+            String gameCode = message.substring(12).trim();
+            Game game = activeGames.get(gameCode);
+            if (game != null) {
+                startNewRound(game); 
+            }
         } else {
             conn.send("Unknown command.");
         }
@@ -152,6 +158,53 @@ public class WebServer extends WebSocketServer {
             broadcastToGame(game, "DRAWER_JOINED: " + gameCode);
             System.out.println("Drawer has joined game: " + gameCode + ". Timer should start now.");
         }
+    }
+
+    private void startNewRound(Game game) {
+        if (game == null) return;
+
+        if (game.getCurrentRound() + 1 > Game.getMaxRounds()) { // Check if all rounds are done
+            broadcastToGame(game, "GAME_OVER");
+            System.out.println("All rounds complete. Waiting for players to exit.");
+            return; // Do not clear players yet
+        }
+    
+        game.nextTurn(); // Move to the next round
+        game.setTimeLeft(60); // Reset the round timer to 60 seconds
+    
+        // Notify all players about the new round and new drawer
+        broadcastToGame(game, "NEW_ROUND: " + game.getCurrentRound() + " DRAWER: " + game.getDrawer().getId());
+    }
+
+    /*
+     * game timer handled by server 
+     */
+    private void startRoundTimer(Game game) {
+        if (game == null) return;
+        
+        game.setTimeLeft(60); // Reset timer for new round
+
+        // game.setTimeLeft(5); // short timer for testing
+        
+        // Ensure only one timer runs per game
+        Timer roundTimer = new Timer();
+        
+        roundTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                int timeLeft = game.getTimeLeft();
+                
+                if (timeLeft <= 0) {
+                    roundTimer.cancel(); // Stop timer
+                    broadcastToGame(game, "ROUND_OVER");
+                    startNewRound(game); // Move to next round
+                    return;
+                }
+                
+                game.setTimeLeft(timeLeft - 1);
+                broadcastToGame(game, "TIMER_UPDATE: " + game.getTimeLeft());
+            }
+        }, 0, 1000); // Run every second
     }
 
     // Helper method to get a User object by userId
@@ -275,13 +328,14 @@ public class WebServer extends WebSocketServer {
     }
 
     private void broadcastToGame(Game game, String message) {
-    
         if (game != null) {
             for (User player : game.getPlayers()) {
                 WebSocket conn = getConnectionByUser(player);
                 if (conn != null) {
                     conn.send(message);
-                    System.out.println("Sent start game command to: " + player.getUsername());
+                    if (!message.startsWith("TIMER_UPDATE")) {
+                        System.out.println("Broadcast to: " + player.getUsername() + " Message: " + message);
+                    }
                 } else {
                     System.out.println("Could not find connection for " + player.getUsername());
                 }
@@ -387,6 +441,9 @@ public class WebServer extends WebSocketServer {
             broadcastToGame(game, message);
             System.out.println("Word selected: " + word + ". Starting round...");
         }
+
+        // Start the timer for the new round
+        startRoundTimer(game);
     }
 
     @Override
