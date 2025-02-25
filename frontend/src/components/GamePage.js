@@ -37,8 +37,17 @@ const GamePage = () => {
         }
 
         if (event.data.startsWith("DRAWER_JOINED:")) {
-            console.log("Drawer has joined the game. Starting timer...");
-            setTimeLeft(60); // Timer starts when drawer joins
+          console.log("Drawer has joined the game. Starting timer...");
+          setTimeLeft(60); // Reset timer when drawer joins
+
+          // Start countdown only if this player is the drawer
+          if (isDrawer) {
+              const timer = setInterval(() => {
+                  setTimeLeft((prevTime) => prevTime > 0 ? prevTime - 1 : 0);
+              }, 1000);
+
+              return () => clearInterval(timer); // Cleanup timer on unmount
+          }
         }
     };
 

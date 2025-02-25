@@ -1,20 +1,19 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useWebSocket } from "../WebSocketContext"; 
 import "../styles/GameSetup.css";
-import crayons from "./assets/setupPage/crayons.png"
-import hourglass from "./assets/setupPage/hourglass.png"
+import crayons from "./assets/setupPage/crayons.png";
+import hourglass from "./assets/setupPage/hourglass.png";
 import right_bkg from "./assets/right_bkg.png";
 import left_bkg from "./assets/left_bkg.png";
 
-const WordSelection = ({ currentDrawer }) => {
-  // just using mary for now, need to add functionality once we have actual users
+const WordSelection = () => {
   const { gameCode } = useParams(); 
-  const drawer = currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
-  const [randomWords, setRandomWords] = useState([]);
-  const socket = useWebSocket(); 
   const navigate = useNavigate();
+  const [randomWords, setRandomWords] = useState([]);
+  const [drawer, setDrawer] = useState(null); // Stores actual drawer info
+  const socket = useWebSocket(); 
+  const userId = localStorage.getItem("userId"); // Get user ID
 
   const handleWordSelect = (word) => {
     if (!socket) {
@@ -23,7 +22,7 @@ const WordSelection = ({ currentDrawer }) => {
     }
     
     console.log(`Drawer selected word: ${word}`);
-    socket.send(`/select-word ${gameCode} ${word}`); // Send the word selection to the backend
+    socket.send(`/select-word ${gameCode} ${word}`); // Send word selection to the backend
 
     // Notify backend that the drawer is now joining the game
     socket.send(`/drawer-joined ${gameCode}`);
@@ -35,6 +34,7 @@ const WordSelection = ({ currentDrawer }) => {
   useEffect(() => {
     console.log("WordSelection useEffect running...");
     console.log("Game Code:", gameCode);
+    console.log("User ID:", userId);
 
     if (!socket) {
         console.log("WebSocket is null. Exiting useEffect.");
@@ -46,22 +46,34 @@ const WordSelection = ({ currentDrawer }) => {
         console.log("Raw Data:", event.data);
 
         try {
-            if (!event.data.startsWith("{")) {
-                console.log("Skipping non-JSON message:", event.data);
-                return;
-            }
             const message = JSON.parse(event.data);
 
             if (message.type === "WORDS") {
                 console.log("WORDS event received. Updating random words...");
-                console.log("Parsed Words:", message.data);
-                const wordsData = message.data;
-                setRandomWords(wordsData);
+                setRandomWords(message.data);
+                console.log("Word Choices:", message.data);
+            }
 
-                console.log("Updated Random Words List:");
-                wordsData.forEach((word) => {
-                    console.log(`   - ${word}`);
-                });
+            if (message.type === "GAME_PLAYERS") {
+                console.log("GAME_PLAYERS event received. Finding drawer...");
+
+                const players = JSON.parse(message.data);
+                console.log("Full Players List:", players);
+
+                // Find current user in player list
+                const currentPlayer = players.find(player => player.id === userId);
+                if (currentPlayer) {
+                    console.log("Current User Found:", currentPlayer);
+                    
+                    // Ensure we use `username` not `name`
+                    setDrawer({
+                        avatar: currentPlayer.icon || "❓",
+                        username: currentPlayer.username || "Unknown", // FIX HERE
+                        score: currentPlayer.score !== undefined ? currentPlayer.score : "No score data",
+                    });
+                } else {
+                    console.error("Current player not found in game data.");
+                }
             }
         } catch (error) {
             console.error("Error parsing WebSocket message:", error);
@@ -70,28 +82,22 @@ const WordSelection = ({ currentDrawer }) => {
 
     const attachWebSocketListeners = () => {
         console.log("Attaching WebSocket message listener...");
-
-        console.log(`Requesting random words for game: ${gameCode}`);
-        socket.send(`/word-selection ${gameCode}`);
+        socket.send(`/word-selection ${gameCode}`); // Request words
+        socket.send(`/getgame ${gameCode}`); // Request player list
 
         socket.addEventListener("message", handleMessage);
     };
 
     if (socket.readyState === WebSocket.OPEN) {
-        console.log("WebSocket is already open. Proceeding...");
         attachWebSocketListeners();
     } else {
-        console.log("WebSocket is not open. Waiting for connection...");
-        socket.onopen = () => {
-            console.log("WebSocket just opened. Attaching event listeners...");
-            attachWebSocketListeners();
-        };
+        socket.onopen = attachWebSocketListeners;
     }
 
     return () => {
         socket.removeEventListener("message", handleMessage);
     };
-}, [socket, gameCode]);
+  }, [socket, gameCode, userId]);
 
   return (
     <div className="setup_container">
@@ -101,14 +107,18 @@ const WordSelection = ({ currentDrawer }) => {
       <hr className="underline"/>
 
       <div className="ws_content_container">
-        {/* show the actual user’s avatar, name, and score */}
-        <div className="ws_player_card">
-          <span className="wordselect-avatar">{drawer.avatar}</span>  
-          <div>
-            <div className="ws_username">{drawer.name}</div> 
-            <div className="ws_points">{drawer.score} points</div> 
+        {/* Display actual user’s avatar, name, and score */}
+        {drawer ? (
+          <div className="ws_player_card">
+            <span className="wordselect-avatar">{drawer.avatar}</span>  
+            <div>
+              <div className="ws_username">{drawer.username}</div> {/* FIXED */}
+              <div className="ws_points">{drawer.score} points</div> 
+            </div>
           </div>
-        </div>
+        ) : (
+          <p>Loading player data...</p>
+        )}
         <div className="setup_image">
           <img src={crayons} alt="crayons" className="wordselect_image crayons" />
           <img src={hourglass} alt="hourglass" className="wordselect_image hourglass" />
