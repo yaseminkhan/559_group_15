@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import "../styles/GamePage.css";
 import Header from "./Header"; 
 import ColourPalette from "./ColourPalette"; 
@@ -10,10 +11,13 @@ const GamePage = () => {
   const clearCanvasRef = useRef(null);
   
   // Temporary placeholders
-  const [isDrawer, setIsDrawer] = useState(true); 
+  // const [isDrawer, setIsDrawer] = useState(true); 
   const [wordToDraw, setWordToDraw] = useState("Cactus"); 
-  const [isChoosingWord, setIsChoosingWord] = useState(false);
-  
+  // const [isChoosingWord, setIsChoosingWord] = useState(false);
+  const location = useLocation();
+  const isChoosingWord = location.state?.choosingWord || false;
+  const drawerName = location.state?.drawerName || "Host";
+  const isDrawer = location.state?.isDrawer || true;
 
   return (
     <div className="game-page">
@@ -33,7 +37,7 @@ const GamePage = () => {
       </div>
 
       {/* Buttons for toggling roles and simulating pop-up */}
-      <div className="button-container">
+      {/* <div className="button-container">
         <button className="role-toggle-btn" onClick={() => setIsDrawer(!isDrawer)}>
           Switch to {isDrawer ? "Guesser" : "Drawer"} View
         </button>
@@ -43,8 +47,8 @@ const GamePage = () => {
             Simulate Pop-up
           </button>
         )}
-      </div>
-      {!isDrawer && isChoosingWord && (
+      </div> */}
+      {/* {!isDrawer && isChoosingWord && (
         <div className="overlay">
           <div className="word-popup">
             <strong>Please wait...</strong>
@@ -54,7 +58,7 @@ const GamePage = () => {
             </button>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
