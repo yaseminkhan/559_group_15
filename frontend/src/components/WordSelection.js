@@ -1,27 +1,81 @@
-import React, {useState} from "react";
-import { useLocation } from "react-router-dom"; 
+
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useWebSocket } from "../WebSocketContext"; 
 import "../styles/GameSetup.css";
-import avatar from "./assets/avatar.png"
-import starIcon from "./assets/wordSelectionPage/star.png"
 import crayons from "./assets/setupPage/crayons.png"
 import hourglass from "./assets/setupPage/hourglass.png"
 import right_bkg from "./assets/right_bkg.png";
 import left_bkg from "./assets/left_bkg.png";
 
-// temporary random words selected from list 
-const words = ["Cat", "Dog", "Horse", "Hamster", "Table", "Chair", "Sofa", "Bed", "Pizza", "Burger", "Apple", "Cake"];
-const getRandomWords = () => {
-  return words
-    .sort(() => 0.5 - Math.random()) //Shuffle array
-    .slice(0, 4); //Pick first 4 words
-};
-
-const WordSelection = () => {
+const WordSelection = ({ currentDrawer }) => {
   // just using mary for now, need to add functionality once we have actual users
-  // const drawer = currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
-  const location = useLocation();  // ✅ Get navigation state
-  const drawer = location.state?.currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
-  const [randomWords, setRandomWords] = useState(getRandomWords());
+  const { gameCode } = useParams(); 
+  const drawer = currentDrawer || { name: "Mary", avatar: "🐌", score: 245 };
+  const [randomWords, setRandomWords] = useState([]);
+  const socket = useWebSocket(); 
+
+
+  useEffect(() => {
+    console.log("WordSelection useEffect running...");
+    console.log("Game Code:", gameCode);
+
+    if (!socket) {
+        console.log("WebSocket is null. Exiting useEffect.");
+        return;
+    }
+
+    const handleMessage = (event) => {
+        console.log("\n========== WebSocket MESSAGE RECEIVED ==========");
+        console.log("Raw Data:", event.data);
+
+        try {
+            if (!event.data.startsWith("{")) {
+                console.log("Skipping non-JSON message:", event.data);
+                return;
+            }
+            const message = JSON.parse(event.data);
+
+            if (message.type === "WORDS") {
+                console.log("WORDS event received. Updating random words...");
+                console.log("Parsed Words:", message.data);
+                const wordsData = message.data;
+                setRandomWords(wordsData);
+
+                console.log("Updated Random Words List:");
+                wordsData.forEach((word) => {
+                    console.log(`   - ${word}`);
+                });
+            }
+        } catch (error) {
+            console.error("Error parsing WebSocket message:", error);
+        }
+    };
+
+    const attachWebSocketListeners = () => {
+        console.log("Attaching WebSocket message listener...");
+
+        console.log(`Requesting random words for game: ${gameCode}`);
+        socket.send(`/word-selection ${gameCode}`);
+
+        socket.addEventListener("message", handleMessage);
+    };
+
+    if (socket.readyState === WebSocket.OPEN) {
+        console.log("WebSocket is already open. Proceeding...");
+        attachWebSocketListeners();
+    } else {
+        console.log("WebSocket is not open. Waiting for connection...");
+        socket.onopen = () => {
+            console.log("WebSocket just opened. Attaching event listeners...");
+            attachWebSocketListeners();
+        };
+    }
+
+    return () => {
+        socket.removeEventListener("message", handleMessage);
+    };
+}, [socket, gameCode]);
 
   return (
     <div className="setup_container">
