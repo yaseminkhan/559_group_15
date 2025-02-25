@@ -1,24 +1,21 @@
 package com.server;
 
 import org.java_websocket.server.WebSocketServer;
-
 import com.google.gson.Gson;
-
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
-
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WebServer extends WebSocketServer {
 
-    // Stores WebSocket -> User object
     private final ConcurrentHashMap<WebSocket, User> connectedUsers = new ConcurrentHashMap<>();
-
-    // Stores active games (gameCode -> Game instance)
     private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
 
     public WebServer(InetSocketAddress address) {
         super(address);
@@ -26,23 +23,61 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        // Create a new user with a default name (temporary, will be updated later)
-        User newUser = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
+        String existingUserId = handshake.getFieldValue("User-ID");
+        User user;
 
-        // Store the user
-        connectedUsers.put(conn, newUser);
+        if (existingUserId != null && temporarilyDisconnectedUsers.containsKey(existingUserId)) {
+            user = temporarilyDisconnectedUsers.remove(existingUserId);
+            connectedUsers.put(conn, user);
+            System.out.println("Reconnected user: " + user.getUsername());
+        } else {
+            user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
+            connectedUsers.put(conn, user);
+        }
 
-        // Send the user their ID (frontend will need this)
-        conn.send("USER_ID:" + newUser.getId());
-
-        System.out.println("New user connected: " + newUser.getUsername() + " (" + newUser.getId() + ")");
+        conn.send("USER_ID:" + user.getId());
+        System.out.println("User connected: " + user.getUsername() + " (" + user.getId() + ")");
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         User removedUser = connectedUsers.remove(conn);
+
         if (removedUser != null) {
-            System.out.println("User disconnected: " + removedUser.getUsername() + " (" + removedUser.getId() + ")");
+            System.out.println("User temporarily disconnected: " + removedUser.getUsername() + " (" + removedUser.getId() + ")");
+
+            // Move user to temporarily disconnected list
+            temporarilyDisconnectedUsers.put(removedUser.getId(), removedUser);
+
+            // Print users for debugging
+            System.out.println("Current connected users:");
+            for (User user : connectedUsers.values()) {
+                System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+            }
+
+            System.out.println("Temporarily disconnected users:");
+            for (User user : temporarilyDisconnectedUsers.values()) {
+                System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+            }
+
+            // Schedule a delayed check before removing them permanently
+            new Timer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                        String gameCode = removedUser.getGameCode();
+                        if (gameCode != null) {
+                            Game game = activeGames.get(gameCode);
+                            if (game != null) {
+                                game.removePlayer(removedUser);
+                                broadcastGamePlayers(game);
+                                System.out.println("User permanently removed from game: " + removedUser.getUsername());
+                            }
+                        }
+                        temporarilyDisconnectedUsers.remove(removedUser.getId());
+                    }
+                }
+            }, 30000);
         }
     }
 
@@ -50,14 +85,17 @@ public class WebServer extends WebSocketServer {
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
-        if (message.startsWith("/setname ")) {
+        if (message.startsWith("/reconnect ")) {
+            String userId = message.substring(11).trim();
+            handleReconnect(conn, userId);
+        } else if (message.startsWith("/setname ")) {
             handleSetUsername(conn, message.substring(9).trim());
         } else if (message.equals("/creategame")) {
             handleCreateGame(conn);
         } else if (message.startsWith("/getgame ")) {
             String gameCode = message.substring(9).trim();
             handleGetGame(conn, gameCode);
-        } else if(message.startsWith("/join-game ")) {
+        } else if (message.startsWith("/join-game ")) {
             String gameCode = message.substring(11).trim();
             handleJoinGame(conn, gameCode);
         } else {
@@ -65,12 +103,63 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    /*
-    * Handles retrieving game information.
-    */
+    private void handleReconnect(WebSocket conn, String userId) {
+        System.out.println("\n========== HANDLE RECONNECT ==========");
+        System.out.println("Attempting to reconnect user: " + userId);
+    
+        // Check if user is already connected
+        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+            if (entry.getValue().getId().equals(userId)) {
+                System.out.println("User is already connected. Ignoring duplicate reconnect.");
+                return;
+            }
+        }
+    
+        // Check if user is in temporarilyDisconnectedUsers
+        if (temporarilyDisconnectedUsers.containsKey(userId)) {
+            User existingUser = temporarilyDisconnectedUsers.remove(userId);
+            connectedUsers.put(conn, existingUser);
+            System.out.println("User reconnected: " + existingUser.getUsername() + " (" + userId + ")");
+    
+            // Restore game if they were in one
+            if (existingUser.getGameCode() != null && activeGames.containsKey(existingUser.getGameCode())) {
+                Game game = activeGames.get(existingUser.getGameCode());
+    
+                // Ensure user is added back to the game
+                if (!game.hasPlayer(existingUser)) {
+                    game.addPlayer(existingUser);
+                    System.out.println("Re-added " + existingUser.getUsername() + " to game: " + game.getGameCode());
+                }
+    
+                System.out.println("User " + existingUser.getUsername() + " was in game: " + game.getGameCode());
+    
+                // Instead of sending "RECONNECTED", immediately send updated player list
+                broadcastGamePlayers(game);
+                return;
+            }
+    
+            System.out.println("User was not in a game.");
+            return;
+        }
+    
+        System.out.println("ERROR: User ID not found, unable to reconnect.");
+        conn.send("ERROR: User ID not found.");
+    
+        // Debugging logs
+        System.out.println("Current connected users:");
+        for (User user : connectedUsers.values()) {
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
+        System.out.println("Temporarily disconnected users:");
+        for (User user : temporarilyDisconnectedUsers.values()) {
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
+    }
+
     private void handleGetGame(WebSocket conn, String gameCode) {
+        System.out.println("Fetching game data for code: " + gameCode);
         Game game = activeGames.get(gameCode);
-        
+
         if (game == null) {
             conn.send("ERROR: Game not found.");
             return;
@@ -80,89 +169,109 @@ public class WebServer extends WebSocketServer {
         conn.send(new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson)));
     }
 
-    /*
-    * Handles joining game information.
-    */
     private void handleJoinGame(WebSocket conn, String gameCode) {
         Game game = activeGames.get(gameCode);
         System.out.println("Retrieving game: " + gameCode);
         System.out.println("Available games: " + activeGames.keySet());
-
+    
         if (game == null) {
-            System.out.println("Game not found.");
+            System.out.println("ERROR: Game not found.");
             conn.send("ERROR: Game not found.");
             return;
         }
-
+    
         User user = connectedUsers.get(conn);
         if (user == null) {
-            System.out.println("User not found.");
+            System.out.println("ERROR: User not found.");
             conn.send("ERROR: User not found.");
             return;
         }
-
-        // Add user to the game
+    
+        // Remove user from any previous game before joining the new one
+        String previousGameCode = user.getGameCode();
+        if (previousGameCode != null && !previousGameCode.equals(gameCode)) {
+            Game previousGame = activeGames.get(previousGameCode);
+            if (previousGame != null) {
+                previousGame.removePlayer(user);
+                broadcastGamePlayers(previousGame);
+                System.out.println("Removed user " + user.getUsername() + " from previous game: " + previousGameCode);
+            }
+        }
+    
+        if (game.isFull()) {
+            System.out.println("ERROR: Game is full. Cannot add " + user.getUsername());
+            conn.send("ERROR: Game is full.");
+            return;
+        }
+    
         game.addPlayer(user);
-
-        // Send updated player list to all players in the game
+        user.setGameCode(gameCode); // Store the new game code
+    
+        System.out.println("User " + user.getUsername() + " joined game: " + gameCode);
         broadcastGamePlayers(game);
     
         conn.send("JOIN_SUCCESS:" + gameCode);
     }
 
-    /**
-    * Broadcasts the current player list to all players in the game.
-    */
     private void broadcastGamePlayers(Game game) {
         String playersJson = game.getPlayersJson();
         String message = new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson));
-
+    
+        System.out.println("\nBroadcasting updated player list for game: " + game.getGameCode());
+        System.out.println("Players in game:");
+        for (User player : game.getPlayers()) {
+            System.out.println(" - " + player.getUsername() + " (ID: " + player.getId() + ")");
+        }
+    
         for (User player : game.getPlayers()) {
             WebSocket conn = getConnectionByUser(player);
             if (conn != null) {
                 conn.send(message);
+                System.out.println("Sent player list to: " + player.getUsername());
+            } else {
+                System.out.println("Could not find connection for " + player.getUsername());
             }
         }
     }
 
-    /**
-    * Retrieves the WebSocket connection for a given user.
-    */
     private WebSocket getConnectionByUser(User user) {
-        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-            if (entry.getValue().equals(user)) {
-                return entry.getKey();
-            }
-        }
-        return null;
+        return connectedUsers.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(user))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
     }
 
-    /*
-     * Handles creating a new game and adding the user to it.
-     */
     private void handleCreateGame(WebSocket conn) {
         User user = connectedUsers.get(conn);
-    
         if (user == null) {
-            conn.send("Error: You must be connected first.");
+            conn.send("ERROR: You must be connected first.");
             return;
         }
     
-        // Generate a new 6-character game code
-        String gameCode = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        // Check if the user is in an existing game and remove them
+        String previousGameCode = user.getGameCode();
+        if (previousGameCode != null) {
+            Game previousGame = activeGames.get(previousGameCode);
+            if (previousGame != null) {
+                previousGame.removePlayer(user);
+                broadcastGamePlayers(previousGame);
+                System.out.println("Removed user " + user.getUsername() + " from previous game: " + previousGameCode);
+            }
+        }
     
-        // Create new game with a specified game code
+        // Generate a new game code
+        String gameCode = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         Game newGame = new Game(gameCode);
         newGame.addPlayer(user);
-    
-        // Store the game
         activeGames.put(gameCode, newGame);
-        System.out.println("Game stored: " + gameCode);
     
-        // Send game code back to user
+        user.setGameCode(gameCode); // Store the gameCode in the user object
+    
         conn.send("GAME_CREATED:" + gameCode);
+        broadcastGamePlayers(newGame);
     
-        System.out.println("Game created: " + gameCode + " by " + user.getUsername());
+        System.out.println("New game created: " + gameCode + " by " + user.getUsername());
     }
 
     private void handleSetUsername(WebSocket conn, String newUsername) {
@@ -170,18 +279,15 @@ public class WebServer extends WebSocketServer {
             conn.send("ERROR: Invalid username. Try again.");
             return;
         }
-    
-        // Check if the user exists
+
         User user = connectedUsers.get(conn);
         if (user == null) {
             conn.send("ERROR: User not found.");
             return;
         }
-    
-        // Update username
+
         user.setUsername(newUsername);
         conn.send("USERNAME_SET:" + newUsername);
-    
         System.out.println("User set name: " + newUsername);
     }
 

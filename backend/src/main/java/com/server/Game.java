@@ -48,6 +48,9 @@ public class Game {
             return false;
         }
         if (!gameStarted) {
+            if (players.isEmpty()) {
+                player.setHost(); // First player is the host
+            }
             players.add(player);
             return true;
         }
@@ -74,12 +77,14 @@ public class Game {
     /*
      * starts a new game 
      */
-    public void startGame() {
-        if (!players.isEmpty()) {
+    public boolean startGame(User user) {
+        if (!players.isEmpty() && user.isHost()) { 
             gameStarted = true;
             round = 1;
             assignNextDrawer();
+            return true;
         }
+        return false;  // Game cannot start if not host
     }
 
     /* 
@@ -137,7 +142,19 @@ public class Game {
      */
     public String getPlayersJson() {
         Gson gson = new Gson();
-        return gson.toJson(players);
+        List<Map<String, Object>> playerList = new ArrayList<>();
+    
+        for (User player : players) {
+            Map<String, Object> playerData = new HashMap<>();
+            playerData.put("id", player.getId());
+            playerData.put("username", player.getUsername());
+            playerData.put("icon", player.getIcon());
+            playerData.put("score", player.getScore());
+            playerData.put("isDrawer", player.isDrawer());
+            playerData.put("isHost", player.isHost());  
+            playerList.add(playerData);
+        }
+        return gson.toJson(playerList);
     }
 
     /*
@@ -149,10 +166,12 @@ public class Game {
         for (User player : players) {
             System.out.println(player.getUsername() + ": " + player.getScore() + " points");
         }
+        players.clear();  
     }
 
     // functions to get game information 
     public boolean isFull() {return players.size() >= MAX_PLAYERS;}
     public boolean hasEnded() {return gameEnded;}
     public int getCurrentRound() {return round;}
+    public String getGameCode() {return this.gameCode;}
 }
