@@ -14,6 +14,7 @@ public class Game {
     private String gameCode;
     private List<User> players;
     private Set<String> confirmedEndGame;
+    private Set<String> drawnPlayers;
     private User drawer;
     private int round;
     private String wordToDraw;
@@ -31,6 +32,7 @@ public class Game {
         this.gameCode = gameCode; 
         this.players = new ArrayList<>();
         this.confirmedEndGame = new HashSet<>();
+        this.drawnPlayers = new HashSet<>();
         this.round = 1;
         this.gameStarted = false;
         this.gameEnded = false;
@@ -91,25 +93,39 @@ public class Game {
         return false;  // Game cannot start if not host
     }
 
+    public Set<String> getDrawnPlayers() {
+        return this.drawnPlayers;
+    }
+
     /* 
      * Assigns new drawer - will need to change to a different algorithm later 
      */
-    private void assignNextDrawer() {
-        if (!players.isEmpty()) {
-            if (drawer != null) {
-                drawer.removeAsDrawer();
-            }
+    public void assignNextDrawer() {
+        if (players.isEmpty()) {
+            return;
+        }
     
-            // Ensure the new drawer is different from the previous one
-            int previousDrawerIndex = drawerIndex;
+        if (drawer != null) {
+            drawer.removeAsDrawer();
+        }
+    
+        // Case when only 2 players - allow alternating turns
+        if (players.size() == 2) {
+            drawerIndex = (drawerIndex + 1) % players.size();
+        } else {
+            // Find the next player who hasn't drawn yet
+            int startIndex = drawerIndex;
             do {
                 drawerIndex = (drawerIndex + 1) % players.size();
-            } while (drawerIndex == previousDrawerIndex && players.size() > 1);
+            } while (drawnPlayers.contains(players.get(drawerIndex).getId()) && drawerIndex != startIndex);
     
-            drawer = players.get(drawerIndex);
-            drawer.setDrawer();
-            wordToDraw = selectRandomWord();
+            // Mark the new drawer as having drawn
+            drawnPlayers.add(players.get(drawerIndex).getId());
         }
+
+        drawer = players.get(drawerIndex);
+        drawer.setDrawer();
+        wordToDraw = selectRandomWord();
     }
 
     /*

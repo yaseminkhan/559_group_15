@@ -143,9 +143,8 @@ public class WebServer extends WebSocketServer {
                 return;
             }
     
-            // Select a random player as the first drawer
-            User firstDrawer = players.get((int) (Math.random() * players.size()));
-            firstDrawer.setDrawer(); 
+            game.assignNextDrawer();
+            User firstDrawer = game.getDrawer();
     
             String startGameMessage = "GAME_STARTED: " + firstDrawer.getId();
             broadcastToGame(game, startGameMessage);
