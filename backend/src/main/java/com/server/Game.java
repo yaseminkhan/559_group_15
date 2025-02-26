@@ -99,9 +99,13 @@ public class Game {
             if (drawer != null) {
                 drawer.removeAsDrawer();
             }
-
-            // Move to the next player in order
-            drawerIndex = (drawerIndex + 1) % players.size();
+    
+            // Ensure the new drawer is different from the previous one
+            int previousDrawerIndex = drawerIndex;
+            do {
+                drawerIndex = (drawerIndex + 1) % players.size();
+            } while (drawerIndex == previousDrawerIndex && players.size() > 1);
+    
             drawer = players.get(drawerIndex);
             drawer.setDrawer();
             wordToDraw = selectRandomWord();
