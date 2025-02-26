@@ -42,6 +42,15 @@ const EndGamePage = () => {
     // Sort players by score (highest to lowest)
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
+    const handleEndGame = () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(`/endgame ${gameCode}`);
+            navigate('/');
+        } else {
+            alert("WebSocket is not connected!");
+        }
+    }
+
     return (
         <div className="endgame_container">           
             <div className="endgame_box">
@@ -59,7 +68,7 @@ const EndGamePage = () => {
                     ))}
                 </div>
 
-                <button className="endgame_btn" onClick={() => navigate("/")}>Back to Home</button>
+                <button className="endgame_btn" onClick={handleEndGame}>Back to Home</button>
             </div>
         </div>
     );

@@ -125,6 +125,9 @@ public class WebServer extends WebSocketServer {
             if (game != null) {
                 startNewRound(game); 
             }
+        } else if (message.startsWith("/endgame ")) {
+            String gameCode = message.split(" ")[1];
+            handleEndGame(conn, gameCode);
         } else {
             conn.send("Unknown command.");
         }
@@ -148,6 +151,24 @@ public class WebServer extends WebSocketServer {
             broadcastToGame(game, startGameMessage);
             System.out.println(startGameMessage);
             System.out.println("Game started for game code: " + gameCode + ". First drawer is: " + firstDrawer.getUsername());
+        }
+    }
+
+    private void handleEndGame(WebSocket conn, String gameCode) {
+        Game game = activeGames.get(gameCode);
+        if (game != null) {
+            User user = connectedUsers.get(conn);
+            if (user != null) {
+                game.confirmEndGame(user.getId());
+                System.out.println("User " + user.getUsername() + " confirmed end game for " + gameCode);
+                
+                // Check if all players have confirmed
+                if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
+                    activeGames.remove(gameCode);
+                    System.out.println("Game " + gameCode + " has ended and been removed.");
+                    //broadcastToGame(game, "GAME_ENDED");
+                }
+            }
         }
     }
 

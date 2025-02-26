@@ -13,6 +13,7 @@ public class Game {
 
     private String gameCode;
     private List<User> players;
+    private Set<String> confirmedEndGame;
     private User drawer;
     private int round;
     private String wordToDraw;
@@ -29,6 +30,7 @@ public class Game {
     public Game(String gameCode) {
         this.gameCode = gameCode; 
         this.players = new ArrayList<>();
+        this.confirmedEndGame = new HashSet<>();
         this.round = 1;
         this.gameStarted = false;
         this.gameEnded = false;
@@ -140,6 +142,20 @@ public class Game {
      */
     public List<User> getPlayers() {
         return players;
+    }
+
+    /*
+     * Add the user to set when they confirm to end game.
+     */
+    public void confirmEndGame(String userId) {
+        confirmedEndGame.add(userId);
+    }
+
+    /*
+     * Returns number of users in game that have confirmed end game.
+     */
+    public int sizeOfPlayersConfirmedEnd() {
+        return confirmedEndGame.size();
     }
 
     /*
