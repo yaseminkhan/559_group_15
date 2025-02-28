@@ -128,8 +128,24 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("/endgame ")) {
             String gameCode = message.split(" ")[1];
             handleEndGame(conn, gameCode);
-        } else {
-            conn.send("Unknown command.");
+
+            /**
+             * Canvas Data Handling
+             * Send Coordinates and Colors through json object
+             */
+        } else if (message.startsWith("/canvas-update ")) {
+            System.out.println("Canvas Update From: " + conn.getRemoteSocketAddress() + ": " + message);
+            
+            // /canvas-update <gameCode> <json>
+            String[] parts = message.split(" ", 3);
+            if (parts.length < 3) {
+                conn.send("ERROR: Invalid canvas update format.");
+                return;
+            }
+            String gameCode = parts[1];
+            String json = parts[2];
+
+            handleCanvasUpdate(conn, gameCode, json);
         }
     }
 
@@ -464,6 +480,18 @@ public class WebServer extends WebSocketServer {
 
         // Start the timer for the new round
         startRoundTimer(game);
+    }
+
+    /**
+     * Canvas Handle Function
+     */
+    public void handleCanvasUpdate(WebSocket conn, String gameCode, String json) {
+        Game game = activeGames.get(gameCode);
+        if (game != null) {
+            System.out.println("ERROR: Game Not Found: " + gameCode);
+        }
+        System.out.println("Canvas Update: " + json);
+        broadcastToGame(game, "CANVAS_UPDATE " + json);
     }
 
     @Override
