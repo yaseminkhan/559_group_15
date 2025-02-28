@@ -47,15 +47,16 @@ function bufferToString(buf) {
     return new TextDecoder('utf-8').decode(buf);
 }
 
-function constructStrokeMessage(id, x, y, timestamp) {
+function constructStrokeMessage(id, color, x, y, timestamp) {
     const buf = new ArrayBuffer(100);
     const view = new DataView(buf);
     view.setInt32(0, MESSAGE_SIZES.STROKE, false);
     view.setUint8(4, STROKE, false);
     view.setUint32(5, id, false);
-    view.setUint32(9, x, false);
-    view.setUint32(13, y, false);
-    view.setFloat64(17, timestamp, false);
+    view.setUint32(9, color, false);
+    view.setUint32(13, x, false);
+    view.setUint32(17, y, false);
+    view.setFloat64(21, timestamp, false);
     return bufferToString(buf);
 }
 
@@ -66,10 +67,8 @@ function constructChatMessage(id, timestamp, data) {
     view.setUint8(4, CHAT, false);
     view.setInt32(5, id, false);
     view.setFloat64(9, timestamp, false);
-    for (let i = 17; i < data.length; ++i)
-    view.setUint8(i, data.charCodeAt(i-17) & 0xff, false);
-    for (let i = data.length; i < buf.byteLength; ++i)
-    view.setUint8(i, data.charCodeAt(i-17) & 0xff, false);
+    for (let i = 17; i < buf.byteLength; ++i)
+        view.setUint8(i, data.charCodeAt(i-17) & 0xff, false);
     return bufferToString(buf);
 }
 

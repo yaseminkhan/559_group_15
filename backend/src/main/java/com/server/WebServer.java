@@ -8,11 +8,6 @@
 package com.server;
 
 import org.java_websocket.server.WebSocketServer;
-
-import com.server.Message.Chat;
-import com.server.Message.MessageType;
-import com.server.Message.Stroke;
-
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 
