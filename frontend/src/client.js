@@ -1,0 +1,82 @@
+const MAX_PLAYER_NAME_LENGTH = 100;
+
+// "Enum" for message types.
+const [STROKE, CHAT, STATE, OTHER] = [0, 1, 2, 3];
+const MESSAGE_SIZES = {
+    STROKE: 20,    // int size + struct { int id, x, y; double timestamp; };
+    CHAT: 504,     // int size + struct { int id, char data[]; }
+    STATE: 0,
+    OTHER: 0,
+};
+
+// Create WebSocket connection to localhost:8887
+const ws = new WebSocket('ws://localhost:8887');
+
+// When the connection opens
+ws.onopen = () => {
+    console.log('Connected to WebSocket server');
+    document.getElementById('response').textContent = 'Connected to WebSocket server!';
+};
+
+// When a message is received from the server
+ws.onmessage = (event) => {
+    console.log('Server says:', event.data);
+    document.getElementById('response').textContent = `Server says: ${event.data}`;
+};
+
+// When there is an error with the connection
+ws.onerror = (error) => console.error('WebSocket error:', error);
+
+// When the connection is closed
+ws.onclose = () => {
+    console.log('WebSocket connection closed');
+    document.getElementById('response').textContent = 'WebSocket connection closed';
+};
+
+// Function to send a message to the server
+const sendMessage = (message = document.getElementById('message').value) => {
+    if (ws.readyState === WebSocket.OPEN) {
+    ws.send(message);
+    console.log('Sent:', message);
+    } else {
+    console.log('WebSocket is not open.');
+    }
+}
+
+function bufferToString(buf) {
+    return new TextDecoder('utf-8').decode(buf);
+}
+
+function constructStrokeMessage(id, x, y, timestamp) {
+    const buf = new ArrayBuffer(100);
+    const view = new DataView(buf);
+    view.setInt32(0, MESSAGE_SIZES.STROKE, false);
+    view.setUint8(4, STROKE, false);
+    view.setUint32(5, id, false);
+    view.setUint32(9, x, false);
+    view.setUint32(13, y, false);
+    view.setFloat64(17, timestamp, false);
+    return bufferToString(buf);
+}
+
+function constructChatMessage(id, timestamp, data) {
+    const buf = new ArrayBuffer(600);
+    const view = new DataView(buf);
+    view.setInt32(0, 600, false);
+    view.setUint8(4, CHAT, false);
+    view.setInt32(5, id, false);
+    view.setFloat64(9, timestamp, false);
+    for (let i = 17; i < data.length; ++i)
+    view.setUint8(i, data.charCodeAt(i-17) & 0xff, false);
+    for (let i = data.length; i < buf.byteLength; ++i)
+    view.setUint8(i, data.charCodeAt(i-17) & 0xff, false);
+    return bufferToString(buf);
+}
+
+function sendStroke() {
+    sendMessage(constructStrokeMessage(12, 31, 97, 139.0));
+}
+
+function sendChat() {
+    sendMessage(constructChatMessage(12, 0, "baa baa black sheep."));
+}

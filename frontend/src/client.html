@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Client</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      color: #333;
+    }
+    #message {
+      padding: 5px;
+      margin: 10px 0;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Connect to WebSocket on localhost:8887</h1>
+  <input id="message" type="text" placeholder="Type a message" />
+  <button onclick="sendMessage()">Send</button>
+  <button onclick="sendChat()">Send Chat Message</button>
+  <button onclick="sendStroke()">Send Stroke Message</button>
+  <p id="response">Waiting for connection...</p>
+  <script src="client.js"></script>
+</body>
+</html>

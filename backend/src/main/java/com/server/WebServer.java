@@ -8,45 +8,21 @@
 package com.server;
 
 import org.java_websocket.server.WebSocketServer;
+
+import com.server.Message.Chat;
+import com.server.Message.MessageType;
+import com.server.Message.Stroke;
+
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WebServer extends WebSocketServer {
-
-    public enum MessageType {
-        STROKE,
-        CHAT,
-        STATE,
-    };
-
-    record Stroke(int id, int x, int y, double timestamp) {
-        public Stroke(ByteBuffer buf) {
-            this(buf.getInt(0), buf.getInt(4), buf.getInt(8), buf.getInt(12));
-        }
-
-        public Stroke(byte[] msg) {
-            this(ByteBuffer.wrap(msg));
-        }
-    }
-
-    record Chat(int id, String data) {
-        public static Chat fromByteArray(byte[] msg) {
-            var buf = ByteBuffer.wrap(msg);
-            return new Chat(
-                    buf.getInt(1),
-                    new String(Arrays.copyOfRange(msg, 4, msg.length)));
-        }
-    }
-
-    record State(long id, long score) {
-    }
 
     private final Set<WebSocket> connectedClients = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
@@ -77,10 +53,9 @@ public class WebServer extends WebSocketServer {
                 System.out.println(new Stroke(raw));
                 break;
             case CHAT:
-                System.out.println(Chat.fromByteArray(raw));
+                System.out.println(new Chat(raw));
                 break;
-            case STATE:
-                System.out.println("Received a game state message.");
+            default:
                 break;
         }
         conn.send("You said: " + message);
