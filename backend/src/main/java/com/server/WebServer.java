@@ -45,7 +45,8 @@ public class WebServer extends WebSocketServer {
         User removedUser = connectedUsers.remove(conn);
 
         if (removedUser != null) {
-            System.out.println("User temporarily disconnected: " + removedUser.getUsername() + " (" + removedUser.getId() + ")");
+            System.out.println(
+                    "User temporarily disconnected: " + removedUser.getUsername() + " (" + removedUser.getId() + ")");
 
             // Move user to temporarily disconnected list
             temporarilyDisconnectedUsers.put(removedUser.getId(), removedUser);
@@ -114,7 +115,7 @@ public class WebServer extends WebSocketServer {
             }
             String gameCode = parts[1];
             String selectedWord = parts[2];
-    
+
             handleWordSelection(conn, gameCode, selectedWord);
         } else if (message.startsWith("/drawer-joined ")) {
             String gameCode = message.substring(15).trim();
@@ -123,33 +124,56 @@ public class WebServer extends WebSocketServer {
             String gameCode = message.substring(12).trim();
             Game game = activeGames.get(gameCode);
             if (game != null) {
-                startNewRound(game); 
+                startNewRound(game);
             }
         } else if (message.startsWith("/endgame ")) {
             String gameCode = message.split(" ")[1];
             handleEndGame(conn, gameCode);
+        } else if (message.startsWith("/chat ")) {
+            String[] parts = message.split(" ", 3);
+            String gameCode = parts[1];
+            String chatData = parts[2];
+            handleChat(conn, gameCode, chatData);
         } else {
             conn.send("Unknown command.");
         }
+    }
+
+    private void handleChat(WebSocket conn, String gameCode, String chatData) {
+        var game = activeGames.get(gameCode);
+        var gson = new Gson();
+        var chat = gson.fromJson(chatData, Chat.class);
+        var user = connectedUsers.get(conn);
+
+        chat.sender = user.getUsername();
+
+        game.addMessage(chat); // Clear after /new-round.
+        chat.correct = chat.text.equalsIgnoreCase(game.getWordToDraw());
+
+        // System.out.println("------------------------------------------------");
+        // System.out.println(chat.toString());
+        broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
+        // System.out.println("------------------------------------------------");
     }
 
     private void handleStartGame(WebSocket conn, String gameCode, String userId) {
         Game game = activeGames.get(gameCode);
         if (game != null) {
             List<User> players = game.getPlayers();
-            
+
             if (players.isEmpty()) {
                 conn.send("ERROR: No players in game.");
                 return;
             }
-    
+
             game.assignNextDrawer();
             User firstDrawer = game.getDrawer();
-    
+
             String startGameMessage = "GAME_STARTED: " + firstDrawer.getId();
             broadcastToGame(game, startGameMessage);
             System.out.println(startGameMessage);
-            System.out.println("Game started for game code: " + gameCode + ". First drawer is: " + firstDrawer.getUsername());
+            System.out.println(
+                    "Game started for game code: " + gameCode + ". First drawer is: " + firstDrawer.getUsername());
         }
     }
 
@@ -160,7 +184,7 @@ public class WebServer extends WebSocketServer {
             if (user != null) {
                 game.confirmEndGame(user.getId());
                 System.out.println("User " + user.getUsername() + " confirmed end game for " + gameCode);
-                
+
                 // Check if all players have confirmed
                 if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
                     activeGames.remove(gameCode);
@@ -181,17 +205,18 @@ public class WebServer extends WebSocketServer {
     }
 
     private void startNewRound(Game game) {
-        if (game == null) return;
+        if (game == null)
+            return;
 
         if (game.getCurrentRound() + 1 > Game.getMaxRounds()) { // Check if all rounds are done
             broadcastToGame(game, "GAME_OVER");
             System.out.println("All rounds complete. Waiting for players to exit.");
             return; // Do not clear players yet
         }
-    
+
         game.nextTurn(); // Move to the next round
         game.setTimeLeft(60); // Reset the round timer to 60 seconds
-    
+
         // Notify all players about the new round and new drawer
         broadcastToGame(game, "NEW_ROUND: " + game.getCurrentRound() + " DRAWER: " + game.getDrawer().getId());
     }
@@ -200,27 +225,28 @@ public class WebServer extends WebSocketServer {
      * game timer handled by server 
      */
     private void startRoundTimer(Game game) {
-        if (game == null) return;
-        
+        if (game == null)
+            return;
+
         game.setTimeLeft(60); // Reset timer for new round
 
         // game.setTimeLeft(5); // short timer for testing
-        
+
         // Ensure only one timer runs per game
         Timer roundTimer = new Timer();
-        
+
         roundTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 int timeLeft = game.getTimeLeft();
-                
+
                 if (timeLeft <= 0) {
                     roundTimer.cancel(); // Stop timer
                     broadcastToGame(game, "ROUND_OVER");
                     startNewRound(game); // Move to next round
                     return;
                 }
-                
+
                 game.setTimeLeft(timeLeft - 1);
                 broadcastToGame(game, "TIMER_UPDATE: " + game.getTimeLeft());
             }
@@ -240,7 +266,7 @@ public class WebServer extends WebSocketServer {
     private void handleReconnect(WebSocket conn, String userId) {
         System.out.println("\n========== HANDLE RECONNECT ==========");
         System.out.println("Attempting to reconnect user: " + userId);
-    
+
         // Check if user is already connected
         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
             if (entry.getValue().getId().equals(userId)) {
@@ -248,37 +274,37 @@ public class WebServer extends WebSocketServer {
                 return;
             }
         }
-    
+
         // Check if user is in temporarilyDisconnectedUsers
         if (temporarilyDisconnectedUsers.containsKey(userId)) {
             User existingUser = temporarilyDisconnectedUsers.remove(userId);
             connectedUsers.put(conn, existingUser);
             System.out.println("User reconnected: " + existingUser.getUsername() + " (" + userId + ")");
-    
+
             // Restore game if they were in one
             if (existingUser.getGameCode() != null && activeGames.containsKey(existingUser.getGameCode())) {
                 Game game = activeGames.get(existingUser.getGameCode());
-    
+
                 // Ensure user is added back to the game
                 if (!game.hasPlayer(existingUser)) {
                     game.addPlayer(existingUser);
                     System.out.println("Re-added " + existingUser.getUsername() + " to game: " + game.getGameCode());
                 }
-    
+
                 System.out.println("User " + existingUser.getUsername() + " was in game: " + game.getGameCode());
-    
+
                 // Instead of sending "RECONNECTED", immediately send updated player list
                 broadcastGamePlayers(game);
                 return;
             }
-    
+
             System.out.println("User was not in a game.");
             return;
         }
-    
+
         System.out.println("ERROR: User ID not found, unable to reconnect.");
         conn.send("ERROR: User ID not found.");
-    
+
         // Debugging logs
         System.out.println("Current connected users:");
         for (User user : connectedUsers.values()) {
@@ -307,20 +333,20 @@ public class WebServer extends WebSocketServer {
         Game game = activeGames.get(gameCode);
         System.out.println("Retrieving game: " + gameCode);
         System.out.println("Available games: " + activeGames.keySet());
-    
+
         if (game == null) {
             System.out.println("ERROR: Game not found.");
             conn.send("ERROR: Game not found.");
             return;
         }
-    
+
         User user = connectedUsers.get(conn);
         if (user == null) {
             System.out.println("ERROR: User not found.");
             conn.send("ERROR: User not found.");
             return;
         }
-    
+
         // Remove user from any previous game before joining the new one
         String previousGameCode = user.getGameCode();
         if (previousGameCode != null && !previousGameCode.equals(gameCode)) {
@@ -331,19 +357,19 @@ public class WebServer extends WebSocketServer {
                 System.out.println("Removed user " + user.getUsername() + " from previous game: " + previousGameCode);
             }
         }
-    
+
         if (game.isFull()) {
             System.out.println("ERROR: Game is full. Cannot add " + user.getUsername());
             conn.send("ERROR: Game is full.");
             return;
         }
-    
+
         game.addPlayer(user);
         user.setGameCode(gameCode); // Store the new game code
-    
+
         System.out.println("User " + user.getUsername() + " joined game: " + gameCode);
         broadcastGamePlayers(game);
-    
+
         conn.send("JOIN_SUCCESS:" + gameCode);
     }
 
@@ -366,13 +392,13 @@ public class WebServer extends WebSocketServer {
     private void broadcastGamePlayers(Game game) {
         String playersJson = game.getPlayersJson();
         String message = new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson));
-    
+
         System.out.println("\nBroadcasting updated player list for game: " + game.getGameCode());
         System.out.println("Players in game:");
         for (User player : game.getPlayers()) {
             System.out.println(" - " + player.getUsername() + " (ID: " + player.getId() + ")");
         }
-    
+
         for (User player : game.getPlayers()) {
             WebSocket conn = getConnectionByUser(player);
             if (conn != null) {
@@ -398,7 +424,7 @@ public class WebServer extends WebSocketServer {
             conn.send("ERROR: You must be connected first.");
             return;
         }
-    
+
         // Check if the user is in an existing game and remove them
         String previousGameCode = user.getGameCode();
         if (previousGameCode != null) {
@@ -409,18 +435,18 @@ public class WebServer extends WebSocketServer {
                 System.out.println("Removed user " + user.getUsername() + " from previous game: " + previousGameCode);
             }
         }
-    
+
         // Generate a new game code
         String gameCode = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         Game newGame = new Game(gameCode);
         newGame.addPlayer(user);
         activeGames.put(gameCode, newGame);
-    
+
         user.setGameCode(gameCode); // Store the gameCode in the user object
-    
+
         conn.send("GAME_CREATED:" + gameCode);
         broadcastGamePlayers(newGame);
-    
+
         System.out.println("New game created: " + gameCode + " by " + user.getUsername());
     }
 
@@ -455,7 +481,7 @@ public class WebServer extends WebSocketServer {
         Game game = activeGames.get(gameCode);
         if (game != null) {
             game.setCurrentWord(word);
-    
+
             // Notify all players that the word has been selected
             String message = "WORD_SELECTED: " + word;
             broadcastToGame(game, message);
@@ -468,7 +494,8 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
-        System.err.println("Error from " + (conn != null ? conn.getRemoteSocketAddress() : "Server") + ": " + ex.getMessage());
+        System.err.println(
+                "Error from " + (conn != null ? conn.getRemoteSocketAddress() : "Server") + ": " + ex.getMessage());
         ex.printStackTrace();
     }
 

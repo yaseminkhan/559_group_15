@@ -1,27 +1,98 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "../styles/GamePage.css";
+import { useWebSocket } from "../WebSocketContext.js"; // Externally defined WebSocket instance
+
+function constructChatMessage(sender, text) {
+  return {
+    sender,
+    text,
+    timestamp: performance.now(),
+    correct: false,
+  };
+}
+
 
 const ChatBox = ({ isDrawer, wordToDraw }) => {
-    // can be removed when chat functionality added 
-    const [messages, setMessages] = useState([
-        { sender: "Sarah", text: "Palm Tree"},
-        { sender: "John", text: "Idk"}
-    ]);
-    const [newMessage, setNewMessage] = useState("");
-    const senderName = "You"; 
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const gameCode = localStorage.getItem("gameCode");
+  const socket = useWebSocket(); // Using the external WebSocket instance
+  // const [username, setUsername] = useState("");
+  const username = useRef("");
+  const timestamp = useRef(0);
+  // const [timestamp, setTimestamp] = useState(0);
+  const alias = "You";
 
-    const handleKeyDown = (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (newMessage.trim() !== "") {
-                const isCorrect = newMessage.trim().toLowerCase() === wordToDraw.toLowerCase();
-                const displayText = isCorrect ? `${senderName} got it!` : newMessage;
+  // Create a ref for the input element
+  const inputRef = useRef(null);
 
-                setMessages([...messages, { sender: senderName, text: displayText, correct: isCorrect }]);
-                setNewMessage("");
-            }
+  useEffect(() => {
+
+    const deconstructMessage = (data) => {
+      data = data.split(" ", 3)[2];
+      return JSON.parse(data);
+    }
+
+    const debugPrint = (str) => {
+      console.log("------------------------------------------");
+      console.log(str);
+      console.log("------------------------------------------");
+    }
+
+    const handleMessage = (event) => {
+        if (!socket || !event.data.includes("/chat "))
+            return;
+        const msg = deconstructMessage(event.data);
+        if (username.current === "") {
+          if (msg.timestamp === timestamp.current) {
+            username.current = msg.sender;
+          }
         }
+        if (msg.sender !== username.current)
+          messages.push(msg);
+    }
+
+    socket.addEventListener("message", handleMessage);
+    return () => {
+      socket.removeEventListener("message", handleMessage);
+    }
+  }, [messages, socket, timestamp, username]);
+
+  // useEffect to attach a keydown listener to the input element
+  useEffect(() => {
+    
+    const handleKeyDown = (e) => {
+      // Check for the Enter key and no shift modifier
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault(); // Prevent default behavior, like newline insertion
+        if (newMessage.trim() === "") return; // Avoid sending empty messages
+
+        // Construct the chat message
+        const messageToSend = constructChatMessage(alias, newMessage);
+
+        // Send the message only if the WebSocket is open
+        if (!socket || socket.readyState !== WebSocket.OPEN)
+          console.log("WebSocket is not open.");
+        
+        if (username.current === "") {
+          timestamp.current = messageToSend.timestamp;
+        }
+
+        socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
+        messages.push(messageToSend);
+        console.log("Sent message:", newMessage);
+        setNewMessage("");
+      }
     };
+
+    const inputElem = inputRef.current;
+    if (inputElem)
+      inputElem.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      inputElem.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [newMessage, socket, gameCode, timestamp, username]);
 
   return (
     <div className="chat-background">
@@ -35,15 +106,17 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
       <div className="input-container">
         {!isDrawer ? (
           <input
+            ref={inputRef}
             type="text"
             className="text-box"
             placeholder="Enter a guess..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
           />
         ) : (
-          <div className="word-box">The word is: <strong>{wordToDraw}</strong></div>
+          <div className="word-box">
+            The word is: <strong>{wordToDraw}</strong>
+          </div>
         )}
       </div>
     </div>

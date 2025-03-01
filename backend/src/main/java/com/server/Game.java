@@ -2,7 +2,6 @@ package com.server;
 
 import java.util.*;
 import com.google.gson.Gson;
-import com.server.Words;
 
 /*
  * Game instance
@@ -20,8 +19,9 @@ public class Game {
     private String wordToDraw;
     private boolean gameStarted;
     private boolean gameEnded;
-    // private List<Stroke> strokes;
-    private List<String> chatMessages;
+    private List<Stroke> strokes;
+    // private List<String> chatMessages;
+    private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
 
@@ -29,19 +29,31 @@ public class Game {
      * constructor creates new instance of a game
      */
     public Game(String gameCode) {
-        this.gameCode = gameCode; 
+        this.gameCode = gameCode;
         this.players = new ArrayList<>();
         this.confirmedEndGame = new HashSet<>();
         this.drawnPlayers = new HashSet<>();
         this.round = 1;
         this.gameStarted = false;
         this.gameEnded = false;
-        // this.strokes = new ArrayList<>();
+        this.strokes = new ArrayList<>();
         this.chatMessages = new ArrayList<>();
         this.drawer = null;
         this.drawerIndex = -1;
         this.wordToDraw = Words.getRandomWord();
         this.timeLeft = 60;
+    }
+
+    public void addMessage(Chat message) {
+        chatMessages.add(message);
+    }
+
+    public String getWordToDraw() {
+        return wordToDraw;
+    }
+
+    public List<Stroke> getStrokes() {
+        return strokes;
     }
 
     /*
@@ -84,13 +96,13 @@ public class Game {
      * starts a new game 
      */
     public boolean startGame(User user) {
-        if (!players.isEmpty() && user.isHost()) { 
+        if (!players.isEmpty() && user.isHost()) {
             gameStarted = true;
             round = 1;
             assignNextDrawer();
             return true;
         }
-        return false;  // Game cannot start if not host
+        return false; // Game cannot start if not host
     }
 
     public Set<String> getDrawnPlayers() {
@@ -104,11 +116,11 @@ public class Game {
         if (players.isEmpty()) {
             return;
         }
-    
+
         if (drawer != null) {
             drawer.removeAsDrawer();
         }
-    
+
         // Case when only 2 players - allow alternating turns
         if (players.size() == 2) {
             drawerIndex = (drawerIndex + 1) % players.size();
@@ -118,7 +130,7 @@ public class Game {
             do {
                 drawerIndex = (drawerIndex + 1) % players.size();
             } while (drawnPlayers.contains(players.get(drawerIndex).getId()) && drawerIndex != startIndex);
-    
+
             // Mark the new drawer as having drawn
             drawnPlayers.add(players.get(drawerIndex).getId());
         }
@@ -134,7 +146,7 @@ public class Game {
     private String selectRandomWord() {
         return Words.getRandomWord();
     }
-    
+
     /*
      * Gets 4 random words to use - will implement later 
      */
