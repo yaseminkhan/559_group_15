@@ -17,14 +17,10 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
   const [newMessage, setNewMessage] = useState("");
   const gameCode = localStorage.getItem("gameCode");
   const socket = useWebSocket(); // Using the external WebSocket instance
-  // const [username, setUsername] = useState("");
   const username = useRef("");
   const timestamp = useRef(0);
-  // const [timestamp, setTimestamp] = useState(0);
   const alias = "You";
-
-  // Create a ref for the input element
-  const inputRef = useRef(null);
+  const inputRef = useRef(null); // Create a ref for the input element
 
   useEffect(() => {
 
