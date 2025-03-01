@@ -33,12 +33,6 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
       return JSON.parse(data);
     }
 
-    const debugPrint = (str) => {
-      console.log("------------------------------------------");
-      console.log(str);
-      console.log("------------------------------------------");
-    }
-
     const handleMessage = (event) => {
         if (!socket || !event.data.includes("/chat "))
             return;

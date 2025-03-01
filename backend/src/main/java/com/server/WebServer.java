@@ -147,13 +147,12 @@ public class WebServer extends WebSocketServer {
 
         chat.sender = user.getUsername();
 
-        game.addMessage(chat); // Clear after /new-round.
+        game.addMessage(chat); // Make sure to clear data after /new-round.
         chat.correct = chat.text.equalsIgnoreCase(game.getWordToDraw());
 
-        // System.out.println("------------------------------------------------");
-        // System.out.println(chat.toString());
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
-        // System.out.println("------------------------------------------------");
+        
+        
     }
 
     private void handleStartGame(WebSocket conn, String gameCode, String userId) {
