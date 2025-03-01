@@ -146,7 +146,16 @@ public class WebServer extends WebSocketServer {
             String json = parts[2];
 
             handleCanvasUpdate(conn, gameCode, json);
+        } else if (message.startsWith("/clear-canvas")) {
+            String gameCode = message.split(" ")[1];
+            Game game = activeGames.get(gameCode);
+            if (game != null) {
+                broadcastToGame(game, "CLEAR_CANVAS");
+            }
+        } else {
+            System.out.println("CANVAS CLEARED: " + message);
         }
+
     }
 
     private void handleStartGame(WebSocket conn, String gameCode, String userId) {

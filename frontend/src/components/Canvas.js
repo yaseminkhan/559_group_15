@@ -16,6 +16,9 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   const socket = useWebSocket();
   const gameCode = localStorage.getItem("gameCode");
 
+  // Buffer to store points
+  const pointBuffer = useRef([]);
+
   /**
    * Setup canvas context on component mount
    */
@@ -54,6 +57,11 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     const { offsetX, offsetY } = event.nativeEvent;
     setLastX(offsetX);
     setLastY(offsetY);
+
+    // reset for new storke 
+    const ctx = contextRef.current;
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY);
   };
 
   const draw = (event) => {
@@ -95,6 +103,10 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
     context.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (socket && gameCode && isDrawer) {
+      socket.send(`/clear-canvas ${gameCode}`);
+    }
   };
 
   useEffect(() => {
@@ -110,7 +122,9 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       if (event.data.startsWith("CANVAS_UPDATE")) {
         const jsonString = event.data.replace("CANVAS_UPDATE", "").trim();
         const pointData = JSON.parse(jsonString);
-        applyDrawing(pointData);
+        pointBuffer.current.push(pointData);
+      } else if (event.data.startsWith("CLEAR_CANVAS")) {
+        clearCanvas();
       }
     };
 
@@ -118,38 +132,36 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     return () => socket.removeEventListener("message", handleMessage);
   }, [socket]);
 
+  // Process the buffer at regular intervals
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (pointBuffer.current.length > 0) {
+        const points = pointBuffer.current.splice(0, pointBuffer.current.length);
+        points.forEach(point => applyDrawing(point));
+      }
+    }, 16); //16ms
+
+    return () => clearInterval(interval);
+  }, []);
+
   const applyDrawing = (point) => {
- 
     const ctx = contextRef.current;
     const prevColor = ctx.strokeStyle;
     const prevWidth = ctx.lineWidth;
-  
+
     // Use the incoming style
     ctx.strokeStyle = point.color;
     ctx.lineWidth = point.width;
-  
-    // Retrieve the last remote position (rx, ry)
-    const { x: rx, y: ry } = lastPos.current;
-  
-    // If this is the first remote point, just move to it
-    if (rx == null || ry == null) {
-      ctx.beginPath();
-      ctx.moveTo(point.x, point.y);
-    } else {
-      // Draw from the last remote point to this new one
-      ctx.beginPath();
-      ctx.moveTo(rx, ry);
-      ctx.lineTo(point.x, point.y);
-      ctx.stroke();
-  
-      // Reposition the pen
-      ctx.beginPath();
-      ctx.moveTo(point.x, point.y);
-    }
-  
+
+    // Draw a small circle at the new point
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, point.width / 2, 0, Math.PI * 2);
+    ctx.fillStyle = point.color;
+    ctx.fill();
+
     // Update remoteLastPos to the new point
     lastPos.current = { x: point.x, y: point.y };
-  
+
     // Restore style
     ctx.strokeStyle = prevColor;
     ctx.lineWidth = prevWidth;
