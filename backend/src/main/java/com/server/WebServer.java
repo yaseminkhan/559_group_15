@@ -147,12 +147,9 @@ public class WebServer extends WebSocketServer {
 
         chat.sender = user.getUsername();
 
-        game.addMessage(chat); // Make sure to clear data after /new-round.
-        chat.correct = chat.text.equalsIgnoreCase(game.getWordToDraw());
+        chat = game.addMessage(chat); // Make sure to clear data after /new-round.
 
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
-        
-        
     }
 
     private void handleStartGame(WebSocket conn, String gameCode, String userId) {
@@ -239,7 +236,8 @@ public class WebServer extends WebSocketServer {
             public void run() {
                 int timeLeft = game.getTimeLeft();
 
-                if (timeLeft <= 0) {
+                // Stop timer if all players guessed or timer runs out.
+                if (timeLeft <= 0 || game.allPlayersGuessed()) {
                     roundTimer.cancel(); // Stop timer
                     broadcastToGame(game, "ROUND_OVER");
                     startNewRound(game); // Move to next round

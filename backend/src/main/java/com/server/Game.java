@@ -52,19 +52,26 @@ public class Game {
         return total;
     }
 
-    public Chat addMessage(Chat message) {
-        User p = null;
+    public User getUserByName(String username) {
+        User ret = null;
         for (var player : players) {
-            if (player.getUsername().equals(message.sender)) {
-                p = player;
+            if (player.getUsername().equals(username)) {
+                ret = player;
                 break;
             }
         }
-        if (!p.getAlreadyGuessed() && message.text.equalsIgnoreCase(wordToDraw)) {
-            p.setScore(p.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
-            p.setAlreadyGuessed(true);
+        return ret;
+    }
+
+    public Chat addMessage(Chat message) {
+        var user = getUserByName(message.sender);
+
+        if (!user.getAlreadyGuessed() && message.text.equalsIgnoreCase(wordToDraw)) {
+            user.setScore(user.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
+            user.setAlreadyGuessed(true);
             message.correct = true;
         }
+
         chatMessages.add(message);
         System.out.println("----------------SCORE BOARD-------------------");
         for (var player : players) {
@@ -108,8 +115,17 @@ public class Game {
         return players.contains(player);
     }
 
+    /*
+     * Checks if all players have guessed correctly.
+     */
     public boolean allPlayersGuessed() {
-        return players.stream().allMatch(User::getAlreadyGuessed);
+        for (var player : players) {
+            if (player.isDrawer())
+                continue;
+            if (!player.getAlreadyGuessed())
+                return false;
+        }
+        return true;
     }
 
     /*
