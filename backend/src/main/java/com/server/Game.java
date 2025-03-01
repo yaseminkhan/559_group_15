@@ -44,8 +44,34 @@ public class Game {
         this.timeLeft = 60;
     }
 
-    public void addMessage(Chat message) {
+    private int getPlayersAlreadyGuessed() {
+        int total = 0;
+        for (var player : players)
+            if (player.getAlreadyGuessed())
+                ++total;
+        return total;
+    }
+
+    public Chat addMessage(Chat message) {
+        User p = null;
+        for (var player : players) {
+            if (player.getUsername().equals(message.sender)) {
+                p = player;
+                break;
+            }
+        }
+        if (!p.getAlreadyGuessed() && message.text.equalsIgnoreCase(wordToDraw)) {
+            p.setScore(p.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
+            p.setAlreadyGuessed(true);
+            message.correct = true;
+        }
         chatMessages.add(message);
+        System.out.println("----------------SCORE BOARD-------------------");
+        for (var player : players) {
+            System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
+        }
+        System.out.println("----------------------------------------------");
+        return message;
     }
 
     public String getWordToDraw() {
@@ -79,12 +105,16 @@ public class Game {
      * Checks if the given player is already in the game.
      */
     public boolean hasPlayer(User player) {
-        return players.contains(player);  
+        return players.contains(player);
+    }
+
+    public boolean allPlayersGuessed() {
+        return players.stream().allMatch(User::getAlreadyGuessed);
     }
 
     /*
      * Removes player from game and handles situation where the lost player is the drawer 
-     */    
+     */
     public void removePlayer(User player) {
         players.remove(player);
         if (player.isDrawer()) {
@@ -92,11 +122,19 @@ public class Game {
         }
     }
 
+    // private void resetRoundPoints() {
+    //     roundPoints = IntStream
+    //             .range(0, players.size())
+    //             .reduce((x, y) -> x + (1 << y))
+    //             .getAsInt();
+    // }
+
     /*
      * starts a new game 
      */
     public boolean startGame(User user) {
         if (!players.isEmpty() && user.isHost()) {
+            // resetRoundPoints();
             gameStarted = true;
             round = 1;
             assignNextDrawer();
@@ -162,7 +200,7 @@ public class Game {
             endGame();
             return;
         }
-    
+
         round++; // Increase round count
         System.out.println("Starting round " + round);
         assignNextDrawer(); // Assign new drawer
@@ -196,14 +234,14 @@ public class Game {
     public void setTimeLeft(int time) {
         this.timeLeft = time;
     }
-    
+
     /*
      * Converts player list to JSON format for frontend.
      */
     public String getPlayersJson() {
         Gson gson = new Gson();
         List<Map<String, Object>> playerList = new ArrayList<>();
-    
+
         for (User player : players) {
             Map<String, Object> playerData = new HashMap<>();
             playerData.put("id", player.getId());
@@ -211,7 +249,7 @@ public class Game {
             playerData.put("icon", player.getIcon());
             playerData.put("score", player.getScore());
             playerData.put("isDrawer", player.isDrawer());
-            playerData.put("isHost", player.isHost());  
+            playerData.put("isHost", player.isHost());
             playerList.add(playerData);
         }
         return gson.toJson(playerList);
@@ -226,17 +264,37 @@ public class Game {
         for (User player : players) {
             System.out.println(player.getUsername() + ": " + player.getScore() + " points");
         }
-        players.clear();  
+        players.clear();
     }
 
     // functions to get game information 
-    public boolean isFull() {return players.size() >= MAX_PLAYERS;}
-    public boolean hasEnded() {return gameEnded;}
-    public int getCurrentRound() {return round;}
-    public String getGameCode() {return this.gameCode;}
-    public User getDrawer() {return this.drawer; }
-    public int getTimeLeft() { return this.timeLeft; }
-    public static int getMaxRounds() {return MAX_ROUNDS; }
+    public boolean isFull() {
+        return players.size() >= MAX_PLAYERS;
+    }
+
+    public boolean hasEnded() {
+        return gameEnded;
+    }
+
+    public int getCurrentRound() {
+        return round;
+    }
+
+    public String getGameCode() {
+        return this.gameCode;
+    }
+
+    public User getDrawer() {
+        return this.drawer;
+    }
+
+    public int getTimeLeft() {
+        return this.timeLeft;
+    }
+
+    public static int getMaxRounds() {
+        return MAX_ROUNDS;
+    }
 
     /*
      * set current word
