@@ -11,9 +11,8 @@ import java.util.UUID;
 public class User {
     // list of emojis to randomly assign to users 
     private static final List<String> EMOJIS = Arrays.asList(
-        "🐌", "🌵", "😃", "☀️", "🦃", "💬", "📚", "🥶",
-        "🚀", "🎸", "🎨", "⚡", "🎭", "🍕", "🐙"
-    );
+            "🐌", "🌵", "😃", "☀️", "🦃", "💬", "📚", "🥶",
+            "🚀", "🎸", "🎨", "⚡", "🎭", "🍕", "🐙");
 
     private String id;
     private String username;
@@ -21,18 +20,43 @@ public class User {
     private int score;
     private boolean isDrawer;
     private boolean isHost;
+    private boolean alreadyGuessed; // Guessed correctly.
     private String gameCode;
 
     /*
      * Contructor to create a new user 
      */
-    public User(String username){
-        this.id = UUID.randomUUID().toString(); 
+    public User(String username) {
+        this.id = UUID.randomUUID().toString();
         this.username = username;
         this.icon = getRandomEmoji();
         this.score = 0;
         this.isDrawer = false; // default
         this.isHost = false; // default
+        this.alreadyGuessed = false;
+    }
+
+    /*
+     * Check if the user has already guessed correctly.
+     */
+    public boolean getAlreadyGuessed() {
+        return alreadyGuessed;
+    }
+
+    /*
+     * Set the alreadyGuessed value.
+     */
+    public void setAlreadyGuessed(boolean val) {
+        alreadyGuessed = val;
+    }
+
+    /*
+     * Set user score.
+     */
+    public void setScore(int value) {
+        if (value < 0)
+            throw new IllegalArgumentException("Can't assign negative score to player");
+        score = value;
     }
 
     /*
@@ -51,20 +75,54 @@ public class User {
     }
 
     // functions to return information about users 
-    public String getId() { return id; }
-    public String getUsername() { return username; }
-    public String getIcon() { return icon; }
-    public int getScore() { return score; }
-    public boolean isDrawer() { return isDrawer; }
-    public boolean isHost() { return isHost; }
-    public String getGameCode() {return gameCode; }
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public boolean isDrawer() {
+        return isDrawer;
+    }
+
+    public boolean isHost() {
+        return isHost;
+    }
+
+    public String getGameCode() {
+        return gameCode;
+    }
 
     // functions to modify users points and assign a drawer 
-    public void setDrawer() { this.isDrawer = true; }
-    public void removeAsDrawer() { this.isDrawer = false; }
-    public void addPoints(int points) { this.score += points; }
-    public void setHost() { this.isHost = true; } 
-    public void setGameCode(String gameCode) { this.gameCode = gameCode; }
+    public void setDrawer() {
+        this.isDrawer = true;
+    }
+
+    public void removeAsDrawer() {
+        this.isDrawer = false;
+    }
+
+    public void addPoints(int points) {
+        this.score += points;
+    }
+
+    public void setHost() {
+        this.isHost = true;
+    }
+
+    public void setGameCode(String gameCode) {
+        this.gameCode = gameCode;
+    }
 
     // helps printing users for debugging 
     @Override
