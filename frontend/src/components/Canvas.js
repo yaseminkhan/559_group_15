@@ -11,6 +11,8 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   const [lastX, setLastX] = useState(null);
   const [lastY, setLastY] = useState(null);
 
+  const [lastIndex, setLastIndex] = useState(0);
+
   const lastPos = useRef({ x: null, y: null });
 
   const socket = useWebSocket();
@@ -37,19 +39,15 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     contextRef.current = context;
   }, []);
 
-  /**
-   * Color Change
-   */
-
+  // Color Change
   useEffect(() => {
     if (contextRef.current) {
       contextRef.current.strokeStyle = selectedColour;
     }
   }, [selectedColour]);
 
-  /**
-   * Start Drawing Function  - sets the drawing state to true and sets the last x and y coordinates
-   */
+  
+  //Start Drawing
   const startDrawing = (event) => {
     if (!isDrawer) return; 
     setDrawing(true);
@@ -58,10 +56,20 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     setLastX(offsetX);
     setLastY(offsetY);
 
-    // reset for new storke 
     const ctx = contextRef.current;
     ctx.beginPath();
     ctx.moveTo(offsetX, offsetY);
+
+    if (socket && gameCode) {
+      const pointData = {
+        x: offsetX,
+        y: offsetY,
+        color: ctx.strokeStyle,
+        width: ctx.lineWidth,
+        newStroke: true,
+      };
+      socket.send(`/canvas-update ${gameCode} ${JSON.stringify(pointData)}`);
+    }
   };
 
   const draw = (event) => {
@@ -84,6 +92,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         y: offsetY,
         color: ctx.strokeStyle,
         width: ctx.lineWidth,
+        newStroke: false,
       };
       socket.send(`/canvas-update ${gameCode} ${JSON.stringify(pointData)}`);
     }
@@ -104,6 +113,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     const context = canvas.getContext("2d");
     context.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Send clear-canvas message to server
     if (socket && gameCode && isDrawer) {
       socket.send(`/clear-canvas ${gameCode}`);
     }
@@ -116,56 +126,95 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   }, [clearCanvasRef]);
   
   useEffect(() => {
-    if (!socket || isDrawer) return;
+    if (!socket) return;
 
     const handleMessage = (event) => {
-      if (event.data.startsWith("CANVAS_UPDATE")) {
-        const jsonString = event.data.replace("CANVAS_UPDATE", "").trim();
-        const pointData = JSON.parse(jsonString);
-        pointBuffer.current.push(pointData);
-      } else if (event.data.startsWith("CLEAR_CANVAS")) {
-        clearCanvas();
+      const data = event.data;
+
+      if (data.startsWith("CANVAS_HISTORY")) {
+        const parts = data.split(" ", 4);
+        const newIndex = parseInt(parts[1], 10);
+        const prefix = `CANVAS_HISTORY ${parts[1]} `;
+        const jsonString = data.substring(prefix.length);
+        const strokes = JSON.parse(jsonString);
+
+        strokes.forEach((stroke) => {
+          applyDrawing(stroke);
+        });
+        setLastIndex(newIndex);
+      } else if (data.startsWith("CANVAS_CLEAR")) {
+        const canvas = canvasRef.current;
+        const context = canvas.getContext("2d");
+        context.clearRect(0, 0, canvas.width, canvas.height);
       }
     };
 
     socket.addEventListener("message", handleMessage);
-    return () => socket.removeEventListener("message", handleMessage);
+    return () => {
+      socket.removeEventListener("message", handleMessage);
+    };
   }, [socket]);
 
-  // Process the buffer at regular intervals
+  // Request Canvas Data In Intervals and Refresh Canvas with New Data
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (pointBuffer.current.length > 0) {
-        const points = pointBuffer.current.splice(0, pointBuffer.current.length);
-        points.forEach(point => applyDrawing(point));
-      }
-    }, 16); //16ms
+    if (!socket) return;
 
-    return () => clearInterval(interval);
-  }, []);
+    if (socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    
+    if (socket || !isDrawer) {
+      const intervalId = setInterval(() => {
+        socket.send(`/getcanvas ${gameCode} ${lastIndex}`);
+      }, 100); // 16 ms
+      return () => clearInterval(intervalId);
+    }
 
+    //refresh canvas
+    const ctx = contextRef.current;
+    pointBuffer.current.forEach((point) => {
+      applyDrawing(point);
+    });
+
+  }, [socket, gameCode, lastIndex]);
+  
+ 
   const applyDrawing = (point) => {
     const ctx = contextRef.current;
+    
+    // If the point marks the beginning of a new stroke, reset the last position
+    if (point.newStroke) {
+      lastPos.current = { x: null, y: null };
+    }
+    
+    // Save current drawing settings
     const prevColor = ctx.strokeStyle;
     const prevWidth = ctx.lineWidth;
-
-    // Use the incoming style
+    
     ctx.strokeStyle = point.color;
     ctx.lineWidth = point.width;
-
-    // Draw a small circle at the new point
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, point.width / 2, 0, Math.PI * 2);
-    ctx.fillStyle = point.color;
-    ctx.fill();
-
-    // Update remoteLastPos to the new point
+  
+    // If there is a previous point, draw a line; otherwise, draw a dot
+    if (lastPos.current.x != null && lastPos.current.y != null) {
+      ctx.beginPath();
+      ctx.moveTo(lastPos.current.x, lastPos.current.y);
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, point.width / 2, 0, Math.PI * 2);
+      ctx.fillStyle = point.color;
+      ctx.fill();
+    }
+    
+    // Update the last position
     lastPos.current = { x: point.x, y: point.y };
-
-    // Restore style
+  
+    // Restore previous drawing settings
     ctx.strokeStyle = prevColor;
     ctx.lineWidth = prevWidth;
   };
+  
 
   return (
     <canvas
