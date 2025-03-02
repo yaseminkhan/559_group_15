@@ -129,6 +129,10 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("/endgame ")) {
             String gameCode = message.split(" ")[1];
             handleEndGame(conn, gameCode);
+        } else if (message.startsWith("/chat-history ")) {
+            String[] parts = message.split(" ", 2);
+            String gameCode = parts[1];
+            handleChatRequest(conn, gameCode);
         } else if (message.startsWith("/chat ")) {
             String[] parts = message.split(" ", 3);
             String gameCode = parts[1];
@@ -137,6 +141,14 @@ public class WebServer extends WebSocketServer {
         } else {
             conn.send("Unknown command.");
         }
+    }
+
+    private void handleChatRequest(WebSocket conn, String gameCode) {
+        var game = activeGames.get(gameCode);
+        var gson = new Gson();
+        var chat = game.getChatMessages();
+        // System.out.println(chat);
+        conn.send("HISTORY: " + gson.toJson(chat));
     }
 
     private void handleChat(WebSocket conn, String gameCode, String chatData) {

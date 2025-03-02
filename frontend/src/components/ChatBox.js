@@ -26,28 +26,53 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
 
   useEffect(() => {
 
-    const deconstructMessage = (data) => {
-      data = data.split(" ", 3)[2];
-      return JSON.parse(data);
-    }
+    // const deconstructMessage = (data) => {
+    //   data = data.split(" ", 3)[2];
+    //   return JSON.parse(data);
+    // }
 
     handleMessage.current = (e) => {
-        if (!socket || !e.data.includes("/chat "))
+
+        if (!socket)
             return;
         
         // Clear chat when starting new round.
-        if (e.data.includes("NEW_ROUND: ")) {
-          setMessages([]);
-        } else {
-          const msg = deconstructMessage(e.data);
+        // if (e.data.includes("NEW_ROUND: ")) {
+        //   setMessages([]);
+        // } else
 
-          if (username.current === "" && msg.timestamp === timestamp.current)
-              username.current = msg.sender;
+        if (e.data.startsWith("HISTORY: ")) {
+          const chat = e.data.split(" ", 2)[1];
+          // console.log("===============================================")
+          // console.log(chat);
+          // console.log("===============================================")
+          const messages = JSON.parse(chat);
 
-          if (msg.sender === username.current)
-            msg.sender = alias;
-          setMessages((prevMessages) => [...prevMessages, msg]);
+          if (username.current === "") {
+            for (const message of messages) {
+              if (message.timestamp === timestamp.current)
+                  username.current = message.sender;
+            }
+          }
+
+          messages.forEach((msg) => {
+            if (msg.sender === username.current) {
+              msg.sender = alias;
+            }
+          });
+
+          setMessages(messages);
         }
+        // } else {
+        //   const msg = deconstructMessage(e.data);
+
+        //   if (username.current === "" && msg.timestamp === timestamp.current)
+        //       username.current = msg.sender;
+
+        //   if (msg.sender === username.current)
+        //     msg.sender = alias;
+        //   setMessages((prevMessages) => [...prevMessages, msg]);
+        // }
     };
 
     socket.addEventListener("message", handleMessage.current);
@@ -55,6 +80,18 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
       socket.removeEventListener("message", handleMessage.current);
     }
   }, [socket, timestamp, username, handleMessage]);
+
+  useEffect(() => {
+    const interval = 200;  // 200ms polling interval.
+    const getChatHistory = () => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(`/chat-history ${gameCode}`)
+      }
+    };
+
+    const intervalId = setInterval(getChatHistory, interval);
+    return () => clearInterval(intervalId);
+  }, [socket, gameCode]);
 
   // useEffect to attach a keydown listener to the input element
   useEffect(() => {
@@ -82,12 +119,12 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
     };
 
     const inputElem = inputRef.current;
-    if (inputElem)
+    if (inputElem !== null) {
       inputElem.addEventListener("keydown", handleKeyDown.current);
-
-    return () => {
-      inputElem.removeEventListener("keydown", handleKeyDown.current);
-    };
+      return () => {
+        inputElem.removeEventListener("keydown", handleKeyDown.current);
+      };
+    }
   }, [newMessage, socket, gameCode, timestamp, username, handleKeyDown]);
 
   return (
