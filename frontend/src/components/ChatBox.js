@@ -21,6 +21,8 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
   const timestamp = useRef(0);
   const alias = "You";
   const inputRef = useRef(null); // Create a ref for the input element
+  const handleMessage = useRef(null); // Function ref.
+  const handleKeyDown = useRef(null); // Function ref.
 
   useEffect(() => {
 
@@ -29,29 +31,35 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
       return JSON.parse(data);
     }
 
-    const handleMessage = (event) => {
-        if (!socket || !event.data.includes("/chat "))
+    handleMessage.current = (e) => {
+        if (!socket || !e.data.includes("/chat "))
             return;
-        const msg = deconstructMessage(event.data);
-        if (username.current === "") {
-          if (msg.timestamp === timestamp.current) {
-            username.current = msg.sender;
-          }
-        }
-        if (msg.sender !== username.current)
-          messages.push(msg);
-    }
+        
+        // Clear chat when starting new round.
+        if (e.data.includes("NEW_ROUND: ")) {
+          setMessages([]);
+        } else {
+          const msg = deconstructMessage(e.data);
 
-    socket.addEventListener("message", handleMessage);
+          if (username.current === "" && msg.timestamp === timestamp.current)
+              username.current = msg.sender;
+
+          if (msg.sender === username.current)
+            msg.sender = alias;
+          setMessages((prevMessages) => [...prevMessages, msg]);
+        }
+    };
+
+    socket.addEventListener("message", handleMessage.current);
     return () => {
-      socket.removeEventListener("message", handleMessage);
+      socket.removeEventListener("message", handleMessage.current);
     }
-  }, [messages, socket, timestamp, username]);
+  }, [socket, timestamp, username, handleMessage]);
 
   // useEffect to attach a keydown listener to the input element
   useEffect(() => {
     
-    const handleKeyDown = (e) => {
+    handleKeyDown.current = (e) => {
       // Check for the Enter key and no shift modifier
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault(); // Prevent default behavior, like newline insertion
@@ -64,12 +72,10 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         if (!socket || socket.readyState !== WebSocket.OPEN)
           console.log("WebSocket is not open.");
         
-        if (username.current === "") {
+        if (username.current === "")
           timestamp.current = messageToSend.timestamp;
-        }
 
         socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
-        messages.push(messageToSend);
         console.log("Sent message:", newMessage);
         setNewMessage("");
       }
@@ -77,12 +83,12 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
 
     const inputElem = inputRef.current;
     if (inputElem)
-      inputElem.addEventListener("keydown", handleKeyDown);
+      inputElem.addEventListener("keydown", handleKeyDown.current);
 
     return () => {
-      inputElem.removeEventListener("keydown", handleKeyDown);
+      inputElem.removeEventListener("keydown", handleKeyDown.current);
     };
-  }, [newMessage, socket, gameCode, timestamp, username]);
+  }, [newMessage, socket, gameCode, timestamp, username, handleKeyDown]);
 
   return (
     <div className="chat-background">
