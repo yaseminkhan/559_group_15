@@ -52,6 +52,12 @@ public class Game {
         return total;
     }
 
+    public void resetForRound() {
+        chatMessages.clear();
+        for (var player : players)
+            player.setAlreadyGuessed(false);
+    }
+
     public User getUserByName(String username) {
         User ret = null;
         for (var player : players) {

@@ -204,6 +204,8 @@ public class WebServer extends WebSocketServer {
         if (game == null)
             return;
 
+        game.resetForRound();
+
         if (game.getCurrentRound() + 1 > Game.getMaxRounds()) { // Check if all rounds are done
             broadcastToGame(game, "GAME_OVER");
             System.out.println("All rounds complete. Waiting for players to exit.");
