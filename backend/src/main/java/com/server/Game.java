@@ -324,4 +324,8 @@ public class Game {
     public void setCurrentWord(String word) {
         this.wordToDraw = word;
     }
+
+    public Object getChatMessages() {
+        return chatMessages;
+    }
 }
