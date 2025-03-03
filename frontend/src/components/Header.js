@@ -19,6 +19,9 @@ const Header = ({ isChoosingWord, gameCode }) => {
         const handleMessage = (event) => {
             console.log("WebSocket message:", event.data);
 
+            if (event.data.startsWith("HISTORY: ") || event.data.startsWith("/chat"))
+                return;
+
             try {
                 const message = JSON.parse(event.data);
 
