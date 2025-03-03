@@ -19,8 +19,6 @@ const Header = ({ isChoosingWord, gameCode }) => {
         const handleMessage = (event) => {
             console.log("WebSocket message:", event.data);
 
-            if (event.data.startsWith("HISTORY: ") || event.data.startsWith("/chat"))
-                return;
 
             try {
                 const message = JSON.parse(event.data);
@@ -30,7 +28,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
                     setPlayers(JSON.parse(message.data)); // Update players
                 }
             } catch (error) {
-                console.error("Error parsing WebSocket message:", error);
+                // console.error("Error parsing WebSocket message:", error);
             }
         };
 
@@ -40,6 +38,17 @@ const Header = ({ isChoosingWord, gameCode }) => {
             socket.removeEventListener("message", handleMessage);
         };
     }, [socket, gameCode]);
+
+
+    useEffect(() => {
+        const interval = 200;  // 200ms polling interval.
+        const getPlayers = () => {
+            if (socket && socket.readyState === WebSocket.OPEN)
+                socket.send(`/getgame ${gameCode}`);
+        }
+        const intervalId = setInterval(getPlayers, interval);
+        return () => clearInterval(intervalId);
+    }, [players, gameCode])
 
     // timer use effect
     useEffect(() => {
@@ -70,7 +79,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
             <div className="player-container">
                 {players.map((player, index) => (
                     <div key={index} className="player">
-                        {player.score === highestScore && player.score !== 0 && <FontAwesomeIcon icon={faCrown} className="crown" />}
+                        {player.score === highestScore && player.score !== 0 && <FontAwesomeIcon icon={faCrown} className="crown"/>}
                         <span className="avatar">{player.icon || "❓"}</span>
                         <span className="name">{player.username || "Unknown"}</span>
                         <span className="score">{player.score !== undefined ? `${player.score} pts` : "No score"}</span>
