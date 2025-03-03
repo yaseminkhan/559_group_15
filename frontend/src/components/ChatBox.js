@@ -35,19 +35,12 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
 
         if (!socket)
             return;
-        
-        // Clear chat when starting new round.
-        // if (e.data.includes("NEW_ROUND: ")) {
-        //   setMessages([]);
-        // } else
 
         if (e.data.startsWith("HISTORY: ")) {
-          const chat = e.data.split(" ", 2)[1];
-          // console.log("===============================================")
-          // console.log(chat);
-          // console.log("===============================================")
+          const i = e.data.indexOf(" ");
+          const chat = e.data.slice(i + 1)
           const messages = JSON.parse(chat);
-
+          
           if (username.current === "") {
             for (const message of messages) {
               if (message.timestamp === timestamp.current)
@@ -58,21 +51,13 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
           messages.forEach((msg) => {
             if (msg.sender === username.current) {
               msg.sender = alias;
+              if (msg.correct)
+                msg.text = msg.text.replace(username.current, alias);  // Show up as "You" guessed correctly.
             }
           });
 
           setMessages(messages);
         }
-        // } else {
-        //   const msg = deconstructMessage(e.data);
-
-        //   if (username.current === "" && msg.timestamp === timestamp.current)
-        //       username.current = msg.sender;
-
-        //   if (msg.sender === username.current)
-        //     msg.sender = alias;
-        //   setMessages((prevMessages) => [...prevMessages, msg]);
-        // }
     };
 
     socket.addEventListener("message", handleMessage.current);

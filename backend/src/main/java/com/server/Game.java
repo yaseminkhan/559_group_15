@@ -19,13 +19,11 @@ public class Game {
     private String wordToDraw;
     private boolean gameStarted;
     private boolean gameEnded;
-    // private List<String> chatMessages;
     private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
 
     private List<CanvasUpdate> canvasHistory;
-
 
     /*
      * constructor creates new instance of a game
@@ -75,13 +73,16 @@ public class Game {
     public Chat addMessage(Chat message) {
         var user = getUserByName(message.sender);
 
-        if (!user.getAlreadyGuessed() && message.text.equalsIgnoreCase(wordToDraw)) {
-            user.setScore(user.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
-            user.setAlreadyGuessed(true);
-            message.correct = true;
+        if (!user.getAlreadyGuessed()) {
+            if (message.text.equalsIgnoreCase(wordToDraw)) {
+                user.setScore(user.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
+                user.setAlreadyGuessed(true);
+                message.text = user.getUsername() + " guessed correctly!"; // Text is just modified to say the user guessed correctly.
+                message.correct = true;
+            }
+            chatMessages.add(message); // Messages are only added when someone hasn't yet guessed correctly.
         }
 
-        chatMessages.add(message);
         System.out.println("----------------SCORE BOARD-------------------");
         for (var player : players) {
             System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
@@ -328,9 +329,9 @@ public class Game {
         return chatMessages;
     }
 
-     /*
-     * Canvas History Functions
-     */
+    /*
+    * Canvas History Functions
+    */
     public void addCanvasUpdate(CanvasUpdate update) {
         canvasHistory.add(update);
     }
@@ -342,6 +343,7 @@ public class Game {
     public void clearCanvasHistory() {
         canvasHistory.clear();
     }
+
     // Class for CanvasUpdate
     public static class CanvasUpdate {
         private double x;
@@ -358,10 +360,24 @@ public class Game {
             this.newStroke = newStroke;
         }
 
-        public double getX() { return x; }
-        public double getY() { return y; }
-        public String getColor() { return color; }
-        public double getWidth() { return width; }    
-        public boolean getNewStroke() { return newStroke; }    
+        public double getX() {
+            return x;
+        }
+
+        public double getY() {
+            return y;
+        }
+
+        public String getColor() {
+            return color;
+        }
+
+        public double getWidth() {
+            return width;
+        }
+
+        public boolean getNewStroke() {
+            return newStroke;
+        }
     }
 }
