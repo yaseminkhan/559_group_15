@@ -26,11 +26,6 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
 
   useEffect(() => {
 
-    // const deconstructMessage = (data) => {
-    //   data = data.split(" ", 3)[2];
-    //   return JSON.parse(data);
-    // }
-
     handleMessage.current = (e) => {
 
         if (!socket)
@@ -40,7 +35,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
           const i = e.data.indexOf(" ");
           const chat = e.data.slice(i + 1)
           const messages = JSON.parse(chat);
-          
+
           if (username.current === "") {
             for (const message of messages) {
               if (message.timestamp === timestamp.current)
