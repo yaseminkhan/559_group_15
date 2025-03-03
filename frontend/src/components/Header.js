@@ -23,7 +23,6 @@ const Header = ({ isChoosingWord, gameCode }) => {
                 return;
 
             try {
-
                 const message = JSON.parse(event.data);
 
                 if (message.type === "GAME_PLAYERS") {

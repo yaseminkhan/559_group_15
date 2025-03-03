@@ -19,11 +19,13 @@ public class Game {
     private String wordToDraw;
     private boolean gameStarted;
     private boolean gameEnded;
-    private List<Stroke> strokes;
     // private List<String> chatMessages;
     private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
+
+    private List<CanvasUpdate> canvasHistory;
+
 
     /*
      * constructor creates new instance of a game
@@ -36,12 +38,13 @@ public class Game {
         this.round = 1;
         this.gameStarted = false;
         this.gameEnded = false;
-        this.strokes = new ArrayList<>();
         this.chatMessages = new ArrayList<>();
         this.drawer = null;
         this.drawerIndex = -1;
         this.wordToDraw = Words.getRandomWord();
         this.timeLeft = 60;
+        this.canvasHistory = new ArrayList<>();
+
     }
 
     private int getPlayersAlreadyGuessed() {
@@ -89,10 +92,6 @@ public class Game {
 
     public String getWordToDraw() {
         return wordToDraw;
-    }
-
-    public List<Stroke> getStrokes() {
-        return strokes;
     }
 
     /*
@@ -327,5 +326,42 @@ public class Game {
 
     public Object getChatMessages() {
         return chatMessages;
+    }
+
+     /*
+     * Canvas History Functions
+     */
+    public void addCanvasUpdate(CanvasUpdate update) {
+        canvasHistory.add(update);
+    }
+
+    public List<CanvasUpdate> getCanvasHistory() {
+        return new ArrayList<>(canvasHistory);
+    }
+
+    public void clearCanvasHistory() {
+        canvasHistory.clear();
+    }
+    // Class for CanvasUpdate
+    public static class CanvasUpdate {
+        private double x;
+        private double y;
+        private String color;
+        private double width;
+        private boolean newStroke;
+
+        public CanvasUpdate(double x, double y, String color, double width, boolean newStroke) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.width = width;
+            this.newStroke = newStroke;
+        }
+
+        public double getX() { return x; }
+        public double getY() { return y; }
+        public String getColor() { return color; }
+        public double getWidth() { return width; }    
+        public boolean getNewStroke() { return newStroke; }    
     }
 }
