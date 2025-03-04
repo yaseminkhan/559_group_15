@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import "../styles/GamePage.css";
 import { useWebSocket } from "../WebSocketContext.js"; // Externally defined WebSocket instance
 
-function constructChatMessage(sender, text) {
+function constructChatMessage(sender, text, id) {
   return {
     sender,
     text,
+    id,
     timestamp: performance.now(),
     correct: false,
   };
@@ -18,7 +19,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
   const gameCode = localStorage.getItem("gameCode");
   const socket = useWebSocket(); // Using the external WebSocket instance
   const username = useRef("");
-  const timestamp = useRef(0);
+  const userId = localStorage.getItem("userId");
   const alias = "You";
   const inputRef = useRef(null); // Create a ref for the input element
   const handleMessage = useRef(null); // Function ref.
@@ -38,13 +39,15 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
 
           if (username.current === "") {
             for (const message of messages) {
-              if (message.timestamp === timestamp.current)
+              if (message.id === userId) {
                   username.current = message.sender;
+                  break;
+              }
             }
           }
 
           messages.forEach((msg) => {
-            if (msg.sender === username.current) {
+            if (msg.id == userId) {
               msg.sender = alias;
               if (msg.correct)
                 msg.text = msg.text.replace(username.current, alias);  // Show up as "You" guessed correctly.
@@ -59,7 +62,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
     return () => {
       socket.removeEventListener("message", handleMessage.current);
     }
-  }, [socket, timestamp, username, handleMessage]);
+  }, [socket, username, handleMessage]);
 
   useEffect(() => {
     const interval = 200;  // 200ms polling interval.
@@ -83,14 +86,11 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         if (newMessage.trim() === "") return; // Avoid sending empty messages
 
         // Construct the chat message
-        const messageToSend = constructChatMessage(alias, newMessage);
+        const messageToSend = constructChatMessage(alias, newMessage, userId);
 
         // Send the message only if the WebSocket is open
         if (!socket || socket.readyState !== WebSocket.OPEN)
           console.log("WebSocket is not open.");
-        
-        if (username.current === "")
-          timestamp.current = messageToSend.timestamp;
 
         socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
         console.log("Sent message:", newMessage);
@@ -105,7 +105,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         inputElem.removeEventListener("keydown", handleKeyDown.current);
       };
     }
-  }, [newMessage, socket, gameCode, timestamp, username, handleKeyDown]);
+  }, [newMessage, socket, gameCode, username, handleKeyDown]);
 
   return (
     <div className="chat-background">

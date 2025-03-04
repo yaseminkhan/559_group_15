@@ -59,19 +59,19 @@ public class Game {
             player.setAlreadyGuessed(false);
     }
 
-    public User getUserByName(String username) {
-        User ret = null;
+    public User getUserById(String id) {
+        User user = null;
         for (var player : players) {
-            if (player.getUsername().equals(username)) {
-                ret = player;
+            if (player.getId().equals(id)) {
+                user = player;
                 break;
             }
         }
-        return ret;
+        return user;
     }
 
     public Chat addMessage(Chat message) {
-        var user = getUserByName(message.sender);
+        var user = getUserById(message.id);
 
         if (!user.getAlreadyGuessed()) {
             if (message.text.equalsIgnoreCase(wordToDraw)) {
