@@ -201,7 +201,9 @@ public class WebServer extends WebSocketServer {
 
             // Set rounds equal to the number of players
             game.updateMaxRounds(); 
-
+            // Reset all players scores to 0
+            game.resetScores();
+            // Assign a drawer 
             game.assignNextDrawer();
             User firstDrawer = game.getDrawer();
 

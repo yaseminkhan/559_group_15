@@ -168,6 +168,10 @@ public class Game {
                 gameStarted = true;
                 round = 1;
                 assignNextDrawer();
+                // Reset scores to 0 for all players
+                for (User player : players) {
+                    player.setScore(0);
+                }
                 return true;
             }
             return false; // Game cannot start if not host
@@ -283,6 +287,16 @@ public class Game {
                 playerList.add(playerData);
             }
             return gson.toJson(playerList);
+        }
+
+        /*
+        * Resets all player scores to 0.
+        */
+        public void resetScores() {
+            for (User player : players) {
+                player.setScore(0);
+            }
+            System.out.println("All player scores have been reset to 0.");
         }
     
         /*
