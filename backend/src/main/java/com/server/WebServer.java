@@ -184,11 +184,8 @@ public class WebServer extends WebSocketServer {
         var gson = new Gson();
         var chat = gson.fromJson(chatData, Chat.class);
         var user = connectedUsers.get(conn);
-
         chat.sender = user.getUsername();
-
         chat = game.addMessage(chat); // Make sure to clear data after /new-round.
-
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 
@@ -570,7 +567,7 @@ public class WebServer extends WebSocketServer {
         Gson gson = new Gson();
         String newStrokesJson = gson.toJson(newStrokes);
         int newLastIndex = lastIndex + newStrokes.size();
-    
+
         //System.out.println("Canvas History Requested: " + gameCode + " Last Index: " + lastIndex);
         conn.send("CANVAS_HISTORY " + newLastIndex + " " + newStrokesJson);
     }

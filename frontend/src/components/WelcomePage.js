@@ -11,6 +11,7 @@ import left_bkg from "./assets/left_bkg.png";
 
 const WelcomePage = () => {
     const [username, setUsername] = useState("");
+    const [charLimitError, setCharLimitError] = useState("") // State for the error message of having too many char in username
     const [userId, setUserId] = useState(null);
     const [gameCode, setGameCode] = useState(null);
     const socket = useWebSocket(); 
@@ -83,6 +84,17 @@ const WelcomePage = () => {
         }
     };
 
+    const handleUsername = (e) => {
+        const input = e.target.value;
+        if (input.length <= 15) {
+            setUsername(input);
+        }
+        else {
+            setCharLimitError("Username must be 1-15 characters.");
+            setTimeout(() => setCharLimitError(""), 3000); //Pop up disappears after 3 seconds
+        }
+    };
+
     return (
         <div className="wel_container">
             <h1 className="wel_logo">InkBlink</h1>
@@ -98,8 +110,13 @@ const WelcomePage = () => {
                 placeholder="Enter your username..."
                 className="wel_input-box"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={handleUsername}
+                // maxLength={15} //Enforcing character limit at HTML level
             />
+            {/* Vanishing Error Message */}
+            {charLimitError && <div className="wel_error-popup">{charLimitError}</div>}
+            
+
             <div className="wel_button-group">
                 <button className="wel_btn wel_invite-btn" onClick={handleJoinGame}>
                     Join a Game
