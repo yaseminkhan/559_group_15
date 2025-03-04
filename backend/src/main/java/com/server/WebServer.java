@@ -458,6 +458,12 @@ public class WebServer extends WebSocketServer {
             return;
         }
 
+        // Check if a game already exists
+        if (!activeGames.isEmpty()) {
+            conn.send("ERROR: A game is already created.");
+            return;
+        }
+
         // Check if the user is in an existing game and remove them
         String previousGameCode = user.getGameCode();
         if (previousGameCode != null) {
