@@ -199,6 +199,9 @@ public class WebServer extends WebSocketServer {
                 return;
             }
 
+            // Set rounds equal to the number of players
+            game.updateMaxRounds(); 
+
             game.assignNextDrawer();
             User firstDrawer = game.getDrawer();
 
@@ -243,7 +246,7 @@ public class WebServer extends WebSocketServer {
 
         game.resetForRound();
 
-        if (game.getCurrentRound() + 1 > Game.getMaxRounds()) { // Check if all rounds are done
+        if (game.getCurrentRound() + 1 > game.getMaxRounds()) { // Check if all rounds are done
             broadcastToGame(game, "GAME_OVER");
             System.out.println("All rounds complete. Waiting for players to exit.");
             return; // Do not clear players yet
@@ -289,16 +292,6 @@ public class WebServer extends WebSocketServer {
                 broadcastToGame(game, "TIMER_UPDATE: " + game.getTimeLeft());
             }
         }, 0, 1000); // Run every second
-    }
-
-    // Helper method to get a User object by userId
-    private User getUserById(String userId) {
-        for (User user : connectedUsers.values()) {
-            if (user.getId().equals(userId)) {
-                return user;
-            }
-        }
-        return null;
     }
 
     private void handleReconnect(WebSocket conn, String userId) {
