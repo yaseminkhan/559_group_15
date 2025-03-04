@@ -1,8 +1,11 @@
 package com.server;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /*
@@ -14,6 +17,8 @@ public class User {
             "🐌", "🌵", "😃", "☀️", "🦃", "💬", "📚", "🥶",
             "🚀", "🎸", "🎨", "⚡", "🎭", "🍕", "🐙");
 
+
+    private static final Set<String> usedEmojis = new HashSet<>(); // Set to keep track of used emojis
     private String id;
     private String username;
     private String icon;
@@ -29,12 +34,36 @@ public class User {
     public User(String username) {
         this.id = UUID.randomUUID().toString();
         this.username = username;
-        this.icon = getRandomEmoji();
+        this.icon = setIcon();
         this.score = 0;
         this.isDrawer = false; // default
         this.isHost = false; // default
         this.alreadyGuessed = false;
     }
+
+     /*
+     * Assigns a unique emoji to the user
+     */
+    private String setIcon() {
+        List<String> availableEmojis = new ArrayList<>();
+        // Check which emojis have not been used yet
+        for (String emoji : EMOJIS) {
+            if (!usedEmojis.contains(emoji)) {
+                availableEmojis.add(emoji);
+            }
+        }
+
+        if (availableEmojis.isEmpty()) {
+            throw new IllegalStateException("No more unique emojis available!");
+        }
+
+        // Randomly pick an available emoji
+        Random rand = new Random();
+        String selectedEmoji = availableEmojis.get(rand.nextInt(availableEmojis.size()));
+        usedEmojis.add(selectedEmoji); // Mark the emoji as used
+        return selectedEmoji;
+    }
+
 
     /*
      * Check if the user has already guessed correctly.

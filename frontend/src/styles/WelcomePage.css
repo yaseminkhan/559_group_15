@@ -45,6 +45,23 @@
   text-align: left;
 }
 
+.wel_error-popup {
+  position: absolute;
+  top: 10px;
+  background-color: #f35b55;
+  color: black;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 14px;
+  animation: fadeOut 3s forwards;
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 .wel_button-group {
   display: flex;
   gap: 20px;
