@@ -39,6 +39,19 @@ export const WebSocketProvider = ({ children }) => {
         };
     }, []);
 
+
+    // to reconnect when refresh
+    useEffect(() => {
+        if (!socket) return;
+
+        // retrieve userId from local storage
+        const storedUserId = localStorage.getItem("userId");
+        if (storedUserId) {
+            console.log(`Reconnecting as user: ${storedUserId}`);
+            socket.send(`/reconnect ${storedUserId}`);
+        }
+    }, [socket]);
+
     return (
         <WebSocketContext.Provider value={socket}>
             {children}

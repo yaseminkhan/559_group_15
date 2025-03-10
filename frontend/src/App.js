@@ -7,20 +7,23 @@ import SetupPage from "./components/GameSetup";
 import WordSelection from "./components/WordSelection";
 import JoinGamePage from "./components/JoinGamePage";
 import EndGamePage from "./components/EndGamePage";
+import { GameStateContext } from "./GameStateContext";
 
 function App() {
     return (
         <WebSocketProvider>
-            <Router>
-                <Routes>
-                    <Route path="/" element={<WelcomePage />} />
-                    <Route path="/game/:gameCode" element={<GamePage />} />
-                    <Route path="/setup/:gameCode" element={<SetupPage />} />
-                    <Route path="/wordselection/:gameCode" element={<WordSelection />} />
-                    <Route path="/join-game" element={<JoinGamePage />} />
-                    <Route path="/endgame/:gameCode" element={<EndGamePage />} />
-                </Routes>
-            </Router>
+            <GameStateContext
+                <Router>
+                    <Routes>
+                        <Route path="/" element={<WelcomePage />} />
+                        <Route path="/game/:gameCode" element={<GamePage />} />
+                        <Route path="/setup/:gameCode" element={<SetupPage />} />
+                        <Route path="/wordselection/:gameCode" element={<WordSelection />} />
+                        <Route path="/join-game" element={<JoinGamePage />} />
+                        <Route path="/endgame/:gameCode" element={<EndGamePage />} />
+                    </Routes>
+                </Router>
+            </GameStateContext>
         </WebSocketProvider>
     );
 }

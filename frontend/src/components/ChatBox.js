@@ -32,7 +32,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         if (!socket)
             return;
 
-        if (e.data.startsWith("HISTORY: ")) {
+        if (e.data.startsWith("CHAT_HISTORY: ")) {
           const i = e.data.indexOf(" ");
           const chat = e.data.slice(i + 1)
           const messages = JSON.parse(chat);

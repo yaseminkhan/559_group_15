@@ -176,7 +176,7 @@ public class WebServer extends WebSocketServer {
         var gson = new Gson();
         var chat = game.getChatMessages();
         // System.out.println(chat);
-        conn.send("HISTORY: " + gson.toJson(chat));
+        conn.send("CHAT_HISTORY: " + gson.toJson(chat));
     }
 
     private void handleChat(WebSocket conn, String gameCode, String chatData) {
