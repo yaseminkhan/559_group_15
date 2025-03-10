@@ -33,6 +33,8 @@ const WelcomePage = () => {
                 setGameCode(newGameCode);
                 localStorage.setItem("gameCode", newGameCode);
                 console.log("Game created with code:", newGameCode);
+            } else if (event.data.startsWith("ERROR: A game is already created")) {
+                alert("A game is already created. Ask the host for the game code or wait to start a new game.");
             }
         };
 

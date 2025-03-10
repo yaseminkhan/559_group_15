@@ -89,14 +89,6 @@ public class User {
     }
 
     /*
-     * Returns a random emoji from the list
-     */
-    private String getRandomEmoji() {
-        Random rand = new Random();
-        return EMOJIS.get(rand.nextInt(EMOJIS.size()));
-    }
-
-    /*
      * sets username
      */
     public void setUsername(String username) {
