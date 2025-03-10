@@ -20,15 +20,14 @@ const WordSelection = () => {
         console.error("WebSocket is not connected.");
         return;
     }
-    
+
+    // Navigate to the game page after selecting a word
+    navigate(`/game/${gameCode}`, { state: { choosingWord: false, isDrawer: true } });
     console.log(`Drawer selected word: ${word}`);
     socket.send(`/select-word ${gameCode} ${word}`); // Send word selection to the backend
 
     // Notify backend that the drawer is now joining the game
     socket.send(`/drawer-joined ${gameCode}`);
-
-    // Navigate to the game page after selecting a word
-    navigate(`/game/${gameCode}`, { state: { choosingWord: false, isDrawer: true } });
   };
 
   useEffect(() => {

@@ -17,6 +17,10 @@ const GameSetup = () => {
 
     const handleStartGame = () => {
         if (socket && isHost) {
+            if (players.length < 2) {
+                alert("At least 2 players are required to start the game.");
+                return;
+            }
             const userId = localStorage.getItem("userId");
             socket.send(`/startgame ${gameCode} ${userId}`);
         }
