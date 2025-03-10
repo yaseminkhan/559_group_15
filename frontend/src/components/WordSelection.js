@@ -23,11 +23,13 @@ const WordSelection = () => {
 
     // Navigate to the game page after selecting a word
     navigate(`/game/${gameCode}`, { state: { choosingWord: false, isDrawer: true } });
-    console.log(`Drawer selected word: ${word}`);
-    socket.send(`/select-word ${gameCode} ${word}`); // Send word selection to the backend
+    setTimeout(() => {
+      console.log(`Drawer selected word: ${word}`);
+      socket.send(`/select-word ${gameCode} ${word}`); // Send word selection to the backend
 
-    // Notify backend that the drawer is now joining the game
-    socket.send(`/drawer-joined ${gameCode}`);
+      // Notify backend that the drawer is now joining the game
+      socket.send(`/drawer-joined ${gameCode}`);
+    }, 100); // 100ms delay
   };
 
   useEffect(() => {
