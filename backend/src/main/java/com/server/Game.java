@@ -152,13 +152,6 @@ public class Game {
             }
         }
     
-        // private void resetRoundPoints() {
-        //     roundPoints = IntStream
-        //             .range(0, players.size())
-        //             .reduce((x, y) -> x + (1 << y))
-        //             .getAsInt();
-        // }
-    
         /*
          * starts a new game 
          */
@@ -193,6 +186,7 @@ public class Game {
                 drawer.removeAsDrawer();
             }
     
+            if(!hasAvailableDrawer()){}
             // Case when only 2 players - allow alternating turns
             if (players.size() == 2) {
                 drawerIndex = (drawerIndex + 1) % players.size();
@@ -210,6 +204,18 @@ public class Game {
             drawer = players.get(drawerIndex);
             drawer.setDrawer();
             wordToDraw = selectRandomWord();
+        }
+
+        /*
+         * Determine if there is any available players who have not drawn yet 
+         */
+        public boolean hasAvailableDrawer() {
+            for (User player : players) {
+                if (!player.wasDrawer() && !player.isDrawer()) {
+                    return true; // Found a player who hasn't drawn yet
+                }
+            }
+            return false; // All players have drawn
         }
     
         /*

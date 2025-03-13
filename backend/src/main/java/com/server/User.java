@@ -27,6 +27,7 @@ public class User {
     private boolean isHost;
     private boolean alreadyGuessed; // Guessed correctly.
     private String gameCode;
+    private boolean wasDrawer; // indiactes if user has already had a turn as a drawer 
 
     /*
      * Contructor to create a new user 
@@ -39,6 +40,7 @@ public class User {
         this.isDrawer = false; // default
         this.isHost = false; // default
         this.alreadyGuessed = false;
+        this.wasDrawer = false; 
     }
 
      /*
@@ -63,7 +65,6 @@ public class User {
         usedEmojis.add(selectedEmoji); // Mark the emoji as used
         return selectedEmoji;
     }
-
 
     /*
      * Check if the user has already guessed correctly.
@@ -116,6 +117,10 @@ public class User {
         return isDrawer;
     }
 
+    public boolean wasDrawer(){
+        return wasDrawer;
+    }
+
     public boolean isHost() {
         return isHost;
     }
@@ -129,8 +134,12 @@ public class User {
         this.isDrawer = true;
     }
 
+    /*
+     * when drawer is removed both isDrawer and wasDrawer booleans updated 
+     */
     public void removeAsDrawer() {
         this.isDrawer = false;
+        this.wasDrawer = true;
     }
 
     public void addPoints(int points) {

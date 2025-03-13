@@ -62,24 +62,50 @@ public class WebServer extends WebSocketServer {
                 System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
             }
 
-            // Schedule a delayed check before removing them permanently
-            new Timer().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                        String gameCode = removedUser.getGameCode();
-                        if (gameCode != null) {
-                            Game game = activeGames.get(gameCode);
-                            if (game != null) {
+            // Get the game the user was in
+            String gameCode = removedUser.getGameCode();
+            if (gameCode != null) {
+                Game game = activeGames.get(gameCode);
+
+                if (game != null && game.getDrawer() != null && game.getDrawer().equals(removedUser)) {
+
+                    // Schedule a delayed check before removing or replacing them
+                    new Timer().schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            // Notify players that the drawer has disconnected
+                            broadcastToGame(game, "DRAWER_DISCONNECTED");
+                            if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                temporarilyDisconnectedUsers.remove(removedUser.getId());
+
+                                // Drawer did not reconnect, so select a new drawer
+                                boolean drawerAvailable = game.hasAvailableDrawer();
+                                
+                                if(game.hasAvailableDrawer()){
+                                    System.out.println("New drawer available, starting new round...");
+                                    startNewRound(game);
+                                } else{
+                                    broadcastToGame(game, "GAME_OVER");
+                                }
+                            }
+                        }
+                    }, 30000);
+
+                } else {
+                    // If the disconnected user was NOT the drawer, just remove them after timeout
+                    new Timer().schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 game.removePlayer(removedUser);
                                 broadcastGamePlayers(game);
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
+                                temporarilyDisconnectedUsers.remove(removedUser.getId());
                             }
                         }
-                        temporarilyDisconnectedUsers.remove(removedUser.getId());
-                    }
+                    }, 30000); 
                 }
-            }, 30000);
+            }
         }
     }
 
