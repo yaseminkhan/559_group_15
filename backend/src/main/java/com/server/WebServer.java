@@ -4,6 +4,7 @@ import org.java_websocket.server.WebSocketServer;
 import com.google.gson.Gson;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
+
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
@@ -14,34 +15,44 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WebServer extends WebSocketServer {
 
-    private final ConcurrentHashMap<WebSocket, User> connectedUsers = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
+    //Map to store connected users and their Websocket connections
+    private final ConcurrentHashMap<WebSocket, User> connectedUsers = new ConcurrentHashMap<>(); 
+    //Map to store active games by game code
+    private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>(); 
+    //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
+    private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
 
-    public WebServer(InetSocketAddress address) {
+    public WebServer(InetSocketAddress address, String serverAddress, int heartbeatPort, List<String> allServers) {
         super(address);
+        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers); //Initialize the HeartbeatManager
+        this.heartBeatManager.startHeartbeatListener(heartbeatPort); //Start listening for heartbeats from other servers
+        this.heartBeatManager.startHeartbeatSender(); //Start sending heartbeats to other servers
     }
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        String existingUserId = handshake.getFieldValue("User-ID");
+        String existingUserId = handshake.getFieldValue("User-ID"); //Handle new WebSocket connections
         User user;
 
+        //Check if user is reconnecting
         if (existingUserId != null && temporarilyDisconnectedUsers.containsKey(existingUserId)) {
             user = temporarilyDisconnectedUsers.remove(existingUserId);
             connectedUsers.put(conn, user);
             System.out.println("Reconnected user: " + user.getUsername());
         } else {
+            //Create new user for the connection
             user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
             connectedUsers.put(conn, user);
         }
 
-        conn.send("USER_ID:" + user.getId());
+        conn.send("USER_ID:" + user.getId()); //Send user's ID back to the client
         System.out.println("User connected: " + user.getUsername() + " (" + user.getId() + ")");
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
+        //Handle WebSocket disconnections
         User removedUser = connectedUsers.remove(conn);
 
         if (removedUser != null) {
@@ -86,6 +97,9 @@ public class WebServer extends WebSocketServer {
     @Override
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
+
+        //Send heartbeat to all peer servers whenever a message is received
+        heartBeatManager.sendHeartbeatToAllServers(); 
 
         if (message.startsWith("/reconnect ")) {
             String userId = message.substring(11).trim();
@@ -575,6 +589,7 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
+        //Handle WebSocket errors
         System.err.println(
                 "Error from " + (conn != null ? conn.getRemoteSocketAddress() : "Server") + ": " + ex.getMessage());
         ex.printStackTrace();
@@ -582,12 +597,18 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onStart() {
+        //Notify when the WebSocket server starts successfully
         System.out.println("WebSocket server started successfully on " + getPort() + ".");
     }
 
     public static void main(String[] args) {
-        int port = 8887;
-        WebServer server = new WebServer(new InetSocketAddress("localhost", port));
+        int port = 8887; //WebSocket server port
+        String serverAddress = "ws://localhost: " + port; // This server;s address
+        int heartbeatPort = 5001; //Port for heartbeat communication
+        List<String> allServers = List.of("ws://localhost:8888"); //List of other servers
+        
+        //Create and start WebSocket server
+        WebServer server = new WebServer(new InetSocketAddress("localhost", port), serverAddress, heartbeatPort, allServers);
         server.start();
         System.out.println("Web Server running on port: " + port);
     }
