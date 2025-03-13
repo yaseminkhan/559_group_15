@@ -22,6 +22,7 @@ public class Game {
     private int drawerIndex;
     private int timeLeft;
     private int maxRounds;
+    private Timer roundTimer;
     
         private List<CanvasUpdate> canvasHistory;
     
@@ -53,11 +54,20 @@ public class Game {
                     ++total;
             return total;
         }
+
+        public void cancelTimer() {
+            if (roundTimer != null) {
+                roundTimer.cancel();
+                roundTimer.purge();
+                roundTimer = null;
+            }
+        }
     
         public void resetForRound() {
             chatMessages.clear();
             for (var player : players)
                 player.setAlreadyGuessed(false);
+            cancelTimer();
         }
     
         public User getUserById(String id) {
@@ -181,43 +191,63 @@ public class Game {
          */
         public void assignNextDrawer() {
             if (players.isEmpty()) {
+                System.out.println("No players left in the game.");
                 return;
             }
     
             if (drawer != null) {
+                System.out.println("Previous drawer: " + drawer.getUsername());
+                drawer.setDrawer();
                 drawer.removeAsDrawer();
             }
     
-            if(!hasAvailableDrawer()){}
-            // Case when only 2 players - allow alternating turns
-            if (players.size() == 2) {
-                drawerIndex = (drawerIndex + 1) % players.size();
-            } else {
-                // Find the next player who hasn't drawn yet
-                int startIndex = drawerIndex;
-                do {
+            if(hasAvailableDrawer()){
+                System.out.println("\n--- Assigning New Drawer ---");
+                for (User player : players) {
+                     System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
+                }
+                // Select the next available drawer
+                for (int i = 0; i < players.size(); i++) {
                     drawerIndex = (drawerIndex + 1) % players.size();
-                } while (drawnPlayers.contains(players.get(drawerIndex).getId()) && drawerIndex != startIndex);
-    
-                // Mark the new drawer as having drawn
-                drawnPlayers.add(players.get(drawerIndex).getId());
+                    User potentialDrawer = players.get(drawerIndex);
+
+                    if (!potentialDrawer.wasDrawer()) { // Find the first player who hasn’t drawn
+                        drawer = potentialDrawer;
+                        drawer.setDrawer();
+                        //drawer.setWasDrawer(true);
+                        wordToDraw = selectRandomWord();
+                        return;
+                    }
+                }
             }
-    
-            drawer = players.get(drawerIndex);
-            drawer.setDrawer();
-            wordToDraw = selectRandomWord();
         }
 
         /*
          * Determine if there is any available players who have not drawn yet 
          */
         public boolean hasAvailableDrawer() {
+            System.out.println("\n--- Checking Available Drawers ---");
+    
+            if (players.isEmpty()) {
+                System.out.println("No players left in the game.");
+                return false;
+            }
+        
+            boolean foundDrawer = false;
+            
             for (User player : players) {
-                if (!player.wasDrawer() && !player.isDrawer()) {
-                    return true; // Found a player who hasn't drawn yet
+                System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
+                
+                if (!player.wasDrawer()) {
+                    foundDrawer = true;
                 }
             }
-            return false; // All players have drawn
+        
+            if (!foundDrawer) {
+                System.out.println("All players have already drawn. Ending game.");
+            }
+            
+            return foundDrawer;
         }
     
         /*
@@ -238,14 +268,23 @@ public class Game {
          * moves to next round 
          */
         public void nextTurn() {
-            if (round > maxRounds || !hasAvailableDrawer()) {
+            if (!hasAvailableDrawer()) {
+                System.out.println("No available drawers. Ending game.");
                 endGame();
+            endGame();
                 return;
             }
     
             round++; // Increase round count
             System.out.println("Starting round " + round);
             assignNextDrawer(); // Assign new drawer
+
+            if (drawer != null) {
+                System.out.println("New drawer for this round: " + drawer.getUsername());
+            } else {
+                System.out.println("ERROR: No drawer assigned, this should not happen.");
+            }
+
             this.timeLeft = 60;
         }
     
@@ -345,7 +384,7 @@ public class Game {
         }
     
         public int getMaxRounds() {
-                return this.maxRounds;
+            return this.maxRounds;
         }
 
     /*
@@ -409,5 +448,9 @@ public class Game {
         public boolean getNewStroke() {
             return newStroke;
         }
+    }
+
+    public void setTimer(Timer t){
+        this.roundTimer = t;
     }
 }

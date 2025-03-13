@@ -81,11 +81,11 @@ public class WebServer extends WebSocketServer {
                             broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
-
-                                // Drawer did not reconnect, so select a new drawer
-                                boolean drawerAvailable = game.hasAvailableDrawer();
                                 
-                                if(game.hasAvailableDrawer()){
+                                game.cancelTimer();
+
+                                // Drawer did not reconnect, so select a new drawer            
+                                if(game.hasAvailableDrawer() && game.getPlayers().size() >= 2){
                                     System.out.println("New drawer available, starting new round...");
                                     startNewRound(game);
                                 } else{
@@ -281,17 +281,17 @@ public class WebServer extends WebSocketServer {
 
         game.resetForRound();
 
-        if (game.getCurrentRound() + 1 > game.getMaxRounds()) { // Check if all rounds are done
+        if (!game.hasAvailableDrawer()) { // Check if everyone has drawn 
             broadcastToGame(game, "GAME_OVER");
             System.out.println("All rounds complete. Waiting for players to exit.");
             return; // Do not clear players yet
         }
 
         game.nextTurn(); // Move to the next round
-        game.setTimeLeft(60); // Reset the round timer to 60 seconds
 
         // Notify all players about the new round and new drawer
         broadcastToGame(game, "NEW_ROUND: " + game.getCurrentRound() + " DRAWER: " + game.getDrawer().getId());
+
     }
 
     /*
@@ -301,6 +301,9 @@ public class WebServer extends WebSocketServer {
         if (game == null)
             return;
 
+        // Cancel the existing timer if it exists
+        game.cancelTimer();
+
         game.setTimeLeft(60); // Reset timer for new round
 
         game.clearCanvasHistory();
@@ -309,6 +312,7 @@ public class WebServer extends WebSocketServer {
 
         // Ensure only one timer runs per game
         Timer roundTimer = new Timer();
+        game.setTimer(roundTimer);
 
         roundTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -559,6 +563,9 @@ public class WebServer extends WebSocketServer {
             broadcastToGame(game, message);
             System.out.println("Word selected: " + word + ". Starting round...");
         }
+
+        // Reset timer 
+        game.setTimeLeft(60);
 
         // Start the timer for the new round
         startRoundTimer(game);
