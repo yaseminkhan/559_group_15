@@ -154,6 +154,10 @@ public class User {
         this.gameCode = gameCode;
     }
 
+    public void setWasDrawer(boolean val){
+        this.wasDrawer = val;
+    }
+
     // helps printing users for debugging 
     @Override
     public String toString() {

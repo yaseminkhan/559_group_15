@@ -61,7 +61,7 @@ public class WebServer extends WebSocketServer {
             for (User user : temporarilyDisconnectedUsers.values()) {
                 System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
             }
-
+            
             // Get the game the user was in
             String gameCode = removedUser.getGameCode();
             if (gameCode != null) {
@@ -73,6 +73,10 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
+                            game.removePlayer(removedUser);
+                            broadcastGamePlayers(game);
+                            System.out.println("User permanently removed from game: " + removedUser.getUsername());
+
                             // Notify players that the drawer has disconnected
                             broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
@@ -89,7 +93,7 @@ public class WebServer extends WebSocketServer {
                                 }
                             }
                         }
-                    }, 30000);
+                    }, 5000);
 
                 } else {
                     // If the disconnected user was NOT the drawer, just remove them after timeout
@@ -99,11 +103,14 @@ public class WebServer extends WebSocketServer {
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 game.removePlayer(removedUser);
                                 broadcastGamePlayers(game);
+                                if(game.getPlayers().size() < 2){
+                                    broadcastToGame(game, "GAME_OVER");
+                                }
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
                             }
                         }
-                    }, 30000); 
+                    }, 5000); 
                 }
             }
         }

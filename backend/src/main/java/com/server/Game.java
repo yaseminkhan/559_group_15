@@ -164,6 +164,8 @@ public class Game {
                 // Reset scores to 0 for all players
                 for (User player : players) {
                     player.setScore(0);
+                    // Reset boolean indicating if player has been the drawer already 
+                    player.setWasDrawer(false);
                 }
                 return true;
             }
@@ -236,7 +238,7 @@ public class Game {
          * moves to next round 
          */
         public void nextTurn() {
-            if (round > maxRounds) {
+            if (round > maxRounds || !hasAvailableDrawer()) {
                 endGame();
                 return;
             }
