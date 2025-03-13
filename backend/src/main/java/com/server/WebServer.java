@@ -6,6 +6,7 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 
 import java.net.InetSocketAddress;
+import java.text.ListFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -602,14 +603,21 @@ public class WebServer extends WebSocketServer {
     }
 
     public static void main(String[] args) {
-        int port = 8887; //WebSocket server port
-        String serverAddress = "ws://localhost: " + port; // This server;s address
-        int heartbeatPort = 5001; //Port for heartbeat communication
-        List<String> allServers = List.of("ws://localhost:8888"); //List of other servers
+        //Run as primary server if no port is indicated
+        if (args.length < 3) {
+            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other servers>");
+            System.exit(1);
+        }
+        
+        int port = Integer.parseInt(args[0]); //First server port
+        int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
+        List<String> allServers = List.of(args[2].split(",")); //Other server
+        String serverAddress = "ws://localhost: " + port; // This server's address
         
         //Create and start WebSocket server
         WebServer server = new WebServer(new InetSocketAddress("localhost", port), serverAddress, heartbeatPort, allServers);
         server.start();
         System.out.println("Web Server running on port: " + port);
+        System.out.println("Heartbeat listener running on port: " + heartbeatPort);
     }
 }

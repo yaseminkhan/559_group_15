@@ -23,7 +23,9 @@ public class HeartBeatManager {
     public void sendHeartbeatToAllServers() {
         for (String server : allServers) {
             if (!server.equals(serverAddress)) { //Exclude self
-                sendHeartbeat(server, heartbeatPort);
+                String[] serverInfo = server.split(":");
+                int otherServerHBPort = Integer.parseInt(serverInfo[1]);
+                sendHeartbeat(serverInfo[0], otherServerHBPort);
             }
         }
 
@@ -31,12 +33,13 @@ public class HeartBeatManager {
     
     //Send heartbeats to a specific server
     public void sendHeartbeat(String serverIp, int port) {
+        System.out.println("serverip: " + serverIp + ", port: " + port);
         try (Socket socket = new Socket(serverIp, port)) {
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
-            System.out.println("Heartbeat sent to server: " + serverIp);
+            System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
         } catch (IOException ioe) {
-            System.err.println("Failed to send heartbeat to " + serverIp + ": " + ioe.getMessage());
+            System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
         }
     }
 
