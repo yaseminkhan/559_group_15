@@ -2,17 +2,11 @@ package com.server;
 
 import org.java_websocket.server.WebSocketServer;
 import com.google.gson.Gson;
-// import com.google.gson.reflect.TypeToken;
 
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 
-// import java.io.IOException;
-// import java.io.OutputStream;
 import java.net.InetSocketAddress;
-// import java.net.Socket;
-// import java.text.ListFormat;
-// import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
