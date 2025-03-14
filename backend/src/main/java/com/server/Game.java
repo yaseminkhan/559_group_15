@@ -61,6 +61,7 @@ public class Game {
     
         public void resetForRound() {
             chatMessages.clear();
+            clearCanvasHistory();
             for (var player : players)
                 player.setAlreadyGuessed(false);
             cancelTimer();
@@ -227,22 +228,16 @@ public class Game {
                 System.out.println("No players left in the game.");
                 return false;
             }
-        
-            boolean foundDrawer = false;
             
             for (User player : players) {
-                System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
+                //System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
                 
                 if (!player.wasDrawer()) {
-                    foundDrawer = true;
+                    return true;
                 }
             }
-        
-            if (!foundDrawer) {
-                System.out.println("All players have already drawn. Ending game.");
-            }
-            
-            return foundDrawer;
+
+            return false;
         }
     
         /*
@@ -263,12 +258,6 @@ public class Game {
          * moves to next round 
          */
         public void nextTurn() {
-            // if (!hasAvailableDrawer()) {
-            //     System.out.println("No available drawers. Ending game.");
-            //     endGame();
-            //     return;
-            // }
-    
             round++; // Increase round count
             System.out.println("Starting round " + round);
             assignNextDrawer(); // Assign new drawer

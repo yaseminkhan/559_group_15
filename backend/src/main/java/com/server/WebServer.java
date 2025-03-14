@@ -76,7 +76,8 @@ public class WebServer extends WebSocketServer {
                             game.removePlayer(removedUser);
                             broadcastGamePlayers(game);
                             System.out.println("User permanently removed from game: " + removedUser.getUsername());
-
+                            
+                            game.resetForRound();
                             // Notify players that the drawer has disconnected
                             broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
@@ -289,6 +290,7 @@ public class WebServer extends WebSocketServer {
         
         // Notify all players about the new round and new drawer
         broadcastToGame(game, "NEW_ROUND: " + game.getCurrentRound() + " DRAWER: " + game.getDrawer().getId());
+        broadcastToGame(game, "CANVAS_CLEAR");
     }
 
     /*
