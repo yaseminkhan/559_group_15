@@ -6,7 +6,7 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 
 import java.net.InetSocketAddress;
-import java.text.ListFormat;
+// import java.text.ListFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -17,9 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebServer extends WebSocketServer {
 
     //Map to store connected users and their Websocket connections
-    private final ConcurrentHashMap<WebSocket, User> connectedUsers = new ConcurrentHashMap<>(); 
+    private final ConcurrentHashMap<WebSocket, User> connectedUsers = new ConcurrentHashMap<>();
     //Map to store active games by game code
-    private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>(); 
+    private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
@@ -215,7 +215,7 @@ public class WebServer extends WebSocketServer {
             }
 
             // Set rounds equal to the number of players
-            game.updateMaxRounds(); 
+            game.updateMaxRounds();
             // Reset all players scores to 0
             game.resetScores();
             // Assign a drawer 
@@ -608,14 +608,15 @@ public class WebServer extends WebSocketServer {
             System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other servers>");
             System.exit(1);
         }
-        
+
         int port = Integer.parseInt(args[0]); //First server port
         int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
         List<String> allServers = List.of(args[2].split(",")); //Other server
         String serverAddress = "ws://localhost: " + port; // This server's address
-        
+
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("localhost", port), serverAddress, heartbeatPort, allServers);
+        WebServer server = new WebServer(new InetSocketAddress("localhost", port), serverAddress, heartbeatPort,
+                allServers);
         server.start();
         System.out.println("Web Server running on port: " + port);
         System.out.println("Heartbeat listener running on port: " + heartbeatPort);
