@@ -1,0 +1,305 @@
+package com.server;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
+import org.java_websocket.WebSocket;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ReplicationManager {
+
+    private final WebServer webServer;
+    private final boolean isPrimary;
+    private final String serverAddress;
+    private final List<String> allServers;
+    private final int heartbeatPort;
+    private final ConcurrentHashMap<String, Game> activeGames;
+    private final ConcurrentHashMap<String, User> connectedUsersById;
+    // private final ConcurrentHashMap<WebSocket, User> connectedUsers;
+    private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers;
+    private OutputStream backupIncrOutput;
+    private OutputStream backupFullGameOutput;
+
+    public ReplicationManager(WebServer webServer, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers,
+                             ConcurrentHashMap<String, Game> activeGames,
+                             ConcurrentHashMap<WebSocket, User> connectedUsers,
+                             ConcurrentHashMap<String, User> temporarilyDisconnectedUsers) {
+        this.webServer = webServer;
+        this.isPrimary = isPrimary;
+        this.serverAddress = serverAddress;
+        this.heartbeatPort = heartbeatPort;
+        this.allServers = allServers;
+        this.activeGames = activeGames;
+        // this.connectedUsers = connectedUsers;
+        this.connectedUsersById = new ConcurrentHashMap<>(); //Wrapper map since ReplicationManager does not have a websocket
+        this.temporarilyDisconnectedUsers = temporarilyDisconnectedUsers;
+
+        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+            this.connectedUsersById.put(entry.getValue().getId(), entry.getValue());
+        }
+        System.out.println("replication manager constructor");
+        if (isPrimary) {
+            System.out.println("primary is going to connect to backup");
+            connectToBackups();
+        } else {
+            startReplicationListeners();
+        }
+    }
+
+    // Connect to backup servers (primary server only)
+    private void connectToBackups() {
+        for (String server : allServers) {
+            if (!server.equals(serverAddress)) { // Exclude self
+                String[] serverInfo = server.split(":");
+                int otherServerHBPort = Integer.parseInt(serverInfo[1]);
+                String serverIp = serverInfo[0];
+                try {
+                    Socket incrSocket = new Socket(serverIp, otherServerHBPort + 1);
+                    // incrSocket.setKeepAlive(true);
+                    // incrSocket.setSoTimeout(30000);
+                    backupIncrOutput = incrSocket.getOutputStream(); // Create output stream to send data
+                    System.out.println("Connected to backups: " + serverIp + ": " + otherServerHBPort + 1);
+                } catch (IOException ioe) {
+                    System.err.println("Failed to connect to backups: " + ioe.getMessage());
+                }
+                try {
+                    Socket fullGameSocket = new Socket(serverIp, otherServerHBPort + 2);
+                    // fullGameSocket.setKeepAlive(true);
+                    // fullGameSocket.setSoTimeout(30000);
+                    backupFullGameOutput = fullGameSocket.getOutputStream(); // Create output stream to send data
+                    System.out.println("Connected to backups: " + serverIp + ": " + otherServerHBPort + 2);
+                } catch (IOException ioe) {
+                    System.err.println("Failed to connect to backups: " + ioe.getMessage());
+                }
+            }
+        }
+    }
+
+    // Start listeners for replication data (secondary servers only)
+    private void startReplicationListeners() {
+        // Listen for incremental updates
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(heartbeatPort + 1)) {
+                System.out.println("Listening for incremental updates on port " + (heartbeatPort + 1));
+                Socket socket = serverSocket.accept();
+                while (true) {
+                    System.out.println("socket open for listening to incremental: on port " + (heartbeatPort + 1));
+                    socket.setKeepAlive(true);
+                    InputStream input = socket.getInputStream();
+                    byte[] buffer = new byte[1024];
+                    int bytesRead = input.read(buffer);
+                    if (bytesRead > 0) {
+                        String message = new String(buffer, 0, bytesRead);
+                        processIncrementalUpdate(message);
+                    }
+                }
+            } catch (IOException e) {
+                System.err.println("Error in incremental update listener: " + e.getMessage());
+            }
+        }).start();
+
+        // Listen for full game state syncs
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(heartbeatPort + 2)) {
+                System.out.println("Listening for full game state syncs on port " + (heartbeatPort + 2));
+                Socket socket = serverSocket.accept();
+                while (true) {
+                    System.out.println("socket open for listening to full game: on port " + (heartbeatPort + 2));
+                        socket.setKeepAlive(true);
+                        InputStream input = socket.getInputStream();
+                        byte[] buffer = new byte[1024 * 1024]; // 1 MB buffer
+                        int bytesRead = input.read(buffer);
+                        System.out.println("READING DATA YAAY");
+                        if (bytesRead > 0) {
+                            String gameStateJson = new String(buffer, 0, bytesRead);
+                            System.out.println("what did I read?");
+                            System.out.println("bytesRead: " + buffer);
+                            System.out.println("gameStateJson: " + gameStateJson);
+                            updateGameState(gameStateJson);
+                        }
+                        System.out.println("FINISHED READNIG");
+                }
+            } catch (IOException e) {
+                System.err.println("Error in full game state listener: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    // Send incremental updates to backups (primary server only)
+    public void sendIncrementalUpdate(String message) {
+        if (isPrimary && backupIncrOutput != null) {
+            try {
+                backupIncrOutput.write(message.getBytes()); // Send the incremental update
+                System.out.println("PASSED HERE");
+                backupIncrOutput.flush();
+                System.out.println("Incremental update sent to backups: " + message);
+            } catch (IOException e) {
+                System.err.println("Failed to send incremental update to backups: " + e.getMessage());
+            }
+        }
+    }
+
+    // Send full game state to backups (primary server only)
+    public void sendFullGameState() {
+        if (isPrimary && backupFullGameOutput != null) {
+            System.out.println("GOING TO SEND FULL GAME STATE SCHEDULED");
+            String gameState = serializeGameState(); // Serialize the game state
+            try {
+                backupFullGameOutput.write(gameState.getBytes()); // Send the full game state
+                backupFullGameOutput.flush();
+                System.out.println("Full game state sent to backups: " + gameState);
+            } catch (IOException e) {
+                System.err.println("Failed to send full game state to backups: " + e.getMessage());
+            }
+        }
+    }
+
+    // Serialize the game state into a JSON string
+    private String serializeGameState() {
+        Gson gson = new Gson();
+        Map<String, Object> gameState = new HashMap<>();
+        gameState.put("activeGames", activeGames);
+        Map<String,User> usersById = new HashMap<>();
+        for (Map.Entry<WebSocket, User> entry : webServer.getConnectedUsers().entrySet()) {
+            usersById.put(entry.getValue().getId(), entry.getValue());
+        }
+        // gameState.put("connectedUsers", webServer.getConnectedUsers());
+        gameState.put("connectedUsersById", usersById);
+        gameState.put("temporarilyDisconnectedUsers", temporarilyDisconnectedUsers);
+        return gson.toJson(gameState);
+    }
+
+    // Process incremental updates (secondary servers only)
+    private void processIncrementalUpdate(String message) {
+        System.out.println("Processing incremental update: " + message);
+    
+        // Simulate a WebSocket connection for the secondary server
+        // Since secondary servers don't have real WebSocket connections for replicated messages,
+        // we use a dummy WebSocket object.
+        WebSocket dummyConn = new DummyWebSocket();
+    
+        // Handle the message in the same way as the primary server
+        if (message.startsWith("/reconnect ")) {
+            String userId = message.substring(11).trim();
+            webServer.handleReconnect(dummyConn, userId);
+        } else if (message.startsWith("/setname ")) {
+            webServer.handleSetUsername(dummyConn, message.substring(9).trim());
+        } else if (message.equals("/creategame")) {
+            webServer.handleCreateGame(dummyConn);
+        } else if (message.startsWith("/getgame ")) {
+            String gameCode = message.substring(9).trim();
+            webServer.handleGetGame(dummyConn, gameCode);
+        } else if (message.startsWith("/join-game ")) {
+            String gameCode = message.substring(11).trim();
+            webServer.handleJoinGame(dummyConn, gameCode);
+        } else if (message.startsWith("/word-selection ")) {
+            String gameCode = message.substring(15).trim();
+            webServer.handleGetWords(dummyConn, gameCode);
+        } else if (message.startsWith("/startgame ")) {
+            String[] parts = message.split(" ");
+            String gameCode = parts[1];
+            String userId = parts[2];
+            webServer.handleStartGame(dummyConn, gameCode, userId);
+        } else if (message.startsWith("/select-word ")) {
+            String[] parts = message.split(" ");
+            if (parts.length < 3) {
+                System.err.println("ERROR: Invalid word selection format.");
+                return;
+            }
+            String gameCode = parts[1];
+            String selectedWord = parts[2];
+            webServer.handleWordSelection(dummyConn, gameCode, selectedWord);
+        } else if (message.startsWith("/drawer-joined ")) {
+            String gameCode = message.substring(15).trim();
+            webServer.handleDrawerJoined(dummyConn, gameCode);
+        } else if (message.startsWith("/round-over ")) {
+            String gameCode = message.substring(12).trim();
+            Game game = activeGames.get(gameCode);
+            if (game != null) {
+                webServer.startNewRound(game);
+            }
+        } else if (message.startsWith("/endgame ")) {
+            String gameCode = message.split(" ")[1];
+            webServer.handleEndGame(dummyConn, gameCode);
+        } else if (message.startsWith("/chat-history ")) {
+            String[] parts = message.split(" ", 2);
+            String gameCode = parts[1];
+            webServer.handleChatRequest(dummyConn, gameCode);
+        } else if (message.startsWith("/chat ")) {
+            String[] parts = message.split(" ", 3);
+            String gameCode = parts[1];
+            String chatData = parts[2];
+            webServer.handleChat(dummyConn, gameCode, chatData);
+        } else if (message.startsWith("/canvas-update ")) {
+            String[] parts = message.split(" ", 3);
+            if (parts.length < 3) {
+                System.err.println("ERROR: Invalid canvas update format.");
+                return;
+            }
+            String gameCode = parts[1];
+            String json = parts[2];
+            webServer.handleCanvasUpdate(dummyConn, gameCode, json);
+        } else if (message.startsWith("/clear-canvas")) {
+            String gameCode = message.split(" ")[1];
+            Game game = activeGames.get(gameCode);
+            if (game != null) {
+                game.clearCanvasHistory();
+                webServer.broadcastToGame(game, "CANVAS_CLEAR");
+            }
+        } else if (message.startsWith("/getcanvas")) {
+            String[] parts = message.split(" ");
+            if (parts.length < 2) {
+                System.err.println("ERROR: Invalid canvas history request format.");
+                return;
+            }
+            String gameCode = parts[1];
+            int lastIndex = Integer.parseInt(parts[2]);
+            webServer.handleGetCanvasHistory(dummyConn, gameCode, lastIndex);
+        } else {
+            System.err.println("Unknown command in incremental update: " + message);
+        }
+    }
+
+    // Update the game state (secondary servers only)
+    private void updateGameState(String gameStateJson) {
+        Gson gson = new Gson();
+        Type type = new TypeToken<Map<String, Object>>() {}.getType();
+
+        // Deserialize the JSON string into a map
+        Map<String, Object> gameState = gson.fromJson(gameStateJson, type);
+
+        // Clear the existing game state
+        activeGames.clear();
+        connectedUsersById.clear();
+        temporarilyDisconnectedUsers.clear();
+
+        // Deserialize and update the active games
+        Map<String, Game> deserializedActiveGames = gson.fromJson(gson.toJson(gameState.get("activeGames")), new TypeToken<Map<String, Game>>() {}.getType());
+        activeGames.putAll(deserializedActiveGames);
+
+        // Deserialize and update the connected users
+        Map<String, User> deserializedConnectedUsersById = gson.fromJson(gson.toJson(gameState.get("connectedUsersById")), new TypeToken<Map<String, User>>() {}.getType());
+        connectedUsersById.putAll(deserializedConnectedUsersById);
+        // for (Map.Entry<WebSocket, User> entry : deserializedConnectedUsers.entrySet()) {
+        //     // Recreate WebSocket connections (if needed)
+        //     // For now, just store the users without WebSocket references
+        //     System.out.println("not null yet");
+        //     connectedUsersById.put(entry.getValue().getId(), entry.getValue()); // Replace null with actual WebSocket if needed
+        // }
+
+        // Deserialize and update the temporarily disconnected users
+        Map<String, User> deserializedDisconnectedUsers = gson.fromJson(gson.toJson(gameState.get("temporarilyDisconnectedUsers")), new TypeToken<Map<String, User>>() {}.getType());
+        temporarilyDisconnectedUsers.putAll(deserializedDisconnectedUsers);
+
+        System.out.println("Game state deserialized and updated.");
+    }
+}

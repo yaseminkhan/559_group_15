@@ -2,11 +2,17 @@ package com.server;
 
 import org.java_websocket.server.WebSocketServer;
 import com.google.gson.Gson;
+// import com.google.gson.reflect.TypeToken;
+
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 
+// import java.io.IOException;
+// import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.text.ListFormat;
+// import java.net.Socket;
+// import java.text.ListFormat;
+// import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -22,13 +28,36 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>(); 
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
-    private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
+    //Map to store the output streams
+    // private final Map<String, OutputStream> backupOutputs = new ConcurrentHashMap<>();
 
-    public WebServer(InetSocketAddress address, String serverAddress, int heartbeatPort, List<String> allServers) {
+    private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
+    private final ReplicationManager replicationManager; //ReplicationManager instance
+    private boolean isPrimary; //Flag to indicate if this server is the primary server
+    // OutputStream backupOutput; //output stream to send data to backup servers
+
+    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers) {
         super(address);
+        this.isPrimary = isPrimary;
+        
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers); //Initialize the HeartbeatManager
-        this.heartBeatManager.startHeartbeatListener(heartbeatPort); //Start listening for heartbeats from other servers
-        this.heartBeatManager.startHeartbeatSender(); //Start sending heartbeats to other servers
+        // Initialize the ReplicationManager with a reference to this WebServer instance
+        this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
+                activeGames, connectedUsers, temporarilyDisconnectedUsers);
+        if (!allServers.isEmpty()) {
+            this.heartBeatManager.startHeartbeatListener(heartbeatPort);
+            this.heartBeatManager.startHeartbeatSender();
+        }
+        
+        //Set timer to periodically send the full game state to backups
+        if (isPrimary) {
+            new Timer().scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    replicationManager.sendFullGameState();
+                }
+            }, 0, 5000); //Send full game every 10 seconds
+        }
     }
 
     @Override
@@ -99,8 +128,10 @@ public class WebServer extends WebSocketServer {
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
-        //Send heartbeat to all peer servers whenever a message is received
-        heartBeatManager.sendHeartbeatToAllServers(); 
+        //Send data to backups whenever a message is received from the client
+        if (isPrimary) {
+            replicationManager.sendIncrementalUpdate(message);
+        }
 
         if (message.startsWith("/reconnect ")) {
             String userId = message.substring(11).trim();
@@ -186,7 +217,45 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void handleChatRequest(WebSocket conn, String gameCode) {
+    @Override
+    public void onError(WebSocket conn, Exception ex) {
+        //Handle WebSocket errors
+        System.err.println(
+                "Error from " + (conn != null ? conn.getRemoteSocketAddress() : "Server") + ": " + ex.getMessage());
+        ex.printStackTrace();
+    }
+
+    @Override
+    public void onStart() {
+        //Notify when the WebSocket server starts successfully
+        System.out.println("WebSocket server started successfully on " + getPort() + ".");
+    }
+
+    public static void main(String[] args) {
+        //Run as primary server if no port is indicated
+        if (args.length < 3) {
+            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other servers> <primary boolean>");
+            System.exit(1);
+        }
+        
+        int port = Integer.parseInt(args[0]); //First server port
+        int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
+        List<String> allServers = List.of(args[2].split(",")); //Other server
+        String serverAddress = "ws://localhost: " + port; // This server's address
+        boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
+        
+        //Create and start WebSocket server
+        WebServer server = new WebServer(new InetSocketAddress("localhost", port), isPrimary, serverAddress, heartbeatPort, allServers);
+        server.start();
+        System.out.println("isPrimary: " + args[3]);
+        System.out.println("Web Server running on port: " + port);
+        System.out.println("Heartbeat listener running on port: " + heartbeatPort);
+    }
+
+
+    // ======================================================== Game Logic Methods ========================================================
+
+    public void handleChatRequest(WebSocket conn, String gameCode) {
         var game = activeGames.get(gameCode);
         var gson = new Gson();
         var chat = game.getChatMessages();
@@ -194,7 +263,7 @@ public class WebServer extends WebSocketServer {
         conn.send("HISTORY: " + gson.toJson(chat));
     }
 
-    private void handleChat(WebSocket conn, String gameCode, String chatData) {
+    public void handleChat(WebSocket conn, String gameCode, String chatData) {
         var game = activeGames.get(gameCode);
         var gson = new Gson();
         var chat = gson.fromJson(chatData, Chat.class);
@@ -204,7 +273,7 @@ public class WebServer extends WebSocketServer {
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 
-    private void handleStartGame(WebSocket conn, String gameCode, String userId) {
+    public void handleStartGame(WebSocket conn, String gameCode, String userId) {
         Game game = activeGames.get(gameCode);
         if (game != null) {
             List<User> players = game.getPlayers();
@@ -230,7 +299,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void handleEndGame(WebSocket conn, String gameCode) {
+    public void handleEndGame(WebSocket conn, String gameCode) {
         Game game = activeGames.get(gameCode);
         if (game != null) {
             User user = connectedUsers.get(conn);
@@ -248,7 +317,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void handleDrawerJoined(WebSocket conn, String gameCode) {
+    public void handleDrawerJoined(WebSocket conn, String gameCode) {
         Game game = activeGames.get(gameCode);
         if (game != null) {
             // Notify all players that the drawer has joined
@@ -257,7 +326,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void startNewRound(Game game) {
+    public void startNewRound(Game game) {
         if (game == null)
             return;
 
@@ -279,7 +348,7 @@ public class WebServer extends WebSocketServer {
     /*
      * game timer handled by server 
      */
-    private void startRoundTimer(Game game) {
+    public void startRoundTimer(Game game) {
         if (game == null)
             return;
 
@@ -311,7 +380,7 @@ public class WebServer extends WebSocketServer {
         }, 0, 1000); // Run every second
     }
 
-    private void handleReconnect(WebSocket conn, String userId) {
+    public void handleReconnect(WebSocket conn, String userId) {
         System.out.println("\n========== HANDLE RECONNECT ==========");
         System.out.println("Attempting to reconnect user: " + userId);
 
@@ -364,7 +433,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void handleGetGame(WebSocket conn, String gameCode) {
+    public void handleGetGame(WebSocket conn, String gameCode) {
         System.out.println("Fetching game data for code: " + gameCode);
         Game game = activeGames.get(gameCode);
 
@@ -377,7 +446,7 @@ public class WebServer extends WebSocketServer {
         conn.send(new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson)));
     }
 
-    private void handleJoinGame(WebSocket conn, String gameCode) {
+    public void handleJoinGame(WebSocket conn, String gameCode) {
         Game game = activeGames.get(gameCode);
         System.out.println("Retrieving game: " + gameCode);
         System.out.println("Available games: " + activeGames.keySet());
@@ -421,7 +490,7 @@ public class WebServer extends WebSocketServer {
         conn.send("JOIN_SUCCESS:" + gameCode);
     }
 
-    private void broadcastToGame(Game game, String message) {
+    public void broadcastToGame(Game game, String message) {
         if (game != null) {
             for (User player : game.getPlayers()) {
                 WebSocket conn = getConnectionByUser(player);
@@ -437,7 +506,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void broadcastGamePlayers(Game game) {
+    public void broadcastGamePlayers(Game game) {
         String playersJson = game.getPlayersJson();
         String message = new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson));
 
@@ -458,7 +527,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private WebSocket getConnectionByUser(User user) {
+    public WebSocket getConnectionByUser(User user) {
         return connectedUsers.entrySet().stream()
                 .filter(entry -> entry.getValue().equals(user))
                 .map(Map.Entry::getKey)
@@ -466,7 +535,7 @@ public class WebServer extends WebSocketServer {
                 .orElse(null);
     }
 
-    private void handleCreateGame(WebSocket conn) {
+    public void handleCreateGame(WebSocket conn) {
         User user = connectedUsers.get(conn);
         if (user == null) {
             conn.send("ERROR: You must be connected first.");
@@ -504,7 +573,7 @@ public class WebServer extends WebSocketServer {
         System.out.println("New game created: " + gameCode + " by " + user.getUsername());
     }
 
-    private void handleSetUsername(WebSocket conn, String newUsername) {
+    public void handleSetUsername(WebSocket conn, String newUsername) {
         if (newUsername.isEmpty()) {
             conn.send("ERROR: Invalid username. Try again.");
             return;
@@ -521,7 +590,7 @@ public class WebServer extends WebSocketServer {
         System.out.println("User set name: " + newUsername);
     }
 
-    private void handleGetWords(WebSocket conn, String gameCode) {
+    public void handleGetWords(WebSocket conn, String gameCode) {
         List<String> randomWords = Words.getRandomWordChoices();
         String jsonResponse = new Gson().toJson(Map.of("type", "WORDS", "data", randomWords));
         System.out.println("\n========== Sending Words ==========");
@@ -531,7 +600,7 @@ public class WebServer extends WebSocketServer {
         conn.send(jsonResponse);
     }
 
-    private void handleWordSelection(WebSocket conn, String gameCode, String word) {
+    public void handleWordSelection(WebSocket conn, String gameCode, String word) {
         Game game = activeGames.get(gameCode);
         if (game != null) {
             game.setCurrentWord(word);
@@ -588,36 +657,8 @@ public class WebServer extends WebSocketServer {
         conn.send("CANVAS_HISTORY " + newLastIndex + " " + newStrokesJson);
     }
 
-    @Override
-    public void onError(WebSocket conn, Exception ex) {
-        //Handle WebSocket errors
-        System.err.println(
-                "Error from " + (conn != null ? conn.getRemoteSocketAddress() : "Server") + ": " + ex.getMessage());
-        ex.printStackTrace();
+    public ConcurrentHashMap<WebSocket, User> getConnectedUsers() {
+        return connectedUsers;
     }
 
-    @Override
-    public void onStart() {
-        //Notify when the WebSocket server starts successfully
-        System.out.println("WebSocket server started successfully on " + getPort() + ".");
-    }
-
-    public static void main(String[] args) {
-        //Run as primary server if no port is indicated
-        if (args.length < 3) {
-            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other servers>");
-            System.exit(1);
-        }
-        
-        int port = Integer.parseInt(args[0]); //First server port
-        int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
-        List<String> allServers = List.of(args[2].split(",")); //Other server
-        String serverAddress = "ws://localhost: " + port; // This server's address
-        
-        //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("localhost", port), serverAddress, heartbeatPort, allServers);
-        server.start();
-        System.out.println("Web Server running on port: " + port);
-        System.out.println("Heartbeat listener running on port: " + heartbeatPort);
-    }
 }
