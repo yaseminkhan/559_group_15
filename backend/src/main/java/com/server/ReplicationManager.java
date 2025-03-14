@@ -10,10 +10,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 
 public class ReplicationManager {
 
@@ -28,6 +41,8 @@ public class ReplicationManager {
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers;
     private OutputStream backupIncrOutput;
     private OutputStream backupFullGameOutput;
+    private KafkaProducer<String, String> kafkaProducer;
+    private KafkaConsumer<String, String> kafkaConsumer;
 
     public ReplicationManager(WebServer webServer, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers,
                              ConcurrentHashMap<String, Game> activeGames,
@@ -39,7 +54,6 @@ public class ReplicationManager {
         this.heartbeatPort = heartbeatPort;
         this.allServers = allServers;
         this.activeGames = activeGames;
-        // this.connectedUsers = connectedUsers;
         this.connectedUsersById = new ConcurrentHashMap<>(); //Wrapper map since ReplicationManager does not have a websocket
         this.temporarilyDisconnectedUsers = temporarilyDisconnectedUsers;
 
@@ -47,10 +61,40 @@ public class ReplicationManager {
             this.connectedUsersById.put(entry.getValue().getId(), entry.getValue());
         }
         System.out.println("replication manager constructor");
+
+        if (isPrimary) {
+            // Initialize Kafka producer for primary server
+            Properties producerProps = new Properties();
+            producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+            producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+            producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+            kafkaProducer = new KafkaProducer<>(producerProps);
+        } else {
+            
+            Properties consumerProps = new Properties();
+            consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+            consumerProps.put(ConsumerConfig. GROUP_ID_CONFIG, "game-state-consumer-group");
+            consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+            consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+            kafkaConsumer = new KafkaConsumer<>(consumerProps);
+            kafkaConsumer.subscribe(Collections.singletonList("game-state"));
+
+            //Start thread to consume messages from Kafka
+            new Thread(() -> {
+                while (true) {
+                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
+                    for (ConsumerRecord<String, String> record: records) {
+                        updateGameState(record.value());
+                    }
+                }
+            }).start();
+        }
+
         if (isPrimary) {
             System.out.println("primary is going to connect to backup");
             connectToBackups();
-        } else {
+        }
+        else {
             startReplicationListeners();
         }
     }
@@ -136,30 +180,33 @@ public class ReplicationManager {
 
     // Send incremental updates to backups (primary server only)
     public void sendIncrementalUpdate(String message) {
-        if (isPrimary && backupIncrOutput != null) {
-            try {
-                backupIncrOutput.write(message.getBytes()); // Send the incremental update
-                System.out.println("PASSED HERE");
-                backupIncrOutput.flush();
-                System.out.println("Incremental update sent to backups: " + message);
-            } catch (IOException e) {
-                System.err.println("Failed to send incremental update to backups: " + e.getMessage());
-            }
+        if (isPrimary && kafkaProducer != null) {
+            ProducerRecord<String, String> record = new ProducerRecord<>("game-state-updates", message);
+            kafkaProducer.send(record, (metadata, exception) -> {
+                if (exception != null) {
+                    System.err.println("Failed to send incremental update to Kafka:" + exception.getMessage());
+                }
+                else {
+                    System.out.println("Incremental update sent to Kafka: " + metadata);
+                }
+            });
         }
     }
 
+
     // Send full game state to backups (primary server only)
     public void sendFullGameState() {
-        if (isPrimary && backupFullGameOutput != null) {
-            System.out.println("GOING TO SEND FULL GAME STATE SCHEDULED");
-            String gameState = serializeGameState(); // Serialize the game state
-            try {
-                backupFullGameOutput.write(gameState.getBytes()); // Send the full game state
-                backupFullGameOutput.flush();
-                System.out.println("Full game state sent to backups: " + gameState);
-            } catch (IOException e) {
-                System.err.println("Failed to send full game state to backups: " + e.getMessage());
-            }
+        if (isPrimary && kafkaProducer != null) {
+            String gameState = serializeGameState();
+            ProducerRecord<String, String> record = new ProducerRecord<>("game-state", gameState);
+            kafkaProducer.send(record, (metadata, exception) -> {
+                if (exception != null) {
+                    System.err.println("Failed to send full game state to Kafka: " + exception.getMessage());
+                }
+                else {
+                    System.out.println("Full game state sent to Kafka: " + metadata);
+                }
+            });
         }
     }
 

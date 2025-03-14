@@ -237,8 +237,18 @@ public class WebServer extends WebSocketServer {
         String serverAddress = "ws://localhost: " + port; // This server's address
         boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
         
+        
+        System.out.println("isPrimary" + isPrimary);
+        System.out.println("serverAddress" + serverAddress);
+        System.out.println("heartbeatPort" + heartbeatPort);
+        System.out.println("allServers" + allServers);
+        
         //Create and start WebSocket server
         WebServer server = new WebServer(new InetSocketAddress("localhost", port), isPrimary, serverAddress, heartbeatPort, allServers);
+
+
+
+
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
