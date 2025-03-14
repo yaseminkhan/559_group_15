@@ -58,6 +58,14 @@ public class Game {
             this.drawer = null;
             this.wordToDraw = null;
             canvasHistory.clear();
+            for (var player: players) {
+                player.setGameCode(null);
+                player.setWasDrawer(false);
+                player.setAlreadyGuessed(false);
+                player.setScore(0);
+                player.setUsername(null);
+                player.setIsHost(false);
+            }
         }
     
         private int getPlayersAlreadyGuessed() {

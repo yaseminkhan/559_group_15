@@ -125,6 +125,10 @@ public class User {
         return isHost;
     }
 
+    public void setIsHost(boolean val) {
+        this.isHost = val;
+    }
+
     public String getGameCode() {
         return gameCode;
     }
