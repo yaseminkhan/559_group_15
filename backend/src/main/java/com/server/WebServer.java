@@ -85,8 +85,8 @@ public class WebServer extends WebSocketServer {
                                 game.cancelTimer();
 
                                 // Drawer did not reconnect, so select a new drawer            
-                                if(game.hasAvailableDrawer() && game.getPlayers().size() >= 2){
-                                    System.out.println("New drawer available, starting new round...");
+                                if(game.getPlayers().size() >= 2){
+                                    System.out.println("Starting new round...");
                                     startNewRound(game);
                                 } else{
                                     broadcastToGame(game, "GAME_OVER");
@@ -118,7 +118,7 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-        System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
+        //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
         if (message.startsWith("/reconnect ")) {
             String userId = message.substring(11).trim();
@@ -232,8 +232,6 @@ public class WebServer extends WebSocketServer {
                 return;
             }
 
-            // Set rounds equal to the number of players
-            game.updateMaxRounds(); 
             // Reset all players scores to 0
             game.resetScores();
             // Assign a drawer 
@@ -276,22 +274,21 @@ public class WebServer extends WebSocketServer {
     }
 
     private void startNewRound(Game game) {
-        if (game == null)
-            return;
+        if (game == null) return;
 
-        game.resetForRound();
+        game.resetForRound();  // Reset round state
 
-        if (!game.hasAvailableDrawer()) { // Check if everyone has drawn 
+        if (!game.hasAvailableDrawer()) { 
             broadcastToGame(game, "GAME_OVER");
             System.out.println("All rounds complete. Waiting for players to exit.");
-            return; // Do not clear players yet
+            game.endGame();
+            return;
         }
 
-        game.nextTurn(); // Move to the next round
-
+        game.nextTurn();
+        
         // Notify all players about the new round and new drawer
         broadcastToGame(game, "NEW_ROUND: " + game.getCurrentRound() + " DRAWER: " + game.getDrawer().getId());
-
     }
 
     /*
@@ -387,7 +384,7 @@ public class WebServer extends WebSocketServer {
     }
 
     private void handleGetGame(WebSocket conn, String gameCode) {
-        System.out.println("Fetching game data for code: " + gameCode);
+        //System.out.println("Fetching game data for code: " + gameCode);
         Game game = activeGames.get(gameCode);
 
         if (game == null) {
@@ -450,7 +447,7 @@ public class WebServer extends WebSocketServer {
                 if (conn != null) {
                     conn.send(message);
                     if (!message.startsWith("TIMER_UPDATE")) {
-                        System.out.println("Broadcast to: " + player.getUsername() + " Message: " + message);
+                        //System.out.println("Broadcast to: " + player.getUsername() + " Message: " + message);
                     }
                 } else {
                     System.out.println("Could not find connection for " + player.getUsername());

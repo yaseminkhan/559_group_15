@@ -135,7 +135,7 @@ public class User {
     }
 
     /*
-     * when drawer is removed both isDrawer and wasDrawer booleans updated 
+     * when drawer is removed 
      */
     public void removeAsDrawer() {
         this.isDrawer = false;

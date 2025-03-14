@@ -12,7 +12,6 @@ public class Game {
     private String gameCode;
     private List<User> players;
     private Set<String> confirmedEndGame;
-    private Set<String> drawnPlayers;
     private User drawer;
     private int round;
     private String wordToDraw;
@@ -21,7 +20,6 @@ public class Game {
     private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
-    private int maxRounds;
     private Timer roundTimer;
     
         private List<CanvasUpdate> canvasHistory;
@@ -33,16 +31,14 @@ public class Game {
             this.gameCode = gameCode;
             this.players = new ArrayList<>();
             this.confirmedEndGame = new HashSet<>();
-            this.drawnPlayers = new HashSet<>();
-            this.round = 1;
             this.gameStarted = false;
             this.gameEnded = false;
             this.chatMessages = new ArrayList<>();
             this.drawer = null;
             this.drawerIndex = -1;
-            this.maxRounds = 1; // Default value, will be updated when the game starts
             this.wordToDraw = Words.getRandomWord();
             this.timeLeft = 60;
+            this.round = 1;
             this.canvasHistory = new ArrayList<>();
     
         }
@@ -81,13 +77,6 @@ public class Game {
             return user;
         }
     
-        /*
-         * Updates the number of rounds to match the number of players.
-         */
-        public void updateMaxRounds() {
-            this.maxRounds = players.size();
-        }
-    
         public Chat addMessage(Chat message) {
             var user = getUserById(message.id);
     
@@ -101,11 +90,11 @@ public class Game {
                 chatMessages.add(message); // Messages are only added when someone hasn't yet guessed correctly.
             }
     
-            System.out.println("----------------SCORE BOARD-------------------");
-            for (var player : players) {
-                System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
-            }
-            System.out.println("----------------------------------------------");
+            // System.out.println("----------------SCORE BOARD-------------------");
+            // for (var player : players) {
+            //     System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
+            // }
+            // System.out.println("----------------------------------------------");
             return message;
         }
     
@@ -157,9 +146,9 @@ public class Game {
          */
         public void removePlayer(User player) {
             players.remove(player);
-            if (player.isDrawer()) {
-                nextTurn(); // Auto-assign new drawer
-            }
+            // if (player.isDrawer()) {
+            //     nextTurn(); // Auto-assign new drawer
+            // }
         }
     
         /*
@@ -182,10 +171,6 @@ public class Game {
             return false; // Game cannot start if not host
         }
     
-        public Set<String> getDrawnPlayers() {
-            return this.drawnPlayers;
-        }
-    
         /* 
          * Assigns new drawer - will need to change to a different algorithm later 
          */
@@ -194,30 +179,37 @@ public class Game {
                 System.out.println("No players left in the game.");
                 return;
             }
-    
+
+            for (User player : players) {
+                player.removeAsDrawer(); // Set all players to isDrawer = false
+            }
+        
             if (drawer != null) {
                 System.out.println("Previous drawer: " + drawer.getUsername());
-                drawer.setDrawer();
                 drawer.removeAsDrawer();
+                drawer = null; // Ensure the old drawer is cleared
             }
-    
-            if(hasAvailableDrawer()){
+        
+            if (hasAvailableDrawer()) {
                 System.out.println("\n--- Assigning New Drawer ---");
                 for (User player : players) {
-                     System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
+                    System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
                 }
+        
                 // Select the next available drawer
                 for (int i = 0; i < players.size(); i++) {
                     drawerIndex = (drawerIndex + 1) % players.size();
                     User potentialDrawer = players.get(drawerIndex);
-
+        
                     if (!potentialDrawer.wasDrawer()) { // Find the first player who hasn’t drawn
                         drawer = potentialDrawer;
                         drawer.setDrawer();
-                        System.out.println("------------------------------------------------\n" );
-                        System.out.println("\nsetting current drawer as has been drawer" + drawer.getUsername());
-                        System.out.println("------------------------------------------------\n" );
                         drawer.setWasDrawer(true);
+        
+                        System.out.println("\n==========================================\n");
+                        System.out.println("New drawer assigned: " + drawer.getUsername());
+                        System.out.println("==========================================\n");
+        
                         wordToDraw = selectRandomWord();
                         return;
                     }
@@ -271,12 +263,11 @@ public class Game {
          * moves to next round 
          */
         public void nextTurn() {
-            if (!hasAvailableDrawer()) {
-                System.out.println("No available drawers. Ending game.");
-                endGame();
-            endGame();
-                return;
-            }
+            // if (!hasAvailableDrawer()) {
+            //     System.out.println("No available drawers. Ending game.");
+            //     endGame();
+            //     return;
+            // }
     
             round++; // Increase round count
             System.out.println("Starting round " + round);
@@ -384,10 +375,6 @@ public class Game {
     
         public int getTimeLeft() {
             return this.timeLeft;
-        }
-    
-        public int getMaxRounds() {
-            return this.maxRounds;
         }
 
     /*
