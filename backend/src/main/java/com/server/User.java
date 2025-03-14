@@ -139,7 +139,6 @@ public class User {
      */
     public void removeAsDrawer() {
         this.isDrawer = false;
-        this.wasDrawer = true;
     }
 
     public void addPoints(int points) {

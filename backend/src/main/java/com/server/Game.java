@@ -214,7 +214,10 @@ public class Game {
                     if (!potentialDrawer.wasDrawer()) { // Find the first player who hasn’t drawn
                         drawer = potentialDrawer;
                         drawer.setDrawer();
-                        //drawer.setWasDrawer(true);
+                        System.out.println("------------------------------------------------\n" );
+                        System.out.println("\nsetting current drawer as has been drawer" + drawer.getUsername());
+                        System.out.println("------------------------------------------------\n" );
+                        drawer.setWasDrawer(true);
                         wordToDraw = selectRandomWord();
                         return;
                     }
