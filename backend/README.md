@@ -18,11 +18,11 @@ mvn exec:java
 ```
 mvn exec:java -Dexec.mainClass="com.server.Webserver"
 ```
-To specify different servers for now:
+To specify different servers for now (must run backup first):
 
 ```
-mvn exec:java -D"exec.mainClass"="WebServer" -D"exec.args"="8887 5001 localhost:5002"
-mvn exec:java -D"exec.mainClass"="WebServer" -D"exec.args"="8888 5002 localhost:5001"
+mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 5002 localhost:5001 false"
+mvn exec:java -D"exec.mainClass"="WebServer" -D"exec.args"="8887 5001 localhost:5002 true"
 ```
 
 # Test

@@ -28,7 +28,6 @@ public class WebServer extends WebSocketServer {
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
-    // OutputStream backupOutput; //output stream to send data to backup servers
 
     public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers) {
         super(address);
