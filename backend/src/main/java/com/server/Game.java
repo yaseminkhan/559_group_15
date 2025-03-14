@@ -1,6 +1,13 @@
 package com.server;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+
 import com.google.gson.Gson;
 
 /*
@@ -41,6 +48,16 @@ public class Game {
             this.round = 1;
             this.canvasHistory = new ArrayList<>();
     
+        }
+
+        public void clearGame() {
+            this.gameCode = null;
+            players.clear();
+            confirmedEndGame.clear();
+            chatMessages.clear();
+            this.drawer = null;
+            this.wordToDraw = null;
+            canvasHistory.clear();
         }
     
         private int getPlayersAlreadyGuessed() {
@@ -337,8 +354,9 @@ public class Game {
             System.out.println("Game Over! Final Scores:");
             for (User player : players) {
                 System.out.println(player.getUsername() + ": " + player.getScore() + " points");
+                player.setWasDrawer(false);
             }
-            players.clear();
+            // players.clear();
         }
     
         // functions to get game information 

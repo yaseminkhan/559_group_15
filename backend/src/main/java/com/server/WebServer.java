@@ -1,9 +1,5 @@
 package com.server;
 
-import org.java_websocket.server.WebSocketServer;
-import com.google.gson.Gson;
-import org.java_websocket.handshake.ClientHandshake;
-import org.java_websocket.WebSocket;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +7,12 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.java_websocket.WebSocket;
+import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.server.WebSocketServer;
+
+import com.google.gson.Gson;
 
 public class WebServer extends WebSocketServer {
 
@@ -236,7 +238,9 @@ public class WebServer extends WebSocketServer {
             // Reset all players scores to 0
             game.resetScores();
             // Assign a drawer 
+            System.out.println("Assign next drawer called\n");
             game.assignNextDrawer();
+            System.out.println("first drawer called\n");
             User firstDrawer = game.getDrawer();
 
             String startGameMessage = "GAME_STARTED: " + firstDrawer.getId();
@@ -257,6 +261,7 @@ public class WebServer extends WebSocketServer {
 
                 // Check if all players have confirmed
                 if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
+                    game.clearGame();
                     activeGames.remove(gameCode);
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");
