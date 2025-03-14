@@ -1,6 +1,13 @@
 package com.server;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+
 import com.google.gson.Gson;
 
 /*
@@ -12,7 +19,6 @@ public class Game {
     private String gameCode;
     private List<User> players;
     private Set<String> confirmedEndGame;
-    private Set<String> drawnPlayers;
     private User drawer;
     private int round;
     private String wordToDraw;
@@ -21,7 +27,7 @@ public class Game {
     private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
-    private int maxRounds;
+    private Timer roundTimer;
     
         private List<CanvasUpdate> canvasHistory;
     
@@ -32,18 +38,34 @@ public class Game {
             this.gameCode = gameCode;
             this.players = new ArrayList<>();
             this.confirmedEndGame = new HashSet<>();
-            this.drawnPlayers = new HashSet<>();
-            this.round = 1;
             this.gameStarted = false;
             this.gameEnded = false;
             this.chatMessages = new ArrayList<>();
             this.drawer = null;
             this.drawerIndex = -1;
-            this.maxRounds = 1; // Default value, will be updated when the game starts
             this.wordToDraw = Words.getRandomWord();
             this.timeLeft = 60;
+            this.round = 1;
             this.canvasHistory = new ArrayList<>();
     
+        }
+
+        public void clearGame() {
+            this.gameCode = null;
+            players.clear();
+            confirmedEndGame.clear();
+            chatMessages.clear();
+            this.drawer = null;
+            this.wordToDraw = null;
+            canvasHistory.clear();
+            for (var player: players) {
+                player.setGameCode(null);
+                player.setWasDrawer(false);
+                player.setAlreadyGuessed(false);
+                player.setScore(0);
+                player.setUsername(null);
+                player.setIsHost(false);
+            }
         }
     
         private int getPlayersAlreadyGuessed() {
@@ -53,11 +75,21 @@ public class Game {
                     ++total;
             return total;
         }
+
+        public void cancelTimer() {
+            if (roundTimer != null) {
+                roundTimer.cancel();
+                roundTimer.purge();
+                roundTimer = null;
+            }
+        }
     
         public void resetForRound() {
             chatMessages.clear();
+            clearCanvasHistory();
             for (var player : players)
                 player.setAlreadyGuessed(false);
+            cancelTimer();
         }
     
         public User getUserById(String id) {
@@ -69,13 +101,6 @@ public class Game {
                 }
             }
             return user;
-        }
-    
-        /*
-         * Updates the number of rounds to match the number of players.
-         */
-        public void updateMaxRounds() {
-            this.maxRounds = players.size();
         }
     
         public Chat addMessage(Chat message) {
@@ -91,11 +116,11 @@ public class Game {
                 chatMessages.add(message); // Messages are only added when someone hasn't yet guessed correctly.
             }
     
-            System.out.println("----------------SCORE BOARD-------------------");
-            for (var player : players) {
-                System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
-            }
-            System.out.println("----------------------------------------------");
+            // System.out.println("----------------SCORE BOARD-------------------");
+            // for (var player : players) {
+            //     System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
+            // }
+            // System.out.println("----------------------------------------------");
             return message;
         }
     
@@ -147,17 +172,10 @@ public class Game {
          */
         public void removePlayer(User player) {
             players.remove(player);
-            if (player.isDrawer()) {
-                nextTurn(); // Auto-assign new drawer
-            }
+            // if (player.isDrawer()) {
+            //     nextTurn(); // Auto-assign new drawer
+            // }
         }
-    
-        // private void resetRoundPoints() {
-        //     roundPoints = IntStream
-        //             .range(0, players.size())
-        //             .reduce((x, y) -> x + (1 << y))
-        //             .getAsInt();
-        // }
     
         /*
          * starts a new game 
@@ -171,14 +189,12 @@ public class Game {
                 // Reset scores to 0 for all players
                 for (User player : players) {
                     player.setScore(0);
+                    // Reset boolean indicating if player has been the drawer already 
+                    player.setWasDrawer(false);
                 }
                 return true;
             }
             return false; // Game cannot start if not host
-        }
-    
-        public Set<String> getDrawnPlayers() {
-            return this.drawnPlayers;
         }
     
         /* 
@@ -186,30 +202,67 @@ public class Game {
          */
         public void assignNextDrawer() {
             if (players.isEmpty()) {
+                System.out.println("No players left in the game.");
                 return;
             }
-    
+
+            for (User player : players) {
+                player.removeAsDrawer(); // Set all players to isDrawer = false
+            }
+        
             if (drawer != null) {
+                System.out.println("Previous drawer: " + drawer.getUsername());
                 drawer.removeAsDrawer();
+                drawer = null; // Ensure the old drawer is cleared
             }
-    
-            // Case when only 2 players - allow alternating turns
-            if (players.size() == 2) {
-                drawerIndex = (drawerIndex + 1) % players.size();
-            } else {
-                // Find the next player who hasn't drawn yet
-                int startIndex = drawerIndex;
-                do {
+        
+            if (hasAvailableDrawer()) {
+                System.out.println("\n--- Assigning New Drawer ---");
+                for (User player : players) {
+                    System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
+                }
+        
+                // Select the next available drawer
+                for (int i = 0; i < players.size(); i++) {
                     drawerIndex = (drawerIndex + 1) % players.size();
-                } while (drawnPlayers.contains(players.get(drawerIndex).getId()) && drawerIndex != startIndex);
-    
-                // Mark the new drawer as having drawn
-                drawnPlayers.add(players.get(drawerIndex).getId());
+                    User potentialDrawer = players.get(drawerIndex);
+        
+                    if (!potentialDrawer.wasDrawer()) { // Find the first player who hasn’t drawn
+                        drawer = potentialDrawer;
+                        drawer.setDrawer();
+                        drawer.setWasDrawer(true);
+        
+                        System.out.println("\n==========================================\n");
+                        System.out.println("New drawer assigned: " + drawer.getUsername());
+                        System.out.println("==========================================\n");
+        
+                        wordToDraw = selectRandomWord();
+                        return;
+                    }
+                }
             }
+        }
+
+        /*
+         * Determine if there is any available players who have not drawn yet 
+         */
+        public boolean hasAvailableDrawer() {
+            System.out.println("\n--- Checking Available Drawers ---");
     
-            drawer = players.get(drawerIndex);
-            drawer.setDrawer();
-            wordToDraw = selectRandomWord();
+            if (players.isEmpty()) {
+                System.out.println("No players left in the game.");
+                return false;
+            }
+            
+            for (User player : players) {
+                //System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
+                
+                if (!player.wasDrawer()) {
+                    return true;
+                }
+            }
+
+            return false;
         }
     
         /*
@@ -230,14 +283,16 @@ public class Game {
          * moves to next round 
          */
         public void nextTurn() {
-            if (round > maxRounds) {
-                endGame();
-                return;
-            }
-    
             round++; // Increase round count
             System.out.println("Starting round " + round);
             assignNextDrawer(); // Assign new drawer
+
+            if (drawer != null) {
+                System.out.println("New drawer for this round: " + drawer.getUsername());
+            } else {
+                System.out.println("ERROR: No drawer assigned, this should not happen.");
+            }
+
             this.timeLeft = 60;
         }
     
@@ -307,8 +362,9 @@ public class Game {
             System.out.println("Game Over! Final Scores:");
             for (User player : players) {
                 System.out.println(player.getUsername() + ": " + player.getScore() + " points");
+                player.setWasDrawer(false);
             }
-            players.clear();
+            // players.clear();
         }
     
         // functions to get game information 
@@ -334,10 +390,6 @@ public class Game {
     
         public int getTimeLeft() {
             return this.timeLeft;
-        }
-    
-        public int getMaxRounds() {
-                return this.maxRounds;
         }
 
     /*
@@ -401,5 +453,9 @@ public class Game {
         public boolean getNewStroke() {
             return newStroke;
         }
+    }
+
+    public void setTimer(Timer t){
+        this.roundTimer = t;
     }
 }
