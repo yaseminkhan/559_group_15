@@ -26,6 +26,7 @@ Linux: ```bin/zookeeper-server-start.sh config/zookeeper.properties```
 Run Kafka Broker in new terminal in kafka directory:
 Windows: ```bin\windows\kafka-server-start.bat config\server.properties```
 Linux: ```bin/kafka-server-start.sh config/server.properties```
+
 To specify different servers for now (must run backup first):
 
 ```

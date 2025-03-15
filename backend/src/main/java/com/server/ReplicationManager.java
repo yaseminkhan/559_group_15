@@ -11,6 +11,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -77,14 +78,20 @@ public class ReplicationManager {
             consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             kafkaConsumer = new KafkaConsumer<>(consumerProps);
-            kafkaConsumer.subscribe(Collections.singletonList("game-state"));
+            kafkaConsumer.subscribe(Arrays.asList("game-state", "incremental-updates"));
 
             //Start thread to consume messages from Kafka
             new Thread(() -> {
                 while (true) {
-                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
-                    for (ConsumerRecord<String, String> record: records) {
-                        updateGameState(record.value());
+                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000)); // Increased timeout
+                    for (ConsumerRecord<String, String> record : records) {
+                        if (record.topic().equals("game-state")) {
+                            // Handle game-state messages (JSON)
+                            updateGameState(record.value());
+                        } else if (record.topic().equals("incremental-updates")) {
+                            // Handle incremental-updates messages (plain string)
+                            processIncrementalUpdate(record.value());
+                        }
                     }
                 }
             }).start();
@@ -143,6 +150,7 @@ public class ReplicationManager {
                     int bytesRead = input.read(buffer);
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
+                        System.out.println("received incremental update: " + buffer);
                         processIncrementalUpdate(message);
                     }
                 }
@@ -181,7 +189,7 @@ public class ReplicationManager {
     // Send incremental updates to backups (primary server only)
     public void sendIncrementalUpdate(String message) {
         if (isPrimary && kafkaProducer != null) {
-            ProducerRecord<String, String> record = new ProducerRecord<>("game-state-updates", message);
+            ProducerRecord<String, String> record = new ProducerRecord<>("incremental-updates", message);
             kafkaProducer.send(record, (metadata, exception) -> {
                 if (exception != null) {
                     System.err.println("Failed to send incremental update to Kafka:" + exception.getMessage());
@@ -318,6 +326,7 @@ public class ReplicationManager {
 
     // Update the game state (secondary servers only)
     private void updateGameState(String gameStateJson) {
+        System.out.println("Raw gameStateJson: " + gameStateJson); // Debug log
         Gson gson = new Gson();
         Type type = new TypeToken<Map<String, Object>>() {}.getType();
 
