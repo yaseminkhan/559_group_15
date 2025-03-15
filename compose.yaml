@@ -47,14 +47,7 @@ services:
     command: >
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8887 5001 backup_server:6001 true"
     depends_on:
-      - kafka
       - backup_server # Guarantee startup order.
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8887"] # Check if the server is responding
-      interval: 5s # Check every 5 seconds
-      timeout: 3s # Timeout for the health check
-      retries: 10 # Retry up to 10 times before marking as unhealthy
-      start_period: 10s # Wait 10 seconds before starting health checks
 
   client_1:
     image: client
@@ -62,8 +55,7 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      primary_server:
-        condition: service_healthy
+      - primary_server
 
   client_2:
     image: client
@@ -71,5 +63,4 @@ services:
     ports:
       - "3001:3000"
     depends_on:
-      primary_server:
-        condition: service_healthy
+      - primary_server
