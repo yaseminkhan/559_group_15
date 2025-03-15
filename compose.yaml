@@ -1,4 +1,5 @@
 services:
+
   backup_server:
     image: server
     container_name: backup_server
@@ -6,6 +7,7 @@ services:
       - "5002:5002"
     command: >
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 5002 primary_server:5001 false"
+
   primary_server:
     image: server
     container_name: primary_server
@@ -13,6 +15,8 @@ services:
       - "5001:5001"
     command: >
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 5001 backup_server:5002 true"
+    depends_on:
+      - backup_server # Guarantee startup order.
 
   client_1:
     image: client
