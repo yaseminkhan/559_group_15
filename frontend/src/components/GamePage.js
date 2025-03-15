@@ -38,6 +38,11 @@ const GamePage = () => {
             setIsChoosingWord(false); // Hide pop-up for all players
         }
 
+        if (event.data.startsWith("DRAWER_DISCONNECTED")) {
+          console.log("Drawer disconnected during the game.");
+          alert("The drawer disconnected! A new drawer will be selected soon...");
+        }
+
         if (event.data.startsWith("DRAWER_JOINED:")) {
           console.log("Drawer has joined the game. Starting timer...");
           setTimeLeft(60); // Reset timer when drawer joins
