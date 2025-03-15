@@ -271,6 +271,13 @@ public class WebServer extends WebSocketServer {
         var gson = new Gson();
         var chat = gson.fromJson(chatData, Chat.class);
         var user = connectedUsers.get(conn);
+        //DEBUGGING ONLY
+        if (user == null) {
+            System.out.println("ERROR: User not found for connection.");
+            conn.send("ERROR: You are not connected.");
+            return;
+        }
+        //DEBUGGING END
         chat.sender = user.getUsername();
         chat = game.addMessage(chat); // Make sure to clear data after /new-round.
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
