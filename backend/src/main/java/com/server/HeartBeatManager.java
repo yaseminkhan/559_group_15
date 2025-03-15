@@ -12,6 +12,7 @@ public class HeartBeatManager {
     private final int heartbeatPort; //Port for heartbeat communication
     private final List<String> allServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
+    public static final int HEARTBEAT_TIMEOUT = 10000; //Set server time out as 10 seconds
 
     public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers) {
         this.serverAddress = serverAddress;
@@ -90,4 +91,8 @@ public class HeartBeatManager {
         return lastHeartbeatTime;
     }
 
+    public boolean isServerAlive(String serverAddress) {
+        long currentTime = System.currentTimeMillis();
+        return (currentTime - lastHeartbeatTime) < HEARTBEAT_TIMEOUT;
+    }
 }

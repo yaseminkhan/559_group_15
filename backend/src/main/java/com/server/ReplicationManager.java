@@ -38,7 +38,6 @@ public class ReplicationManager {
     private final int heartbeatPort;
     private final ConcurrentHashMap<String, Game> activeGames;
     private final ConcurrentHashMap<String, User> connectedUsersById;
-    // private final ConcurrentHashMap<WebSocket, User> connectedUsers;
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers;
     private OutputStream backupIncrOutput;
     private OutputStream backupFullGameOutput;
@@ -61,19 +60,18 @@ public class ReplicationManager {
         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
             this.connectedUsersById.put(entry.getValue().getId(), entry.getValue());
         }
-        System.out.println("replication manager constructor");
 
         if (isPrimary) {
             // Initialize Kafka producer for primary server
             Properties producerProps = new Properties();
-            producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+            producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
             producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             kafkaProducer = new KafkaProducer<>(producerProps);
         } else {
             
             Properties consumerProps = new Properties();
-            consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+            consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
             consumerProps.put(ConsumerConfig. GROUP_ID_CONFIG, "game-state-consumer-group");
             consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
@@ -98,7 +96,6 @@ public class ReplicationManager {
         }
 
         if (isPrimary) {
-            System.out.println("primary is going to connect to backup");
             connectToBackups();
         }
         else {
@@ -115,19 +112,15 @@ public class ReplicationManager {
                 String serverIp = serverInfo[0];
                 try {
                     Socket incrSocket = new Socket(serverIp, otherServerHBPort + 1);
-                    // incrSocket.setKeepAlive(true);
-                    // incrSocket.setSoTimeout(30000);
                     backupIncrOutput = incrSocket.getOutputStream(); // Create output stream to send data
-                    System.out.println("Connected to backups: " + serverIp + ": " + otherServerHBPort + 1);
+                    System.out.println("Connected to backups: " + serverIp + ": " + (otherServerHBPort + 1));
                 } catch (IOException ioe) {
                     System.err.println("Failed to connect to backups: " + ioe.getMessage());
                 }
                 try {
                     Socket fullGameSocket = new Socket(serverIp, otherServerHBPort + 2);
-                    // fullGameSocket.setKeepAlive(true);
-                    // fullGameSocket.setSoTimeout(30000);
                     backupFullGameOutput = fullGameSocket.getOutputStream(); // Create output stream to send data
-                    System.out.println("Connected to backups: " + serverIp + ": " + otherServerHBPort + 2);
+                    System.out.println("Connected to backups: " + serverIp + ": " + (otherServerHBPort + 2));
                 } catch (IOException ioe) {
                     System.err.println("Failed to connect to backups: " + ioe.getMessage());
                 }

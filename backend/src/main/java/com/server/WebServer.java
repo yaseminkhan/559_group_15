@@ -234,7 +234,7 @@ public class WebServer extends WebSocketServer {
         int port = Integer.parseInt(args[0]); //First server port
         int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
         List<String> allServers = List.of(args[2].split(",")); //Other server
-        String serverAddress = "ws://localhost: " + port; // This server's address
+        String serverAddress = "ws://primary_server: " + port; // This server's address
         boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
         
         
@@ -244,11 +244,7 @@ public class WebServer extends WebSocketServer {
         System.out.println("allServers" + allServers);
         
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("localhost", port), isPrimary, serverAddress, heartbeatPort, allServers);
-
-
-
-
+        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
