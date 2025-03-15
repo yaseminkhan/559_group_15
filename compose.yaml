@@ -12,18 +12,19 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
       KAFKA_LISTENERS: "PLAINTEXT://kafka:9092,CONTROLLER://kafka:19092"
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"  # Add this line
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER" # Add this line
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:19092"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
 
-
   backup_server:
+    build:
+      context: ./backend
     image: server
     container_name: backup_server
     ports:
-      - "8888:8888" # Expose port 8887 for client communication
+      - "8888:8888" # Expose port 8888 for client communication
       - "6001:6001" # Expose port 5002 for heartbeat communication
       - "6002:6002" # Expose port 5002 for Incremental Updates (otherServerHBPort + 1)
       - "6003:6003" # Expose port 5003 for Full game state updates (otherServerHBPort + 2)
@@ -50,6 +51,8 @@ services:
       - backup_server # Guarantee startup order.
 
   client_1:
+    build:
+      context: ./frontend
     image: client
     container_name: client_1
     ports:
