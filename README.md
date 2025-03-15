@@ -1,21 +1,15 @@
 # Docker Configuration Instructions
 
-## Creating Images
+## Run Docker Containers
 
-Getting Docker set up for multiple containers on a single machine is simple. Everything is already configured in `compose.yaml`. Before starting the containers, it is important to build the images for both servers and clients (frontend and backend). To build the images, type in the following commands in the terminal:
+```docker-compose up```
 
-```
-docker build -t server ./backend
-docker build -t client ./frontend
-```
-
-The images should build without any issues. To verify that the images have been built, you can type in `docker image ls -a`, which should list both images since they have been built.
-
-## Creating and Running Containers
-
-To create the containers that run using the Docker images, simply type in `docker-compose up --build` and hit enter. This should build all containers and run them as needed. Additional clients can be added in `compose.yaml` as needed by copying and pasting existing code, and changing the parameters like port numbers where necessary.
+To force build: ```docker-compose up --build```
 
 At any time to check that all containers are running, type in `docker ps -a` to view all containers.
+
+## Remove Old Images:
+```docker-compose down --rmi all```
 
 ## Deleting Containers
 
