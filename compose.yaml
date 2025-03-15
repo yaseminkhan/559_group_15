@@ -14,7 +14,7 @@ services:
     ports:
       - "5001:5001"
     command: >
-      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 5001 backup_server:5002 true"
+      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8887 5001 backup_server:5002 true"
     depends_on:
       - backup_server # Guarantee startup order.
 
