@@ -17,9 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebServer extends WebSocketServer {
 
     //Map to store connected users and their Websocket connections
-    private final ConcurrentHashMap<WebSocket, User> connectedUsers = new ConcurrentHashMap<>(); 
+    private final ConcurrentHashMap<WebSocket, User> connectedUsers = new ConcurrentHashMap<>();
     //Map to store active games by game code
-    private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>(); 
+    private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
     //Map to store the output streams
@@ -294,7 +294,7 @@ public class WebServer extends WebSocketServer {
             }
 
             // Set rounds equal to the number of players
-            game.updateMaxRounds(); 
+            game.updateMaxRounds();
             // Reset all players scores to 0
             game.resetScores();
             // Assign a drawer 
@@ -670,5 +670,4 @@ public class WebServer extends WebSocketServer {
     public ConcurrentHashMap<WebSocket, User> getConnectedUsers() {
         return connectedUsers;
     }
-
 }
