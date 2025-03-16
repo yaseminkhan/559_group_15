@@ -81,6 +81,8 @@ public class Game {
         public Chat addMessage(Chat message) {
             var user = getUserById(message.id);
     
+            message.text = message.text.trim();  // Ignore leading and trailing whitespace.
+
             if (!user.getAlreadyGuessed()) {
                 if (message.text.equalsIgnoreCase(wordToDraw)) {
                     user.setScore(user.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
