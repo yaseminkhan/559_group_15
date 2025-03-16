@@ -353,6 +353,10 @@ public class WebServer extends WebSocketServer {
                     activeGames.remove(gameCode);
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");
+                    // Send a message to Kafka to clear the game state
+                    if (isPrimary) {
+                        replicationManager.sendGameOverMessage(gameCode);
+                    }
                 }
             }
         }
@@ -537,9 +541,12 @@ public class WebServer extends WebSocketServer {
 
     public void broadcastToGame(Game game, String message) {
         if (game != null) {
+            System.out.println("length: " + game.getPlayers().size());
             for (User player : game.getPlayers()) {
+                System.out.println("player: " + player);
+                
                 WebSocket conn = getConnectionByUser(player);
-                if (conn != null) {
+                if (isPrimary && (conn != null)) {
                     conn.send(message);
                     if (!message.startsWith("TIMER_UPDATE")) {
                         //System.out.println("Broadcast to: " + player.getUsername() + " Message: " + message);

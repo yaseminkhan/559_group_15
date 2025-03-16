@@ -214,18 +214,15 @@ public class ReplicationManager {
     private String serializeGameState() {
         Gson gson = new Gson();
         Map<String, Object> gameState = new HashMap<>();
-        System.out.println("BEFORE!!");
         gameState.put("activeGames", activeGames);
-        System.out.println("AFTER ACTIVEGAMES!!");
+
+        //Create a map of users by their IDs
         Map<String,User> usersById = new HashMap<>();
         for (Map.Entry<WebSocket, User> entry : webServer.getConnectedUsers().entrySet()) {
             usersById.put(entry.getValue().getId(), entry.getValue());
         }
-        // gameState.put("connectedUsers", webServer.getConnectedUsers());
         gameState.put("connectedUsersById", usersById);
-        System.out.println("AFTERC CONNECTEDUSERS!!");
         gameState.put("temporarilyDisconnectedUsers", temporarilyDisconnectedUsers);
-        System.out.println("AFTER DISCONNECTED!!");
         return gson.toJson(gameState);
     }
 
