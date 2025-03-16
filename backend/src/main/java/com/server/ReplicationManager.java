@@ -309,6 +309,14 @@ public class ReplicationManager {
             String gameCode = parts[1];
             int lastIndex = Integer.parseInt(parts[2]);
             webServer.handleGetCanvasHistory(dummyConn, gameCode, lastIndex);
+        } else if (message.startsWith("/game-ended")){
+            String gameCode = message.substring(12).trim();
+            Game game = activeGames.get(gameCode);
+            if (game != null) {
+                activeGames.remove(gameCode);
+                resetKafkaConsumerOffsets(gameCode);
+                System.out.println("Game " + gameCode + " has been removed from backup server.");
+            }
         } else {
             System.err.println("Unknown command in incremental update: " + message);
         }
@@ -348,5 +356,13 @@ public class ReplicationManager {
         }
         
         System.out.println("Game state deserialized and updated.");
+    }
+
+    //Reset consumer offsets by committing the offsets to the latest position
+    private void resetKafkaConsumerOffsets(String gameCode) {
+        if (kafkaConsumer != null) {
+            kafkaConsumer.seekToEnd(kafkaConsumer.assignment());
+            System.out.println("Kafka consumer offsets reset for game: " + gameCode);
+        }
     }
 }

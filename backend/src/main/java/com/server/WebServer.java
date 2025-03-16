@@ -355,6 +355,11 @@ public class WebServer extends WebSocketServer {
                     temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");
+                    
+                    // Send a special message to Kafka to indicate the game has ended
+                    if (isPrimary) {
+                        replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
+                    }
                 }
             }
         }
