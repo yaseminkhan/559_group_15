@@ -71,3 +71,19 @@ services:
       - "3001:3000"
     depends_on:
       - primary_server
+  
+  client_3:
+    image: client
+    container_name: client_3
+    ports:
+      - "3002:3000"
+    depends_on:
+      - primary_server
+
+  client_4:
+    image: client
+    container_name: client_4
+    ports:
+      - "3003:3000"
+    depends_on:
+      - primary_server

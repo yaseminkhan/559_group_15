@@ -316,6 +316,7 @@ public class ReplicationManager {
                 activeGames.remove(gameCode);
                 resetKafkaConsumerOffsets(gameCode);
                 System.out.println("Game " + gameCode + " has been removed from backup server.");
+                game.cancelTimer();
             }
         } else {
             System.err.println("Unknown command in incremental update: " + message);
