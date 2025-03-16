@@ -12,7 +12,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -215,14 +214,18 @@ public class ReplicationManager {
     private String serializeGameState() {
         Gson gson = new Gson();
         Map<String, Object> gameState = new HashMap<>();
+        System.out.println("BEFORE!!");
         gameState.put("activeGames", activeGames);
+        System.out.println("AFTER ACTIVEGAMES!!");
         Map<String,User> usersById = new HashMap<>();
         for (Map.Entry<WebSocket, User> entry : webServer.getConnectedUsers().entrySet()) {
             usersById.put(entry.getValue().getId(), entry.getValue());
         }
         // gameState.put("connectedUsers", webServer.getConnectedUsers());
         gameState.put("connectedUsersById", usersById);
+        System.out.println("AFTERC CONNECTEDUSERS!!");
         gameState.put("temporarilyDisconnectedUsers", temporarilyDisconnectedUsers);
+        System.out.println("AFTER DISCONNECTED!!");
         return gson.toJson(gameState);
     }
 
@@ -338,17 +341,18 @@ public class ReplicationManager {
         // Deserialize and update the connected users
         Map<String, User> deserializedConnectedUsersById = gson.fromJson(gson.toJson(gameState.get("connectedUsersById")), new TypeToken<Map<String, User>>() {}.getType());
         connectedUsersById.putAll(deserializedConnectedUsersById);
-        // for (Map.Entry<WebSocket, User> entry : deserializedConnectedUsers.entrySet()) {
-        //     // Recreate WebSocket connections (if needed)
-        //     // For now, just store the users without WebSocket references
-        //     System.out.println("not null yet");
-        //     connectedUsersById.put(entry.getValue().getId(), entry.getValue()); // Replace null with actual WebSocket if needed
-        // }
 
         // Deserialize and update the temporarily disconnected users
         Map<String, User> deserializedDisconnectedUsers = gson.fromJson(gson.toJson(gameState.get("temporarilyDisconnectedUsers")), new TypeToken<Map<String, User>>() {}.getType());
         temporarilyDisconnectedUsers.putAll(deserializedDisconnectedUsers);
 
+        // // Restart timers for all active games
+        for (Game game : activeGames.values()) {
+            if (game.getTimeLeft() > 0) { // Only restart the timer if timeLeft is valid
+                webServer.startRoundTimer(game); // Use Game's startRoundTimer method
+            }
+        }
+        
         System.out.println("Game state deserialized and updated.");
     }
 }

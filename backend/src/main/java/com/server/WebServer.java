@@ -367,7 +367,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void startNewRound(Game game) {
+    public void startNewRound(Game game) {
         if (game == null) return;
 
         game.resetForRound();  // Reset round state
@@ -478,7 +478,7 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void handleGetGame(WebSocket conn, String gameCode) {
+    public void handleGetGame(WebSocket conn, String gameCode) {
         //System.out.println("Fetching game data for code: " + gameCode);
         Game game = activeGames.get(gameCode);
 

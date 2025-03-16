@@ -27,9 +27,8 @@ public class Game {
     private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
-    private Timer roundTimer;
-    
-        private List<CanvasUpdate> canvasHistory;
+    private transient Timer roundTimer; // Transient so Gson ignores it wben seri
+    private List<CanvasUpdate> canvasHistory;
     
         /*
          * constructor creates new instance of a game
@@ -457,5 +456,10 @@ public class Game {
 
     public void setTimer(Timer t){
         this.roundTimer = t;
+    }
+
+    public Timer getTimer() {
+        return roundTimer;
+ 
     }
 }
