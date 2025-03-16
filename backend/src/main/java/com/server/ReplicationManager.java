@@ -12,7 +12,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,15 +162,12 @@ public class ReplicationManager {
                         InputStream input = socket.getInputStream();
                         byte[] buffer = new byte[1024 * 1024]; // 1 MB buffer
                         int bytesRead = input.read(buffer);
-                        System.out.println("READING DATA YAAY");
                         if (bytesRead > 0) {
                             String gameStateJson = new String(buffer, 0, bytesRead);
-                            System.out.println("what did I read?");
                             System.out.println("bytesRead: " + buffer);
                             System.out.println("gameStateJson: " + gameStateJson);
                             updateGameState(gameStateJson);
                         }
-                        System.out.println("FINISHED READNIG");
                 }
             } catch (IOException e) {
                 System.err.println("Error in full game state listener: " + e.getMessage());
@@ -216,11 +212,12 @@ public class ReplicationManager {
         Gson gson = new Gson();
         Map<String, Object> gameState = new HashMap<>();
         gameState.put("activeGames", activeGames);
+
+        //Create a map of users by their IDs
         Map<String,User> usersById = new HashMap<>();
         for (Map.Entry<WebSocket, User> entry : webServer.getConnectedUsers().entrySet()) {
             usersById.put(entry.getValue().getId(), entry.getValue());
         }
-        // gameState.put("connectedUsers", webServer.getConnectedUsers());
         gameState.put("connectedUsersById", usersById);
         gameState.put("temporarilyDisconnectedUsers", temporarilyDisconnectedUsers);
         return gson.toJson(gameState);
@@ -312,6 +309,15 @@ public class ReplicationManager {
             String gameCode = parts[1];
             int lastIndex = Integer.parseInt(parts[2]);
             webServer.handleGetCanvasHistory(dummyConn, gameCode, lastIndex);
+        } else if (message.startsWith("/game-ended")){
+            String gameCode = message.substring(12).trim();
+            Game game = activeGames.get(gameCode);
+            if (game != null) {
+                activeGames.remove(gameCode);
+                resetKafkaConsumerOffsets(gameCode);
+                System.out.println("Game " + gameCode + " has been removed from backup server.");
+                game.cancelTimer();
+            }
         } else {
             System.err.println("Unknown command in incremental update: " + message);
         }
@@ -338,17 +344,26 @@ public class ReplicationManager {
         // Deserialize and update the connected users
         Map<String, User> deserializedConnectedUsersById = gson.fromJson(gson.toJson(gameState.get("connectedUsersById")), new TypeToken<Map<String, User>>() {}.getType());
         connectedUsersById.putAll(deserializedConnectedUsersById);
-        // for (Map.Entry<WebSocket, User> entry : deserializedConnectedUsers.entrySet()) {
-        //     // Recreate WebSocket connections (if needed)
-        //     // For now, just store the users without WebSocket references
-        //     System.out.println("not null yet");
-        //     connectedUsersById.put(entry.getValue().getId(), entry.getValue()); // Replace null with actual WebSocket if needed
-        // }
 
         // Deserialize and update the temporarily disconnected users
         Map<String, User> deserializedDisconnectedUsers = gson.fromJson(gson.toJson(gameState.get("temporarilyDisconnectedUsers")), new TypeToken<Map<String, User>>() {}.getType());
         temporarilyDisconnectedUsers.putAll(deserializedDisconnectedUsers);
 
+        // // Restart timers for all active games
+        for (Game game : activeGames.values()) {
+            if (game.getTimeLeft() > 0) { // Only restart the timer if timeLeft is valid
+                webServer.startRoundTimer(game); // Use Game's startRoundTimer method
+            }
+        }
+        
         System.out.println("Game state deserialized and updated.");
+    }
+
+    //Reset consumer offsets by committing the offsets to the latest position
+    private void resetKafkaConsumerOffsets(String gameCode) {
+        if (kafkaConsumer != null) {
+            kafkaConsumer.seekToEnd(kafkaConsumer.assignment());
+            System.out.println("Kafka consumer offsets reset for game: " + gameCode);
+        }
     }
 }
