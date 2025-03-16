@@ -17,7 +17,11 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:19092"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
-
+      # Retention policy settings
+      KAFKA_LOG_RETENTION_HOURS: "1"  # i Hour
+      KAFKA_LOG_CLEANUP_POLICY: "delete"  # Delete old messages based on retention settings
+    # volumes:
+    #   - ./log4j.properties:/opt/kafka/config/log4j.properties  # Mount custom log4j.properties
   backup_server:
     build:
       context: ./backend

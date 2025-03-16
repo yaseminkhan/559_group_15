@@ -49,7 +49,7 @@ public class WebServer extends WebSocketServer {
                 public void run() {
                     replicationManager.sendFullGameState();
                 }
-            }, 0, 5000); //Send full game every 5 seconds
+            }, 0, 10000); //Send full game every 10 seconds
         }
     }
 
@@ -351,12 +351,10 @@ public class WebServer extends WebSocketServer {
                 if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
                     game.clearGame();
                     activeGames.remove(gameCode);
+                    connectedUsers.clear();
+                    temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");
-                    // Send a message to Kafka to clear the game state
-                    if (isPrimary) {
-                        replicationManager.sendGameOverMessage(gameCode);
-                    }
                 }
             }
         }
@@ -541,18 +539,17 @@ public class WebServer extends WebSocketServer {
 
     public void broadcastToGame(Game game, String message) {
         if (game != null) {
-            System.out.println("length: " + game.getPlayers().size());
             for (User player : game.getPlayers()) {
-                System.out.println("player: " + player);
-                
                 WebSocket conn = getConnectionByUser(player);
-                if (isPrimary && (conn != null)) {
+                if (conn != null) {
                     conn.send(message);
                     if (!message.startsWith("TIMER_UPDATE")) {
                         //System.out.println("Broadcast to: " + player.getUsername() + " Message: " + message);
                     }
                 } else {
-                    System.out.println("Could not find connection for " + player.getUsername());
+                    if (isPrimary) {
+                        System.out.println("Could not find connection for " + player.getUsername());
+                    }
                 }
             }
         }
@@ -570,11 +567,13 @@ public class WebServer extends WebSocketServer {
 
         for (User player : game.getPlayers()) {
             WebSocket conn = getConnectionByUser(player);
-            if (conn != null) {
+            if ((conn != null)) {
                 conn.send(message);
                 System.out.println("Sent player list to: " + player.getUsername());
             } else {
-                System.out.println("Could not find connection for " + player.getUsername());
+                if (isPrimary){
+                    System.out.println("Could not find connection for " + player.getUsername());
+                }
             }
         }
     }

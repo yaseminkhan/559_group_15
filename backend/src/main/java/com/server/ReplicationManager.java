@@ -162,15 +162,12 @@ public class ReplicationManager {
                         InputStream input = socket.getInputStream();
                         byte[] buffer = new byte[1024 * 1024]; // 1 MB buffer
                         int bytesRead = input.read(buffer);
-                        System.out.println("READING DATA YAAY");
                         if (bytesRead > 0) {
                             String gameStateJson = new String(buffer, 0, bytesRead);
-                            System.out.println("what did I read?");
                             System.out.println("bytesRead: " + buffer);
                             System.out.println("gameStateJson: " + gameStateJson);
                             updateGameState(gameStateJson);
                         }
-                        System.out.println("FINISHED READNIG");
                 }
             } catch (IOException e) {
                 System.err.println("Error in full game state listener: " + e.getMessage());
