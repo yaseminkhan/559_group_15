@@ -85,7 +85,7 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-        System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
+        //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
         if (message.startsWith("/reconnect ")) {
             String userId = message.substring(11).trim();
@@ -151,6 +151,7 @@ public class WebServer extends WebSocketServer {
             handleCanvasUpdate(conn, gameCode, json);
 
         } else if (message.startsWith("/clear-canvas")) {
+            System.out.println("RECEIVED CLEAR CANVAS COMMAND");
             String gameCode = message.split(" ")[1];
             Game game = activeGames.get(gameCode);
             if (game != null) {
@@ -297,7 +298,7 @@ public class WebServer extends WebSocketServer {
     }
 
     private void handleReconnect(WebSocket conn, String userId) {
-        System.out.println("\n========== HANDLE RECONNECT ==========");
+        //System.out.println("\n========== HANDLE RECONNECT ==========");
         System.out.println("Attempting to reconnect user: " + userId);
 
         // Check if user is already connected
@@ -339,6 +340,7 @@ public class WebServer extends WebSocketServer {
         conn.send("ERROR: User ID not found.");
 
         // Debugging logs
+        /*
         System.out.println("Current connected users:");
         for (User user : connectedUsers.values()) {
             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
@@ -347,10 +349,11 @@ public class WebServer extends WebSocketServer {
         for (User user : temporarilyDisconnectedUsers.values()) {
             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
         }
+        */
     }
 
     private void handleGetGame(WebSocket conn, String gameCode) {
-        System.out.println("Fetching game data for code: " + gameCode);
+        //System.out.println("Fetching game data for code: " + gameCode);
         Game game = activeGames.get(gameCode);
 
         if (game == null) {

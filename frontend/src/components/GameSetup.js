@@ -13,7 +13,7 @@ const GameSetup = () => {
     const navigate = useNavigate();
     const [players, setPlayers] = useState([]);
     const [isHost, setIsHost] = useState(false);
-    const socket = useWebSocket(); 
+    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
 
     const handleStartGame = () => {
         if (socket && isHost) {
@@ -27,10 +27,10 @@ const GameSetup = () => {
     };
 
     useEffect(() => {
-        console.log("GameSetup useEffect running...");
+        //console.log("GameSetup useEffect running...");
     
         if (!socket) {
-            console.log("WebSocket is null. Exiting useEffect.");
+            console.log("WebSocket is null. Exiting use Effect.");
             return;
         }
 
@@ -47,10 +47,11 @@ const GameSetup = () => {
         
                     if (firstDrawer === userId) {
                         console.log("You are the first drawer. Navigating to word selection page.");
-                        navigate(`/wordselection/${gameCode}`); 
+                        localStorage.setItem("isDrawer", true);
+                        navigate(`/wordselection/${gameCode}`, {state: { isDrawer: true} }); 
                     } else {
                         console.log(`Navigating to game page. Waiting for drawer to choose a word.`);
-                        navigate(`/game/${gameCode}`, { state: { choosingWord: true, isDrawer: false } });
+                        navigate(`/game/${gameCode}`, { state: { isChoosingWord: true, isDrawer: false } });
                     }
                     return;
                 }

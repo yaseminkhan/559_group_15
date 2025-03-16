@@ -14,7 +14,7 @@ const WelcomePage = () => {
     const [charLimitError, setCharLimitError] = useState("") // State for the error message of having too many char in username
     const [userId, setUserId] = useState(null);
     const [gameCode, setGameCode] = useState(null);
-    const socket = useWebSocket(); 
+    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -48,7 +48,7 @@ const WelcomePage = () => {
             console.log("Navigating to:", `/setup/${gameCode}`);
             navigate(`/setup/${gameCode}`);
         }
-    }, [gameCode, navigate]);
+    }, [gameCode, navigate, isConnected]);
 
     const handleCreateGame = () => {
         if (!username.trim()) {
@@ -56,7 +56,7 @@ const WelcomePage = () => {
             return;
         }
 
-        if (socket && socket.readyState === WebSocket.OPEN) {
+        if (socket && isConnected) {
             socket.send(`/setname ${username}`);
             setTimeout(() => {
                 socket.send("/creategame");
@@ -72,13 +72,12 @@ const WelcomePage = () => {
             return;
         }
 
-        if (socket && socket.readyState === WebSocket.OPEN) {
+        if (socket && isConnected) {
             socket.send(`/setname ${username}`);  
             console.log(`Sent username: ${username}`);
 
             setTimeout(() => {
                 navigate("/join-game");
-                //socket.send("/join-game");  
                 console.log("Requested to join a game.");
             }, 500);
         } else {

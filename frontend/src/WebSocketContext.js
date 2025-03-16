@@ -5,6 +5,7 @@ let ws = null;
 
 export const WebSocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
         const connectWebSocket = () => {
@@ -13,6 +14,7 @@ export const WebSocketProvider = ({ children }) => {
 
                 ws.onopen = () => {
                     console.log("WebSocket Connected");
+                    setIsConnected(true);
                 
                     const storedUserId = localStorage.getItem("userId");
                     if (storedUserId) {
@@ -21,10 +23,19 @@ export const WebSocketProvider = ({ children }) => {
                     }
                 };
 
+                ws.onmessage = (event) => {
+                    if (event.data.startsWith("/USER_ID")) {
+                        const userId = event.data.split(" ")[1];
+                        console.log(`Connected as user: ${userId}`);
+                        localStorage.setItem("userId", userId);
+                    }
+                }
+
                 ws.onerror = (error) => console.error("WebSocket Error:", error);
 
                 ws.onclose = () => {
                     console.log("WebSocket Disconnected. Retrying in 3 seconds...");
+                    setIsConnected(false);
                     setTimeout(connectWebSocket, 3000);
                 };
 
@@ -40,7 +51,7 @@ export const WebSocketProvider = ({ children }) => {
     }, []);
 
     return (
-        <WebSocketContext.Provider value={socket}>
+        <WebSocketContext.Provider value={{ socket, isConnected }}>
             {children}
         </WebSocketContext.Provider>
     );

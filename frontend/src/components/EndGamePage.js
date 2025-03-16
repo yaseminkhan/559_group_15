@@ -6,7 +6,7 @@ import "../styles/WelcomePage.css";
 
 const EndGamePage = () => {
     const navigate = useNavigate();
-    const socket = useWebSocket();
+    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
     const [players, setPlayers] = useState([]);
     const location = useLocation();
     const gameCode = location.state?.gameCode || localStorage.getItem("gameCode");
@@ -43,7 +43,7 @@ const EndGamePage = () => {
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
     const handleEndGame = () => {
-        if (socket && socket.readyState === WebSocket.OPEN) {
+        if (socket && isConnected) {
             socket.send(`/endgame ${gameCode}`);
             navigate('/');
         } else {

@@ -12,12 +12,11 @@ function constructChatMessage(sender, text, id) {
   };
 }
 
-
 const ChatBox = ({ isDrawer, wordToDraw }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const gameCode = localStorage.getItem("gameCode");
-  const socket = useWebSocket(); // Using the external WebSocket instance
+  const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
   const username = useRef("");
   const userId = localStorage.getItem("userId");
   const alias = "You";
@@ -29,8 +28,9 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
 
     handleMessage.current = (e) => {
 
-        if (!socket)
-            return;
+        if (!socket) {
+          return;
+        }
 
         if (e.data.startsWith("HISTORY: ")) {
           const i = e.data.indexOf(" ");
@@ -57,24 +57,25 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
           setMessages(messages);
         }
     };
-
+    if (!socket || !isConnected) return
     socket.addEventListener("message", handleMessage.current);
     return () => {
       socket.removeEventListener("message", handleMessage.current);
     }
-  }, [socket, username, handleMessage]);
+    
+  }, [socket, username, handleMessage, isConnected]);
 
   useEffect(() => {
     const interval = 200;  // 200ms polling interval.
     const getChatHistory = () => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
+        if (!socket || !isConnected) {return}
+        console.log("is chat coming through");
         socket.send(`/chat-history ${gameCode}`)
-      }
     };
 
     const intervalId = setInterval(getChatHistory, interval);
     return () => clearInterval(intervalId);
-  }, [socket, gameCode]);
+  }, [socket, gameCode, isConnected]);
 
   // useEffect to attach a keydown listener to the input element
   useEffect(() => {
@@ -89,8 +90,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         const messageToSend = constructChatMessage(alias, newMessage, userId);
 
         // Send the message only if the WebSocket is open
-        if (!socket || socket.readyState !== WebSocket.OPEN)
-          console.log("WebSocket is not open.");
+        if (!socket || !isConnected) return
 
         socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
         console.log("Sent message:", newMessage);
@@ -105,10 +105,15 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         inputElem.removeEventListener("keydown", handleKeyDown.current);
       };
     }
-  }, [newMessage, socket, gameCode, username, handleKeyDown]);
+  }, [newMessage, socket, gameCode, username, handleKeyDown, isConnected]);
 
   return (
     <div className="chat-background">
+      <div>
+          isDrawer: {isDrawer ? "true" : "false"} <br />
+          socket: {socket ? "connected" : "disconnected"} <br />
+          isConnected: {isConnected ? "true" : "false"} <br />
+      </div>
       <div className="message-container">
             {messages.map((msg, index) => (
                 <div key={index} className={`message ${msg.correct ? "correct-message" : ""}`}>

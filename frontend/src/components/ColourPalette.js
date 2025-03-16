@@ -1,5 +1,8 @@
 import React from "react";
 import "../styles/GamePage.css";
+import { useWebSocket } from "../WebSocketContext";
+
+
 
 const colours = [
   "#000000", "#A52A2A", "#007BFF", "#34C759",
@@ -8,9 +11,14 @@ const colours = [
 ];
 
 const ColourPalette = ({ selectedColour, setSelectedColour, clearCanvas }) => {
+  const gameCode = localStorage.getItem("gameCode");
+  const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
+
   const handleColourClick = (colour) => {
     if (colour === "white") {
       clearCanvas();
+      // This is obv a work around, but it's a quick fix for now
+      socket.send(`/clear-canvas ${gameCode}`);
     } else {
       setSelectedColour(colour);
     }

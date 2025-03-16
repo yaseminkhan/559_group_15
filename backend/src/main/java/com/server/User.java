@@ -45,8 +45,10 @@ public class User {
      * Assigns a unique emoji to the user
      */
     private String setIcon() {
-        List<String> availableEmojis = new ArrayList<>();
+        List<String> availableEmojis = new ArrayList<>();    
+        
         // Check which emojis have not been used yet
+        /*
         for (String emoji : EMOJIS) {
             if (!usedEmojis.contains(emoji)) {
                 availableEmojis.add(emoji);
@@ -61,7 +63,8 @@ public class User {
         Random rand = new Random();
         String selectedEmoji = availableEmojis.get(rand.nextInt(availableEmojis.size()));
         usedEmojis.add(selectedEmoji); // Mark the emoji as used
-        return selectedEmoji;
+        */
+        return "🐌";
     }
 
 

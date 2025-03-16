@@ -12,14 +12,11 @@ const WordSelection = () => {
   const navigate = useNavigate();
   const [randomWords, setRandomWords] = useState([]);
   const [drawer, setDrawer] = useState(null); // Stores actual drawer info
-  const socket = useWebSocket(); 
   const userId = localStorage.getItem("userId"); // Get user ID
+  const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
 
   const handleWordSelect = (word) => {
-    if (!socket) {
-        console.error("WebSocket is not connected.");
-        return;
-    }
+    if (!socket) return;
 
     // Navigate to the game page after selecting a word
     navigate(`/game/${gameCode}`, { state: { choosingWord: false, isDrawer: true } });
@@ -98,7 +95,7 @@ const WordSelection = () => {
     return () => {
         socket.removeEventListener("message", handleMessage);
     };
-  }, [socket, gameCode, userId]);
+  }, [socket, gameCode, userId, isConnected]);
 
   return (
     <div className="setup_container">
