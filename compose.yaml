@@ -22,11 +22,11 @@ services:
       KAFKA_LOG_CLEANUP_POLICY: "delete"  # Delete old messages based on retention settings
     # volumes:
     #   - ./log4j.properties:/opt/kafka/config/log4j.properties  # Mount custom log4j.properties
-  backup_server:
+  backup_server_1:
     build:
       context: ./backend
     image: server
-    container_name: backup_server
+    container_name: backup_server_1
     ports:
       - "8888:8888" # Expose port 8888 for client communication
       - "6001:6001" # Expose port 5002 for heartbeat communication
@@ -35,7 +35,24 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
-      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 6001 primary_server:5001 false"
+      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 6001 primary_server:5001,backup_server_2:7001 false"
+    depends_on:
+      - kafka
+
+  backup_server_2:
+    build:
+      context: ./backend
+    image: server
+    container_name: backup_server_2
+    ports:
+      - "8889:8889" # Expose port 8889 for client communication
+      - "7001:7001" # Expose port 7001 for heartbeat communication
+      - "7002:7002" # Expose port 7002 for Incremental Updates (otherServerHBPort + 1)
+      - "7003:7003" # Expose port 7003 for Full game state updates (otherServerHBPort + 2)
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    command: >
+      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8889 7001 primary_server:5001,backup_server_1:6001 false"
     depends_on:
       - kafka
 
@@ -50,9 +67,10 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
-      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8887 5001 backup_server:6001 true"
+      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8887 5001 backup_server_1:6001,backup_server_2:7001 true"
     depends_on:
-      - backup_server # Guarantee startup order.
+      - backup_server_1 # Guarantee startup order.
+      - backup_server_2
 
   client_1:
     build:

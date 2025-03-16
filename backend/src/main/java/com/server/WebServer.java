@@ -261,7 +261,7 @@ public class WebServer extends WebSocketServer {
     public static void main(String[] args) {
         //Run as primary server if no port is indicated
         if (args.length < 3) {
-            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other servers> <primary boolean>");
+            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other-servers> <primary boolean>");
             System.exit(1);
         }
         
@@ -351,7 +351,7 @@ public class WebServer extends WebSocketServer {
                 if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
                     game.clearGame();
                     activeGames.remove(gameCode);
-                    connectedUsers.clear();
+                    // connectedUsers.clear(); // causing issues
                     temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");

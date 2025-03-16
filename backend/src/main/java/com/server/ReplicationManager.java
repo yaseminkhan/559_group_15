@@ -5,11 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import org.java_websocket.WebSocket;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -71,7 +67,7 @@ public class ReplicationManager {
             
             Properties consumerProps = new Properties();
             consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
-            consumerProps.put(ConsumerConfig. GROUP_ID_CONFIG, "game-state-consumer-group");
+            consumerProps.put(ConsumerConfig. GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); //Unique Group for each server
             consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             kafkaConsumer = new KafkaConsumer<>(consumerProps);
@@ -80,7 +76,8 @@ public class ReplicationManager {
             //Start thread to consume messages from Kafka
             new Thread(() -> {
                 while (true) {
-                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000)); // Increased timeout
+                    System.out.println("polling from kafka");
+                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000));
                     for (ConsumerRecord<String, String> record : records) {
                         if (record.topic().equals("game-state")) {
                             // Handle game-state messages (JSON)
@@ -93,86 +90,6 @@ public class ReplicationManager {
                 }
             }).start();
         }
-
-        if (isPrimary) {
-            connectToBackups();
-        }
-        else {
-            startReplicationListeners();
-        }
-    }
-
-    // Connect to backup servers (primary server only)
-    private void connectToBackups() {
-        for (String server : allServers) {
-            if (!server.equals(serverAddress)) { // Exclude self
-                String[] serverInfo = server.split(":");
-                int otherServerHBPort = Integer.parseInt(serverInfo[1]);
-                String serverIp = serverInfo[0];
-                try {
-                    Socket incrSocket = new Socket(serverIp, otherServerHBPort + 1);
-                    backupIncrOutput = incrSocket.getOutputStream(); // Create output stream to send data
-                    System.out.println("Connected to backups: " + serverIp + ": " + (otherServerHBPort + 1));
-                } catch (IOException ioe) {
-                    System.err.println("Failed to connect to backups: " + ioe.getMessage());
-                }
-                try {
-                    Socket fullGameSocket = new Socket(serverIp, otherServerHBPort + 2);
-                    backupFullGameOutput = fullGameSocket.getOutputStream(); // Create output stream to send data
-                    System.out.println("Connected to backups: " + serverIp + ": " + (otherServerHBPort + 2));
-                } catch (IOException ioe) {
-                    System.err.println("Failed to connect to backups: " + ioe.getMessage());
-                }
-            }
-        }
-    }
-
-    // Start listeners for replication data (secondary servers only)
-    private void startReplicationListeners() {
-        // Listen for incremental updates
-        new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(heartbeatPort + 1)) {
-                System.out.println("Listening for incremental updates on port " + (heartbeatPort + 1));
-                Socket socket = serverSocket.accept();
-                while (true) {
-                    System.out.println("socket open for listening to incremental: on port " + (heartbeatPort + 1));
-                    socket.setKeepAlive(true);
-                    InputStream input = socket.getInputStream();
-                    byte[] buffer = new byte[1024];
-                    int bytesRead = input.read(buffer);
-                    if (bytesRead > 0) {
-                        String message = new String(buffer, 0, bytesRead);
-                        System.out.println("received incremental update: " + buffer);
-                        processIncrementalUpdate(message);
-                    }
-                }
-            } catch (IOException e) {
-                System.err.println("Error in incremental update listener: " + e.getMessage());
-            }
-        }).start();
-
-        // Listen for full game state syncs
-        new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(heartbeatPort + 2)) {
-                System.out.println("Listening for full game state syncs on port " + (heartbeatPort + 2));
-                Socket socket = serverSocket.accept();
-                while (true) {
-                    System.out.println("socket open for listening to full game: on port " + (heartbeatPort + 2));
-                        socket.setKeepAlive(true);
-                        InputStream input = socket.getInputStream();
-                        byte[] buffer = new byte[1024 * 1024]; // 1 MB buffer
-                        int bytesRead = input.read(buffer);
-                        if (bytesRead > 0) {
-                            String gameStateJson = new String(buffer, 0, bytesRead);
-                            System.out.println("bytesRead: " + buffer);
-                            System.out.println("gameStateJson: " + gameStateJson);
-                            updateGameState(gameStateJson);
-                        }
-                }
-            } catch (IOException e) {
-                System.err.println("Error in full game state listener: " + e.getMessage());
-            }
-        }).start();
     }
 
     // Send incremental updates to backups (primary server only)
