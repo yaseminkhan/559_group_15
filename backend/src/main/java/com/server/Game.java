@@ -152,13 +152,6 @@ public class Game {
             }
         }
     
-        // private void resetRoundPoints() {
-        //     roundPoints = IntStream
-        //             .range(0, players.size())
-        //             .reduce((x, y) -> x + (1 << y))
-        //             .getAsInt();
-        // }
-    
         /*
          * starts a new game 
          */

@@ -32,6 +32,7 @@ public class WebServer extends WebSocketServer {
             connectedUsers.put(conn, user);
             System.out.println("Reconnected user: " + user.getUsername());
         } else {
+            // Runtime error
             user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
             connectedUsers.put(conn, user);
         }
@@ -107,6 +108,8 @@ public class WebServer extends WebSocketServer {
             String gameCode = message.split(" ")[1];
             String userId = message.split(" ")[2];
             handleStartGame(conn, gameCode, userId);
+            //Game game = activeGames.get(gameCode);
+            //startNewRound(game);
         } else if (message.startsWith("/select-word ")) {
             String[] parts = message.split(" ");
             if (parts.length < 3) {
