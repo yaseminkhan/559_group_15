@@ -109,11 +109,6 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
 
   return (
     <div className="chat-background">
-      <div>
-          isDrawer: {isDrawer ? "true" : "false"} <br />
-          socket: {socket ? "connected" : "disconnected"} <br />
-          isConnected: {isConnected ? "true" : "false"} <br />
-      </div>
       <div className="message-container">
             {messages.map((msg, index) => (
                 <div key={index} className={`message ${msg.correct ? "correct-message" : ""}`}>

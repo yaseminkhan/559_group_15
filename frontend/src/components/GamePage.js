@@ -85,13 +85,6 @@ const GamePage = () => {
         ) : (
           <div className="empty-placeholder"></div> 
         )}
-        <div>
-          isDrawer: {isDrawer ? "true" : "false"} <br />
-          socket: {socket ? "connected" : "disconnected"} <br />
-          isConnected: {isConnected ? "true" : "false"} <br />
-          clearCanvasRef: {clearCanvasRef.current ? "exists" : "null"} <br />
-          isChoosingWord: {isChoosingWord ? "true" : "false"} <br />
-        </div>
         <Canvas selectedColour={selectedColour} isDrawer={isDrawer} clearCanvasRef={clearCanvasRef} />
         <ChatBox isDrawer={isDrawer} wordToDraw={wordToDraw} />
 

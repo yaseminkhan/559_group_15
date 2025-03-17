@@ -107,7 +107,7 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            if (temporarilyDisconnectedUsers.containsKey(removedUser)) {
+                            if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 game.removePlayer(removedUser);
                                 broadcastGamePlayers(game);
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
@@ -360,14 +360,6 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void handleDrawerJoined(WebSocket conn, String gameCode) {
-        Game game = activeGames.get(gameCode);
-        if (game != null) {
-            // Notify all players that the drawer has joined
-            broadcastToGame(game, "DRAWER_JOINED: " + gameCode);
-            System.out.println("Drawer has joined game: " + gameCode + ". Timer should start now.");
-        }
-    }
 
     public void startNewRound(Game game) {
         if (game == null) return;

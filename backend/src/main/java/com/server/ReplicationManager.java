@@ -180,9 +180,6 @@ public class ReplicationManager {
             String gameCode = parts[1];
             String selectedWord = parts[2];
             webServer.handleWordSelection(dummyConn, gameCode, selectedWord);
-        } else if (message.startsWith("/drawer-joined ")) {
-            String gameCode = message.substring(15).trim();
-            webServer.handleDrawerJoined(dummyConn, gameCode);
         } else if (message.startsWith("/round-over ")) {
             String gameCode = message.substring(12).trim();
             Game game = activeGames.get(gameCode);
