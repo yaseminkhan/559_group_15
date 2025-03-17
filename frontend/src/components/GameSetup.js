@@ -15,6 +15,7 @@ const GameSetup = () => {
     const [isHost, setIsHost] = useState(false);
     const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
 
+
     const handleStartGame = () => {
         if (socket && isHost) {
             if (players.length < 2) {
@@ -27,7 +28,6 @@ const GameSetup = () => {
     };
 
     useEffect(() => {
-        //console.log("GameSetup useEffect running...");
     
         if (!socket) {
             console.log("WebSocket is null. Exiting use Effect.");
@@ -39,7 +39,6 @@ const GameSetup = () => {
             console.log("Raw Data:", event.data);
         
             try {
-                // If the message is a known string-based format, handle it first
                 if (typeof event.data === "string" && event.data.startsWith("GAME_STARTED: ")) {
                     const firstDrawer = event.data.split(" ")[1];
                     console.log("Game is starting...");
@@ -48,13 +47,16 @@ const GameSetup = () => {
                     if (firstDrawer === userId) {
                         console.log("You are the first drawer. Navigating to word selection page.");
                         localStorage.setItem("isDrawer", true);
-                        navigate(`/wordselection/${gameCode}`, {state: { isDrawer: true} }); 
+                        navigate(`/wordselection/${gameCode}`); 
                     } else {
                         console.log(`Navigating to game page. Waiting for drawer to choose a word.`);
-                        navigate(`/game/${gameCode}`, { state: { isChoosingWord: true, isDrawer: false } });
+                        localStorage.setItem("isDrawer", false);
+                        localStorage.setItem("isChoosingWord", true);
+                        navigate(`/game/${gameCode}`);
                     }
                     return;
                 }
+                
         
                 // Check if event.data is JSON before parsing
                 let message;

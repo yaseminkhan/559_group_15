@@ -19,9 +19,10 @@ const WordSelection = () => {
     if (!socket) return;
 
     // Navigate to the game page after selecting a word
-    navigate(`/game/${gameCode}`, { state: { choosingWord: false, isDrawer: true } });
+    navigate(`/game/${gameCode}`);
     setTimeout(() => {
       console.log(`Drawer selected word: ${word}`);
+      localStorage.setItem("isChoosingWord", false);
       socket.send(`/select-word ${gameCode} ${word}`); // Send word selection to the backend
 
       // Notify backend that the drawer is now joining the game

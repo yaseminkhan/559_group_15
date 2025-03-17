@@ -12,7 +12,7 @@ const EndGamePage = () => {
     const gameCode = location.state?.gameCode || localStorage.getItem("gameCode");
 
     useEffect(() => {
-        if (!socket) return;
+        if (!socket || !isConnected) return;
         
         console.log(`Requesting players for game: ${gameCode}`);
         socket.send(`/getgame ${gameCode}`);
@@ -45,6 +45,12 @@ const EndGamePage = () => {
     const handleEndGame = () => {
         if (socket && isConnected) {
             socket.send(`/endgame ${gameCode}`);
+
+            // clear localstorage
+            localStorage.setItem("isDrawer", null);
+            localStorage.setItem("isChoosingWord", null);
+            localStorage.setItem("wordToDraw", null);
+
             navigate('/');
         } else {
             alert("WebSocket is not connected!");

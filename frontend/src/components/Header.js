@@ -54,8 +54,6 @@ const Header = ({ isChoosingWord, gameCode }) => {
       if (!socket) return;
   
       const handleMessage = (event) => {
-          console.log("WebSocket message:", event.data);
-  
           if (event.data.startsWith("TIMER_UPDATE:")) {
               const newTime = parseInt(event.data.split(": ")[1]);
               console.log("Updating timer in header to:", newTime);

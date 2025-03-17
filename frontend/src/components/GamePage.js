@@ -12,8 +12,7 @@ const GamePage = () => {
   const [selectedColour, setSelectedColour] = useState("#000000");
   const clearCanvasRef = useRef(null);
   const [wordToDraw, setWordToDraw] = useState("");
-  const [isChoosingWord, setIsChoosingWord] = useState();  
-  const [round, setRound] = useState(1); 
+  const [isChoosingWord, setIsChoosingWord] = useState(localStorage.getItem("isChoosingWord") === "true");
   const navigate = useNavigate();
   const location = useLocation();
   const userId = localStorage.getItem("userId");
@@ -24,12 +23,16 @@ const GamePage = () => {
   useEffect(() => {
     if (!socket) return;
 
+    setIsChoosingWord(localStorage.getItem("isChoosingWord") === "true");
+    setWordToDraw(localStorage.getItem("wordToDraw"));
     const handleMessage = (event) => {
 
+
         if (event.data.startsWith("WORD_SELECTED:")) {
-            const chosenWord = event.data.split(": ")[1];
-            setWordToDraw(chosenWord);
-            setIsChoosingWord(false); // Hide pop-up for all players
+            setIsChoosingWord(false);
+            localStorage.setItem("isChoosingWord", false);
+            localStorage.setItem("wordToDraw", event.data.split(" ")[1]);
+            setWordToDraw(event.data.split(" ")[1]);
         }
 
         if (event.data.startsWith("NEW_ROUND:")) {
@@ -39,16 +42,17 @@ const GamePage = () => {
 
           console.log(`Starting Round ${newRound}, New Drawer: ${newDrawerId}`);
 
-          setRound(newRound);
-          setIsChoosingWord(true);
           if (userId === newDrawerId) {
               localStorage.setItem("isDrawer", true);
               setIsDrawer(true);
+              setIsChoosingWord(false);
               console.log("You are the new drawer. Redirecting to word selection...");
               navigate(`/wordselection/${gameCode}`);
           } else {
               localStorage.setItem("isDrawer", false);
+              localStorage.setItem("isChoosingWord", true);
               setIsDrawer(false);
+              setIsChoosingWord(true);
           }
         }
 
@@ -81,6 +85,7 @@ const GamePage = () => {
           socket: {socket ? "connected" : "disconnected"} <br />
           isConnected: {isConnected ? "true" : "false"} <br />
           clearCanvasRef: {clearCanvasRef.current ? "exists" : "null"} <br />
+          isChoosingWord: {isChoosingWord ? "true" : "false"} <br />
         </div>
         <Canvas selectedColour={selectedColour} isDrawer={isDrawer} clearCanvasRef={clearCanvasRef} />
         <ChatBox isDrawer={isDrawer} wordToDraw={wordToDraw} />
