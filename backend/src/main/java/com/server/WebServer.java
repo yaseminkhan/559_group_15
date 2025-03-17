@@ -76,24 +76,26 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            game.removePlayer(removedUser);
-                            broadcastGamePlayers(game);
-                            System.out.println("User permanently removed from game: " + removedUser.getUsername());
-                            
-                            game.resetForRound();
-                            // Notify players that the drawer has disconnected
-                            broadcastToGame(game, "DRAWER_DISCONNECTED");
-                            if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                temporarilyDisconnectedUsers.remove(removedUser.getId());
+                            if (temporarilyDisconnectedUsers.containsKey(removedUser)) {
+                                game.removePlayer(removedUser);
+                                broadcastGamePlayers(game);
+                                System.out.println("User permanently removed from game: " + removedUser.getUsername());
                                 
-                                game.cancelTimer();
+                                game.resetForRound();
+                                // Notify players that the drawer has disconnected
+                                broadcastToGame(game, "DRAWER_DISCONNECTED");
+                                if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                    temporarilyDisconnectedUsers.remove(removedUser.getId());
+                                    
+                                    game.cancelTimer();
 
-                                // Drawer did not reconnect, so select a new drawer            
-                                if(game.getPlayers().size() >= 2){
-                                    System.out.println("Starting new round...");
-                                    startNewRound(game);
-                                } else{
-                                    broadcastToGame(game, "GAME_OVER");
+                                    // Drawer did not reconnect, so select a new drawer            
+                                    if(game.getPlayers().size() >= 2){
+                                        System.out.println("Starting new round...");
+                                        startNewRound(game);
+                                    } else{
+                                        broadcastToGame(game, "GAME_OVER");
+                                    }
                                 }
                             }
                         }
@@ -156,9 +158,6 @@ public class WebServer extends WebSocketServer {
             String selectedWord = parts[2];
 
             handleWordSelection(conn, gameCode, selectedWord);
-        } else if (message.startsWith("/drawer-joined ")) {
-            String gameCode = message.substring(15).trim();
-            handleDrawerJoined(conn, gameCode);
         } else if (message.startsWith("/round-over ")) {
             String gameCode = message.substring(12).trim();
             Game game = activeGames.get(gameCode);
@@ -178,8 +177,6 @@ public class WebServer extends WebSocketServer {
             String chatData = parts[2];
             handleChat(conn, gameCode, chatData);
         } else if (message.startsWith("/canvas-update ")) {
-            //System.out.println("Canvas Update From: " + conn.getRemoteSocketAddress() + ": " + message);
-            // /canvas-update <gameCode> <json>
             String[] parts = message.split(" ", 3);
             if (parts.length < 3) {
                 conn.send("ERROR: Invalid canvas update format.");
@@ -271,15 +268,6 @@ public class WebServer extends WebSocketServer {
                     //broadcastToGame(game, "GAME_ENDED");
                 }
             }
-        }
-    }
-
-    private void handleDrawerJoined(WebSocket conn, String gameCode) {
-        Game game = activeGames.get(gameCode);
-        if (game != null) {
-            // Notify all players that the drawer has joined
-            broadcastToGame(game, "DRAWER_JOINED: " + gameCode);
-            System.out.println("Drawer has joined game: " + gameCode + ". Timer should start now.");
         }
     }
 
