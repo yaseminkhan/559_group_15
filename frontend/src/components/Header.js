@@ -12,8 +12,10 @@ const Header = ({ isChoosingWord, gameCode }) => {
     
     useEffect(() => {
         // if not socket open, return
-        if (!socket || !isConnected) return;
-        socket.send(`/getgame`);
+        if (!socket) return;
+        if (isConnected) {
+            socket.send(`/getgame`);
+        }
         // Routine check getgame response
         const handleMessage = (event) => {
             console.log("WebSocket message:", event.data);

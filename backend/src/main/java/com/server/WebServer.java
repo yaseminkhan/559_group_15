@@ -155,7 +155,7 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-        //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
+        System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
         //Send data to backups whenever a message is received from the client
         if (isPrimary) {

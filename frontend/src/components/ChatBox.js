@@ -47,7 +47,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
           }
 
           messages.forEach((msg) => {
-            if (msg.id == userId) {
+            if (msg.id === userId) {
               msg.sender = alias;
               if (msg.correct)
                 msg.text = msg.text.replace(username.current, alias);  // Show up as "You" guessed correctly.
