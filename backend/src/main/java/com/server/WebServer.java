@@ -34,6 +34,7 @@ public class WebServer extends WebSocketServer {
             connectedUsers.put(conn, user);
             System.out.println("Reconnected user: " + user.getUsername());
         } else {
+            // Runtime error
             user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
             connectedUsers.put(conn, user);
         }
@@ -143,6 +144,8 @@ public class WebServer extends WebSocketServer {
             String gameCode = message.split(" ")[1];
             String userId = message.split(" ")[2];
             handleStartGame(conn, gameCode, userId);
+            //Game game = activeGames.get(gameCode);
+            //startNewRound(game);
         } else if (message.startsWith("/select-word ")) {
             String[] parts = message.split(" ");
             if (parts.length < 3) {
@@ -187,6 +190,7 @@ public class WebServer extends WebSocketServer {
             handleCanvasUpdate(conn, gameCode, json);
 
         } else if (message.startsWith("/clear-canvas")) {
+            System.out.println("RECEIVED CLEAR CANVAS COMMAND");
             String gameCode = message.split(" ")[1];
             Game game = activeGames.get(gameCode);
             if (game != null) {
@@ -338,7 +342,7 @@ public class WebServer extends WebSocketServer {
     }
 
     private void handleReconnect(WebSocket conn, String userId) {
-        System.out.println("\n========== HANDLE RECONNECT ==========");
+        //System.out.println("\n========== HANDLE RECONNECT ==========");
         System.out.println("Attempting to reconnect user: " + userId);
 
         // Check if user is already connected
@@ -380,6 +384,7 @@ public class WebServer extends WebSocketServer {
         conn.send("ERROR: User ID not found.");
 
         // Debugging logs
+        /*
         System.out.println("Current connected users:");
         for (User user : connectedUsers.values()) {
             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
@@ -388,6 +393,7 @@ public class WebServer extends WebSocketServer {
         for (User user : temporarilyDisconnectedUsers.values()) {
             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
         }
+        */
     }
 
     private void handleGetGame(WebSocket conn, String gameCode) {

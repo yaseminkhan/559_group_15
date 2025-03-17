@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
 import "../styles/GamePage.css";
 import { useWebSocket } from "../WebSocketContext";
+import { useLocation, useNavigate } from "react-router-dom";
+
 
 const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   const canvasRef = useRef(null);
@@ -15,11 +17,12 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
   const lastPos = useRef({ x: null, y: null });
 
-  const socket = useWebSocket();
+  const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
   const gameCode = localStorage.getItem("gameCode");
 
   // Buffer to store points
   const pointBuffer = useRef([]);
+  const location = useLocation();
 
   /**
    * Setup canvas context on component mount
@@ -49,7 +52,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   
   //Start Drawing
   const startDrawing = (event) => {
-    if (!isDrawer) return; 
+    if (!isDrawer || !isConnected) return; 
     setDrawing(true);
     
     const { offsetX, offsetY } = event.nativeEvent;
@@ -73,7 +76,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   };
 
   const draw = (event) => {
-    if (!drawing || !isDrawer) return;
+    if (!drawing || !isDrawer || !isConnected) return;
 
     const ctx = contextRef.current;
     const {offsetX, offsetY} = event.nativeEvent;
@@ -94,6 +97,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         width: ctx.lineWidth,
         newStroke: false,
       };
+      if (!isConnected) return;
       socket.send(`/canvas-update ${gameCode} ${JSON.stringify(pointData)}`);
     }
 
@@ -103,7 +107,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   };
 
   const stopDrawing = () => {
-    if (!isDrawer) return; 
+    if (!isDrawer || !isConnected) return; 
     contextRef.current.closePath();
     setDrawing(false);
   };
@@ -113,10 +117,9 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     const context = canvas.getContext("2d");
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Send clear-canvas message to server
-    if (socket && gameCode && isDrawer) {
-      socket.send(`/clear-canvas ${gameCode}`);
-    }
+    if (!isConnected) return;
+    socket.send(`/clear-canvas ${gameCode}`);
+    
   };
 
   useEffect(() => {
@@ -153,30 +156,26 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     return () => {
       socket.removeEventListener("message", handleMessage);
     };
-  }, [socket]);
+  }, [socket, isConnected]);
 
   // Request Canvas Data In Intervals and Refresh Canvas with New Data
   useEffect(() => {
     if (!socket) return;
-
-    if (socket.readyState !== WebSocket.OPEN) {
-      return;
-    }
     
-    if (socket || !isDrawer) {
+    if (socket && isConnected) {
       const intervalId = setInterval(() => {
         socket.send(`/getcanvas ${gameCode} ${lastIndex}`);
       }, 100); // 16 ms
       return () => clearInterval(intervalId);
     }
 
-    //refresh canvas
+    // clear canvas
     const ctx = contextRef.current;
     pointBuffer.current.forEach((point) => {
       applyDrawing(point);
     });
 
-  }, [socket, gameCode, lastIndex]);
+  }, [socket, gameCode, lastIndex, isConnected]);
   
  
   const applyDrawing = (point) => {
