@@ -13,12 +13,18 @@ const JoinGamePage = () => {
     const navigate = useNavigate();
     const [gameCode, setGameCode] = useState("");
     const [message, setMessage] = useState(""); 
-    const socket = useWebSocket(); 
+    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
 
     useEffect(() => {
         if (!socket) return; 
 
-        socket.onopen = () => console.log("Connected to server!");
+        // Duplicate Logic in WebSocketContext
+        //socket.onopen = () => console.log("Connected to server!");
+        // PLEASE RELY ON WEB SOCKET CONTEXT TO HANDLE CONNECTION STATUS
+
+        if (isConnected) {
+            console.log("Connected to server!");
+        }
 
         socket.onmessage = (event) => {
             console.log("Received:", event.data);
@@ -26,6 +32,11 @@ const JoinGamePage = () => {
             if (event.data.startsWith("JOIN_SUCCESS:")) {
               const joinedGameCode = event.data.split(":")[1]; 
               localStorage.setItem("gameCode", joinedGameCode);
+              
+              // temp
+              localStorage.setItem("isDrawer", "false");
+              
+              
               navigate(`/setup/${joinedGameCode}`);
             } else if (event.data.startsWith("ERROR: Game not found.")) {
                 setMessage("Invalid game code. Please try again.");
@@ -43,14 +54,14 @@ const JoinGamePage = () => {
             socket.onmessage = null;
             socket.onerror = null;
         };
-    }, [socket, navigate]);
+    }, [socket, isConnected, navigate]);
 
     const handleJoinGame = () => {
         if (!gameCode.trim()) {
             alert("Please enter a valid game code!");
             return;
         }
-        if (socket && socket.readyState === WebSocket.OPEN) {
+        if (socket && isConnected) {
             socket.send(`/join-game ${gameCode}`);
         } else {
             alert("WebSocket is not connected!");

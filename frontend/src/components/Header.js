@@ -7,19 +7,16 @@ import { useWebSocket } from "../WebSocketContext"; // Import WebSocket context
 const Header = ({ isChoosingWord, gameCode }) => {
     const [players, setPlayers] = useState([]); // Store players from backend
     const [timeLeft, setTimeLeft] = useState(60);
-    const socket = useWebSocket();
+    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
 
+    
     useEffect(() => {
+        // if not socket open, return
         if (!socket) return;
 
-        // Request player list when component mounts
-        console.log(`Requesting players for game: ${gameCode}`);
-        socket.send(`/getgame ${gameCode}`);
-
+        // Routine check getgame response
         const handleMessage = (event) => {
             console.log("WebSocket message:", event.data);
-
-
             try {
                 const message = JSON.parse(event.data);
 
@@ -28,7 +25,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
                     setPlayers(JSON.parse(message.data)); // Update players
                 }
             } catch (error) {
-                // console.error("Error parsing WebSocket message:", error);
+                //console.error("Error parsing WebSocket message:", error);
             }
         };
 
@@ -43,8 +40,10 @@ const Header = ({ isChoosingWord, gameCode }) => {
     useEffect(() => {
         const interval = 200;  // 200ms polling interval.
         const getPlayers = () => {
-            if (socket && socket.readyState === WebSocket.OPEN)
+            if (socket && isConnected) {
+                console.log("requiesting players for game: ", gameCode);
                 socket.send(`/getgame ${gameCode}`);
+            }
         }
         const intervalId = setInterval(getPlayers, interval);
         return () => clearInterval(intervalId);
@@ -55,8 +54,6 @@ const Header = ({ isChoosingWord, gameCode }) => {
       if (!socket) return;
   
       const handleMessage = (event) => {
-          console.log("WebSocket message:", event.data);
-  
           if (event.data.startsWith("TIMER_UPDATE:")) {
               const newTime = parseInt(event.data.split(": ")[1]);
               console.log("Updating timer in header to:", newTime);
@@ -73,6 +70,8 @@ const Header = ({ isChoosingWord, gameCode }) => {
     // Determine the highest score
     const highestScore = players.length > 0 ? Math.max(...players.map(player => player.score || 0)) : 0;
 
+
+    // Player icon, username, score needs to be saved somewhere
     return (
         <div className="header">
             <div className="clock">{timeLeft}</div>
