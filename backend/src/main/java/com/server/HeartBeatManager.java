@@ -1,11 +1,13 @@
 package com.server;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.InputStream;
-import java.net.Socket;
+import java.io.OutputStream;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HeartBeatManager {
     private final String serverAddress;
@@ -13,11 +15,18 @@ public class HeartBeatManager {
     private final List<String> allServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
     public static final int HEARTBEAT_TIMEOUT = 10000; //Set server time out as 10 seconds
+    private final Map<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
+    private final LeaderElectionManager leaderElectionManager;
 
-    public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers) {
+    public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
         this.serverAddress = serverAddress;
         this.heartbeatPort = heartbeatPort;
         this.allServers = allServers;
+        this.leaderElectionManager = new LeaderElectionManager(serverAddress, allServersElection, heartBeatAddress, this, webServer);
+    }
+
+    public void setCurrentLeader(String address) {
+        leaderElectionManager.setCurrentLeader(address);
     }
 
     //Send heartbeats to all peer servers
@@ -46,31 +55,43 @@ public class HeartBeatManager {
 
     //Start listening for heartbeats from other servers
     public void startHeartbeatListener(int port) {
-        new Thread(() -> {
-            try(ServerSocket serverSocket = new ServerSocket(port)) {
-                System.out.println("Listening for heartbeats on port " + port);
-                while (true) {
-                    Socket socket = serverSocket.accept(); //Accept incoming connections
-                    InputStream input = socket.getInputStream(); //Create input stream to read heartbeat of other servers
-                    byte[] buffer = new byte[1024];
+    new Thread(() -> {
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Listening for messages on port " + port);
+            while (true) {
+                Socket socket = serverSocket.accept();
+                InputStream input = socket.getInputStream();
+                byte[] buffer = new byte[1024];
+                int bytesRead = input.read(buffer);
 
-                    //Read incoming message
-                    int bytesRead = input.read(buffer);
-                    if (bytesRead > 0) {
-                        String message = new String(buffer, 0, bytesRead);
-                        if ("HEARTBEAT".equals(message)) {
-                            //Update the timestamp of the last received heartbeat
-                            lastHeartbeatTime = System.currentTimeMillis();
-                            System.out.println("Heartbeat received from: " + socket.getInetAddress());
-                        }
+                if (bytesRead > 0) {
+                    String message = new String(buffer, 0, bytesRead);
+                    // Resolve hostname
+                    String senderIp = socket.getInetAddress().getHostAddress();
+                    String senderHost = socket.getInetAddress().getHostName();
+                    String cleanHost = senderHost.split("\\.")[0]; 
+                    
+                    // Format in WebSocket style
+                    String senderAddress = cleanHost + ":" + port;
+
+                    // Format in WebSocket style
+                    System.out.println("startHeartbeatListener method, sender Address: " + senderAddress);
+                    
+                    if (message.equals("HEARTBEAT")) {
+                        updateHeartbeat(senderAddress);
+                        System.out.println("Heartbeat received from: " + senderAddress);
+                    } else {
+                        handleIncomingMessage(senderAddress, message);
                     }
-                    socket.close(); //Close socket after processing
                 }
-            } catch (IOException ioe) {
-                System.err.println("Error in heartbeat listener: " + ioe.getMessage());
+                socket.close();
             }
-        }).start();
-    }
+        } catch (IOException ioe) {
+            System.err.println("Error in message listener: " + ioe.getMessage());
+        }
+    }).start();
+}
+
 
     //Start sending heartbeats to other servers periodically
     public void startHeartbeatSender() {
@@ -91,8 +112,44 @@ public class HeartBeatManager {
         return lastHeartbeatTime;
     }
 
+    public void leaderStatus() {
+        leaderElectionManager.checkLeaderStatus();
+    }
+
     public boolean isServerAlive(String serverAddress) {
         long currentTime = System.currentTimeMillis();
         return (currentTime - lastHeartbeatTime) < HEARTBEAT_TIMEOUT;
     }
+
+    // Update heartbeat when received
+    public void updateHeartbeat(String serverAddress) {
+        lastHeartbeats.put(serverAddress, System.currentTimeMillis());
+    }
+
+    public void sendMessage(String serverAddress, String message) {
+        System.out.println("Server Address in sendMessage: " + serverAddress);
+        String[] parts = serverAddress.split(":"); // Split by ":"
+        String server = parts[0]; 
+        int port = Integer.parseInt(parts[1]);
+        System.out.println("Server: " + server + "port: " + port);
+        try (Socket socket = new Socket(server, port);
+            OutputStream output = socket.getOutputStream()) {
+            output.write(message.getBytes());
+            System.out.println("Sent message to " + server + " on port: " + port + " Message: " + message);
+        } catch (IOException e) {
+            System.err.println("Failed to send message to " + server + ": " + e.getMessage());
+        }
+    }
+
+    public void handleIncomingMessage(String senderAddress, String message) {
+        if (message.equals("ELECTION")) {
+            leaderElectionManager.handleElectionMessage(senderAddress);
+        } else if (message.equals("OK")) {
+            System.out.println("Received OK from " + senderAddress);
+        } else if (message.startsWith("NEW_LEADER:")) {
+            String newLeader = message.split(":", 2)[1];
+            leaderElectionManager.handleNewLeaderMessage(newLeader);
+        }
+    }
+
 }

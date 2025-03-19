@@ -46,6 +46,12 @@
       <artifactId>kafka-clients</artifactId>
       <version>3.9.0</version>
     </dependency>
+    <!-- WebSocket API -->
+    <dependency>
+        <groupId>javax.websocket</groupId>
+        <artifactId>javax.websocket-api</artifactId>
+        <version>1.1</version>
+    </dependency>
   </dependencies>
   
   <!-- 4) If you want an easy way to run your app (mvn exec:java) -->

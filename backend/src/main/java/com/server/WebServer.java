@@ -1,18 +1,21 @@
 package com.server;
 
-import org.java_websocket.server.WebSocketServer;
-import com.google.gson.Gson;
-
-import org.java_websocket.handshake.ClientHandshake;
-import org.java_websocket.WebSocket;
-
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.java_websocket.WebSocket;
+import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.server.WebSocketServer;
+
+import com.google.gson.Gson;
 
 public class WebServer extends WebSocketServer {
 
@@ -28,18 +31,32 @@ public class WebServer extends WebSocketServer {
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
+    private static final Map<String, Integer> serverNameToIdMap = Map.of(
+        "backup_server_1:6001", 1,
+        "backup_server_2:7001", 2,
+        "primary_server:5001", 3
+    );
+    private String heartBeatAddress;
 
-    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers) {
+    public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
+    public static final Map<String, Integer> serverAddressToIdMap = new HashMap<>();
+
+    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String currentServer) {
         super(address);
         this.isPrimary = isPrimary;
+        this.heartBeatAddress = currentServer;
         
-        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers); //Initialize the HeartbeatManager
-        // Initialize the ReplicationManager with a reference to this WebServer instance
+        
+        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection, heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
                 activeGames, connectedUsers, temporarilyDisconnectedUsers);
         if (!allServers.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
             this.heartBeatManager.startHeartbeatSender();
+        }
+
+        if (isPrimary) {
+            heartBeatManager.setCurrentLeader(serverAddress);
         }
         
         //Set timer to periodically send the full game state to backups
@@ -51,6 +68,13 @@ public class WebServer extends WebSocketServer {
                 }
             }, 0, 10000); //Send full game every 10 seconds
         }
+
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                heartBeatManager.leaderStatus();
+            }
+        }, 0, 5000); // Check every 5 seconds
     }
 
     @Override
@@ -107,26 +131,24 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
+                            game.removePlayer(removedUser);
+                            broadcastGamePlayers(game);
+                            System.out.println("User permanently removed from game: " + removedUser.getUsername());
+                            
+                            game.resetForRound();
+                            // Notify players that the drawer has disconnected
+                            broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                game.removePlayer(removedUser);
-                                broadcastGamePlayers(game);
-                                System.out.println("User permanently removed from game: " + removedUser.getUsername());
+                                temporarilyDisconnectedUsers.remove(removedUser.getId());
                                 
-                                game.resetForRound();
-                                // Notify players that the drawer has disconnected
-                                broadcastToGame(game, "DRAWER_DISCONNECTED");
-                                if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                    temporarilyDisconnectedUsers.remove(removedUser.getId());
-                                    
-                                    game.cancelTimer();
+                                game.cancelTimer();
 
-                                    // Drawer did not reconnect, so select a new drawer            
-                                    if(game.getPlayers().size() >= 2){
-                                        System.out.println("Starting new round...");
-                                        startNewRound(game);
-                                    } else{
-                                        broadcastToGame(game, "GAME_OVER");
-                                    }
+                                // Drawer did not reconnect, so select a new drawer            
+                                if(game.getPlayers().size() >= 2){
+                                    System.out.println("Starting new round...");
+                                    startNewRound(game);
+                                } else{
+                                    broadcastToGame(game, "GAME_OVER");
                                 }
                             }
                         }
@@ -155,7 +177,7 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-        System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
+        //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
         //Send data to backups whenever a message is received from the client
         if (isPrimary) {
@@ -182,8 +204,6 @@ public class WebServer extends WebSocketServer {
             String gameCode = message.split(" ")[1];
             String userId = message.split(" ")[2];
             handleStartGame(conn, gameCode, userId);
-            //Game game = activeGames.get(gameCode);
-            //startNewRound(game);
         } else if (message.startsWith("/select-word ")) {
             String[] parts = message.split(" ");
             if (parts.length < 3) {
@@ -194,6 +214,9 @@ public class WebServer extends WebSocketServer {
             String selectedWord = parts[2];
 
             handleWordSelection(conn, gameCode, selectedWord);
+        } else if (message.startsWith("/drawer-joined ")) {
+            String gameCode = message.substring(15).trim();
+            handleDrawerJoined(conn, gameCode);
         } else if (message.startsWith("/round-over ")) {
             String gameCode = message.substring(12).trim();
             Game game = activeGames.get(gameCode);
@@ -213,6 +236,8 @@ public class WebServer extends WebSocketServer {
             String chatData = parts[2];
             handleChat(conn, gameCode, chatData);
         } else if (message.startsWith("/canvas-update ")) {
+            //System.out.println("Canvas Update From: " + conn.getRemoteSocketAddress() + ": " + message);
+            // /canvas-update <gameCode> <json>
             String[] parts = message.split(" ", 3);
             if (parts.length < 3) {
                 conn.send("ERROR: Invalid canvas update format.");
@@ -223,7 +248,6 @@ public class WebServer extends WebSocketServer {
             handleCanvasUpdate(conn, gameCode, json);
 
         } else if (message.startsWith("/clear-canvas")) {
-            System.out.println("RECEIVED CLEAR CANVAS COMMAND");
             String gameCode = message.split(" ")[1];
             Game game = activeGames.get(gameCode);
             if (game != null) {
@@ -258,6 +282,18 @@ public class WebServer extends WebSocketServer {
         System.out.println("WebSocket server started successfully on " + getPort() + ".");
     }
 
+    public static String getServerAddressFromId(int serverId) {
+        return serverIdToAddressMap.getOrDefault(serverId, "Unknown");
+    }
+
+    public static int getServerIdFromAddress(String serverAddress) {
+        return serverAddressToIdMap.getOrDefault(serverAddress, -1);
+    }
+
+    public void setIsPrimary(boolean val) {
+        this.isPrimary = val;
+    }
+
     public static void main(String[] args) {
         //Run as primary server if no port is indicated
         if (args.length < 3) {
@@ -267,18 +303,46 @@ public class WebServer extends WebSocketServer {
         
         int port = Integer.parseInt(args[0]); //First server port
         int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
+        List<String> allServersElection = new ArrayList<>(Arrays.asList(args[2].split(","))); //Other servers
         List<String> allServers = List.of(args[2].split(",")); //Other server
-        String serverAddress = "ws://primary_server: " + port; // This server's address
         boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
         
+        String serverName = System.getenv("HOSTNAME"); // This gets the Docker container name
+        // Define a mapping from hostnames to integer server IDs
         
-        System.out.println("isPrimary" + isPrimary);
-        System.out.println("serverAddress" + serverAddress);
-        System.out.println("heartbeatPort" + heartbeatPort);
-        System.out.println("allServers" + allServers);
+        String currentServer = serverName + ":" + heartbeatPort;
+        System.out.println("Current Server: " + currentServer);
+        int serverId = serverNameToIdMap.getOrDefault(currentServer, -1); // Assign ID or default (-1 if unknown)
+        if (serverId == -1) {
+            System.err.println("Unknown hostname: " + serverName);
+            System.exit(1);
+        }
+        // Construct a unique server address
+        String serverAddress = "ws://" + serverName + ":" + port;
+        serverIdToAddressMap.put(serverId, currentServer);
+        serverAddressToIdMap.put(currentServer, serverId);
+
+        allServersElection.add(currentServer);
+
+        // Map all servers
+        for (String server : allServersElection) {
+            int id = serverNameToIdMap.getOrDefault(server, -1);
+            if (id != -1) {
+                serverIdToAddressMap.put(id, server);
+                serverAddressToIdMap.put(server, id);
+            }
+        }
+        
+        System.out.println("Server Name: " + serverName);
+        System.out.println("Server ID: " + serverId);
+        System.out.println("isPrimary: " + isPrimary);
+        System.out.println("serverAddress: " + serverAddress);
+        System.out.println("heartbeatPort: " + heartbeatPort);
+        System.out.println("allServers: " + allServers);
+        System.out.println("All Servers for leader election: " + allServersElection);
         
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers);
+        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
@@ -355,11 +419,24 @@ public class WebServer extends WebSocketServer {
                     temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");
+                    
+                    // Send a special message to Kafka to indicate the game has ended
+                    if (isPrimary) {
+                        replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
+                    }
                 }
             }
         }
     }
 
+    public void handleDrawerJoined(WebSocket conn, String gameCode) {
+        Game game = activeGames.get(gameCode);
+        if (game != null) {
+            // Notify all players that the drawer has joined
+            broadcastToGame(game, "DRAWER_JOINED: " + gameCode);
+            System.out.println("Drawer has joined game: " + gameCode + ". Timer should start now.");
+        }
+    }
 
     public void startNewRound(Game game) {
         if (game == null) return;
@@ -462,7 +539,6 @@ public class WebServer extends WebSocketServer {
         conn.send("ERROR: User ID not found.");
 
         // Debugging logs
-        /*
         System.out.println("Current connected users:");
         for (User user : connectedUsers.values()) {
             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
@@ -471,7 +547,6 @@ public class WebServer extends WebSocketServer {
         for (User user : temporarilyDisconnectedUsers.values()) {
             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
         }
-        */
     }
 
     public void handleGetGame(WebSocket conn, String gameCode) {
