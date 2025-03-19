@@ -30,9 +30,9 @@ services:
     hostname: backup_server_1
     ports:
       - "8888:8888" # Expose port 8888 for client communication
-      - "6001:6001" # Expose port 5002 for heartbeat communication
-      - "6002:6002" # Expose port 5002 for Incremental Updates (otherServerHBPort + 1)
-      - "6003:6003" # Expose port 5003 for Full game state updates (otherServerHBPort + 2)
+      - "6001:6001" # Expose port 6001 for heartbeat communication
+      - "6002:6002" # Expose port 6002 for Incremental Updates (otherServerHBPort + 1)
+      - "6003:6003" # Expose port 6003 for Full game state updates (otherServerHBPort + 2)
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
