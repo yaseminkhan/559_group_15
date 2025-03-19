@@ -141,14 +141,25 @@ public class HeartBeatManager {
         }
     }
 
+    // public void handleIncomingMessage(String senderAddress, String message) {
+    //     if (message.equals("ELECTION")) {
+    //         leaderElectionManager.handleElectionMessage(senderAddress);
+    //     } else if (message.equals("OK")) {
+    //         System.out.println("Received OK from " + senderAddress);
+    //     } else if (message.startsWith("NEW_LEADER:")) {
+    //         String newLeader = message.split(":", 2)[1];
+    //         leaderElectionManager.handleNewLeaderMessage(newLeader);
+    //     }
+    // }
+    // Handle incoming messages (ELECTION, BULLY, LEADER)
     public void handleIncomingMessage(String senderAddress, String message) {
         if (message.equals("ELECTION")) {
             leaderElectionManager.handleElectionMessage(senderAddress);
-        } else if (message.equals("OK")) {
-            System.out.println("Received OK from " + senderAddress);
-        } else if (message.startsWith("NEW_LEADER:")) {
+        } else if (message.equals("BULLY")) {
+            leaderElectionManager.handleBullyMessage(senderAddress);
+        } else if (message.startsWith("LEADER")) {
             String newLeader = message.split(":", 2)[1];
-            leaderElectionManager.handleNewLeaderMessage(newLeader);
+            leaderElectionManager.handleLeaderMessage(newLeader);
         }
     }
 

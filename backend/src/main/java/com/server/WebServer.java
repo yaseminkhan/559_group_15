@@ -263,6 +263,15 @@ public class WebServer extends WebSocketServer {
             String gameCode = parts[1];
             int lastIndex = Integer.parseInt(parts[2]);
             handleGetCanvasHistory(conn, gameCode, lastIndex);
+        } else if (message.startsWith("NEW_LEADER:")) {
+            String newLeaderAddress = message.split(":")[1].trim();
+            System.out.println("Received new leader update: " + newLeaderAddress);
+    
+            // Notify the connected client to reconnect
+            conn.send("RECONNECT_TO_NEW_LEADER:" + newLeaderAddress);
+            
+            // Optionally, close the current connection to force reconnection
+            conn.close();
         } else {
             conn.send("Unknown command.");
         }
@@ -280,6 +289,19 @@ public class WebServer extends WebSocketServer {
     public void onStart() {
         //Notify when the WebSocket server starts successfully
         System.out.println("WebSocket server started successfully on " + getPort() + ".");
+    }
+
+    public void notifyClientsNewLeader(String newLeaderAddress) {
+        System.out.println("Notifying clients to switch to new leader: " + newLeaderAddress);
+
+        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+            WebSocket ws = entry.getKey();
+            try {
+                ws.send("NEW_LEADER:" + newLeaderAddress);
+            } catch (Exception e) {
+                System.err.println("Failed to send new leader message to client: " + e.getMessage());
+            }
+        }
     }
 
     public static String getServerAddressFromId(int serverId) {
