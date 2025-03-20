@@ -76,7 +76,7 @@ public class ReplicationManager {
             //Start thread to consume messages from Kafka
             new Thread(() -> {
                 while (true) {
-                    System.out.println("polling from kafka");
+                    //System.out.println("polling from kafka");
                     ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000));
                     for (ConsumerRecord<String, String> record : records) {
                         if (record.topic().equals("game-state")) {

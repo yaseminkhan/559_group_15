@@ -118,7 +118,21 @@ public class HeartBeatManager {
 
     public boolean isServerAlive(String serverAddress) {
         long currentTime = System.currentTimeMillis();
-        return (currentTime - lastHeartbeatTime) < HEARTBEAT_TIMEOUT;
+        Long lastHeartbeat = lastHeartbeats.get(serverAddress);
+        
+        if (lastHeartbeat == null) {
+            System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
+            return false;
+        }
+    
+        boolean alive = (currentTime - lastHeartbeat) < HEARTBEAT_TIMEOUT;
+        if (!alive) {
+            System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
+            lastHeartbeats.remove(serverAddress); // Ensure it's not falsely marked as alive
+        }
+    
+        System.out.println("Checking if " + serverAddress + " is alive: " + alive);
+        return alive;
     }
 
     // Update heartbeat when received
