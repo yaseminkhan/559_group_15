@@ -317,6 +317,7 @@ public class WebServer extends WebSocketServer {
     }
 
     public void setIsPrimary(boolean val) {
+        System.out.println("Is Primary: " + val);
         this.isPrimary = val;
     }
 
@@ -368,7 +369,7 @@ public class WebServer extends WebSocketServer {
         System.out.println("All Servers for leader election: " + allServersElection);
         
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("localhost", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
+        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);

@@ -34,9 +34,10 @@ export const WebSocketProvider = ({ children }) => {
                     } else if (message.startsWith("NEW_LEADER:")) {
                         const newLeaderAddress = message.split(":")[1].trim();
                         console.log(`New leader detected: ${newLeaderAddress}`);
+                        const port = message.split(":")[1].trim();
 
                         // Update state instead of modifying a variable
-                        setServerAddress(`ws://${newLeaderAddress}`);
+                        setServerAddress(`ws://localhost:${port}`);
 
                         // Close current connection and reconnect to the new leader
                         ws.close();

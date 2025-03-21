@@ -34,7 +34,7 @@ public class LeaderElectionManager {
         // heartBeatManager.updateHeartbeat(serverAddress); // Add yourself
         heartBeatManager.startHeartbeatSender();
     
-        WebServer.serverAddressToIdMap.put(serverAddress, getServerId(serverAddress));
+        // WebServer.serverAddressToIdMap.put(serverAddress, getServerId(serverAddress));
     
         for (String server : allServersElection) {
             if (!server.equals(heartBeatAddress)) {
@@ -43,7 +43,7 @@ public class LeaderElectionManager {
         }
     
         webServer.setIsPrimary(true);
-        webServer.notifyClientsNewLeader(serverAddress);
+        // webServer.notifyClientsNewLeader(serverAddress);
     }
 
     // public void setCurrentLeader(String address) {
