@@ -7,6 +7,7 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.WebSocket;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -29,19 +30,22 @@ public class WebServer extends WebSocketServer {
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
 
-    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers) {
+
+    private int serverID; // Server ID to be used for leader election 
+
+    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<ServerInfo> allServerInfos, String primaryServerAddress, int serverId) {
         super(address);
         this.isPrimary = isPrimary;
+        this.serverID = serverId; // Hardcoded values for now
         
-        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers); //Initialize the HeartbeatManager
+        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServerInfos, primaryServerAddress, serverID); //Initialize the HeartbeatManager
         // Initialize the ReplicationManager with a reference to this WebServer instance
-        this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
+        this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServerInfos,
                 activeGames, connectedUsers, temporarilyDisconnectedUsers);
-        if (!allServers.isEmpty()) {
+        if (!allServerInfos.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
             this.heartBeatManager.startHeartbeatSender();
         }
-        
         //Set timer to periodically send the full game state to backups
         if (isPrimary) {
             new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -259,28 +263,61 @@ public class WebServer extends WebSocketServer {
     }
 
     public static void main(String[] args) {
-        //Run as primary server if no port is indicated
-        if (args.length < 3) {
-            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other-servers> <primary boolean>");
+        if (args.length < 7) {
+            System.err.println("Usage: java com.server.WebServer <port> <heartbeatPort> <otherServers> <isPrimary> <serverAddress> <primaryServerAddress> <serverId>");
             System.exit(1);
         }
-        
-        int port = Integer.parseInt(args[0]); //First server port
-        int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
-        List<String> allServers = List.of(args[2].split(",")); //Other server
-        String serverAddress = "ws://primary_server: " + port; // This server's address
-        boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
-        
-        
-        System.out.println("isPrimary" + isPrimary);
-        System.out.println("serverAddress" + serverAddress);
-        System.out.println("heartbeatPort" + heartbeatPort);
-        System.out.println("allServers" + allServers);
-        
-        //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers);
+    
+        int port = Integer.parseInt(args[0]);
+        int heartbeatPort = Integer.parseInt(args[1]);
+        String otherServersRaw = args[2]; // Format: "ip1:port1,ip2:port2"
+        boolean isPrimary = Boolean.parseBoolean(args[3]);
+        String serverAddress = args[4];
+        String primaryServerAddress = args[5];
+        int serverId = Integer.parseInt(args[6]);
+    
+        // Parse the list of other servers into List<ServerInfo>
+        List<ServerInfo> allServerInfos = otherServersRaw.isEmpty() ? List.of() :
+        Arrays.stream(otherServersRaw.replaceAll("\\s+", "").split(","))
+            .map(entry -> {
+                try {
+                    // Format: id@ip:port
+                    String[] idAndRest = entry.split("@");
+                    int sid = Integer.parseInt(idAndRest[0]);
+
+                    String[] ipAndPort = idAndRest[1].split(":");
+                    String ip = ipAndPort[0];
+                    int hbPort = Integer.parseInt(ipAndPort[1]);
+
+                    return new ServerInfo(ip, hbPort, sid);
+                } catch (Exception e) {
+                    System.err.println("Failed to parse server entry: " + entry);
+                    return null;
+                }
+            })
+            .filter(info -> info != null && !info.getIp().equals(serverAddress))
+            .toList();
+    
+        System.out.println("isPrimary: " + isPrimary);
+        System.out.println("serverAddress: " + serverAddress);
+        System.out.println("heartbeatPort: " + heartbeatPort);
+        System.out.println("PrimaryServerAddress: " + primaryServerAddress);
+        System.out.println("Server ID: " + serverId);
+        System.out.println("Parsed ServerInfo list:");
+        allServerInfos.forEach(s -> System.out.println(" - " + s.getIp() + ":" + s.getPort() + " (ID: " + s.getServerId() + ")"));
+    
+        WebServer server = new WebServer(
+            new InetSocketAddress("0.0.0.0", port),
+            isPrimary,
+            serverAddress,
+            heartbeatPort,
+            allServerInfos,
+            primaryServerAddress,
+            serverId
+        );
+    
         server.start();
-        System.out.println("isPrimary: " + args[3]);
+    
         System.out.println("Web Server running on port: " + port);
         System.out.println("Heartbeat listener running on port: " + heartbeatPort);
     }

@@ -35,7 +35,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
-      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 6001 primary_server:5001,backup_server_2:7001 false"
+      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 6001 1@primary_server:5001,3@backup_server_2:7001 false backup_server_1:6001 primary_server:5001 2"
     depends_on:
       - kafka
 
@@ -52,7 +52,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
-      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8889 7001 primary_server:5001,backup_server_1:6001 false"
+      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8889 7001 1@primary_server:5001,2@backup_server_1:6001 false backup_server_2:7001 primary_server:5001 3"
     depends_on:
       - kafka
 
@@ -67,7 +67,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
-      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8887 5001 backup_server_1:6001,backup_server_2:7001 true"
+      mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8887 5001 2@backup_server_1:6001,3@backup_server_2:7001 true primary_server:5001 primary_server:500 1"
     depends_on:
       - backup_server_1 # Guarantee startup order.
       - backup_server_2

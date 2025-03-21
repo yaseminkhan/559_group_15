@@ -29,17 +29,15 @@ public class ReplicationManager {
     private final WebServer webServer;
     private final boolean isPrimary;
     private final String serverAddress;
-    private final List<String> allServers;
+    private final List<ServerInfo> allServers;
     private final int heartbeatPort;
     private final ConcurrentHashMap<String, Game> activeGames;
     private final ConcurrentHashMap<String, User> connectedUsersById;
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers;
-    private OutputStream backupIncrOutput;
-    private OutputStream backupFullGameOutput;
     private KafkaProducer<String, String> kafkaProducer;
     private KafkaConsumer<String, String> kafkaConsumer;
 
-    public ReplicationManager(WebServer webServer, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers,
+    public ReplicationManager(WebServer webServer, boolean isPrimary, String serverAddress, int heartbeatPort, List<ServerInfo> allServers,
                              ConcurrentHashMap<String, Game> activeGames,
                              ConcurrentHashMap<WebSocket, User> connectedUsers,
                              ConcurrentHashMap<String, User> temporarilyDisconnectedUsers) {
@@ -67,7 +65,7 @@ public class ReplicationManager {
             
             Properties consumerProps = new Properties();
             consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
-            consumerProps.put(ConsumerConfig. GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); //Unique Group for each server
+            consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); //Unique Group for each server
             consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             kafkaConsumer = new KafkaConsumer<>(consumerProps);
