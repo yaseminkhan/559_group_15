@@ -72,6 +72,7 @@ public class WebServer extends WebSocketServer {
         new Timer().scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
+                System.out.println("Check leader status");
                 heartBeatManager.leaderStatus();
             }
         }, 0, 5000); // Check every 5 seconds

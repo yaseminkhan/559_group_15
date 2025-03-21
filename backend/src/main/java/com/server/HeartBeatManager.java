@@ -43,7 +43,7 @@ public class HeartBeatManager {
     
     //Send heartbeats to a specific server
     public void sendHeartbeat(String serverIp, int port) {
-        System.out.println("serverip: " + serverIp + ", port: " + port);
+        // System.out.println("serverip: " + serverIp + ", port: " + port);
         try (Socket socket = new Socket(serverIp, port)) {
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
@@ -116,14 +116,44 @@ public class HeartBeatManager {
         leaderElectionManager.checkLeaderStatus();
     }
 
+    // public boolean isServerAlive(String serverAddress) {
+    //     long currentTime = System.currentTimeMillis();
+    //     Long lasthBeat = getLastHeartbeat(serverAddress);
+    //     if (lasthBeat != -1L) {
+    //         System.out.println("Current time: " + currentTime + "Last heart beat for server " + serverAddress + " time: " + getLastHeartbeat(serverAddress));
+    //         return (currentTime - lasthBeat) < HEARTBEAT_TIMEOUT;
+    //     }
+    //     else {
+    //         return true;
+    //     }
+    // }
     public boolean isServerAlive(String serverAddress) {
         long currentTime = System.currentTimeMillis();
-        return (currentTime - lastHeartbeatTime) < HEARTBEAT_TIMEOUT;
+        Long lastHeartbeat = lastHeartbeats.get(serverAddress);
+        System.out.println("Last heart beat: " + lastHeartbeat);
+        
+        if (lastHeartbeat == null) {
+            System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
+            return false;
+        }
+    
+        boolean alive = (currentTime - lastHeartbeat) < HEARTBEAT_TIMEOUT;
+        if (!alive) {
+            System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
+            lastHeartbeats.remove(serverAddress); // Ensure it's not falsely marked as alive
+        }
+    
+        System.out.println("Checking if " + serverAddress + " is alive: " + alive);
+        return alive;
     }
 
     // Update heartbeat when received
     public void updateHeartbeat(String serverAddress) {
         lastHeartbeats.put(serverAddress, System.currentTimeMillis());
+    }
+
+    public Long getLastHeartbeat(String serverAddress) {
+        return lastHeartbeats.getOrDefault(serverAddress, -1L);
     }
 
     public void sendMessage(String serverAddress, String message) {
@@ -160,7 +190,11 @@ public class HeartBeatManager {
         } else if (message.startsWith("LEADER")) {
             String newLeader = message.split(":", 2)[1];
             leaderElectionManager.handleLeaderMessage(newLeader);
+        } else if (message.startsWith("NEW_LEADER:")) {
+            String newLeader = message.split(":", 2)[1];
+            leaderElectionManager.setCurrentLeader(newLeader);
         }
+
     }
 
 }

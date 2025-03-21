@@ -259,13 +259,23 @@ public class LeaderElectionManager {
 
     public void setCurrentLeader(String address) {
         this.currentLeader = address;
+        this.isLeader = true;
         System.out.println("Current leader Address: " + this.currentLeader);
         // Notify all other servers about the leader
-        for (String server : allServersElection) {
-            if (!server.equals(heartBeatAddress)) {  // Avoid sending to self
-                heartBeatManager.sendMessage(server, "NEW_LEADER:" + address);
+        if (this.serverAddress.equals(this.currentLeader)) {
+            for (String server : this.allServersElection) {
+                if (!server.equals(this.heartBeatAddress)) {  // Avoid sending to self
+                    System.out.println("Notifying servers about current leader");
+                    heartBeatManager.sendMessage(server, "NEW_LEADER:" + address);
+                }
             }
         }
+        // for (String server : this.allServersElection) {
+        //     if (!server.equals(this.heartBeatAddress)) {  // Avoid sending to self
+        //         System.out.println("Notifying servers about current leader");
+        //         heartBeatManager.sendMessage(server, "NEW_LEADER:" + address);
+        //     }
+        // }
     }
 
     public String getCurrentLeader() {
@@ -273,10 +283,19 @@ public class LeaderElectionManager {
     }
 
     public void checkLeaderStatus() {
-        if (!heartBeatManager.isServerAlive(currentLeader)) {
+        System.out.println("Current leader: " + this.currentLeader);
+        if (this.currentLeader == null) {
+            initiateElection();
+        }
+        else if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
             System.out.println("Leader is down. Starting election...");
             initiateElection();
         }
+        System.out.println("if-else block");
+        // if (!heartBeatManager.isServerAlive(currentLeader)) {
+        //     System.out.println("Leader is down. Starting election...");
+        //     initiateElection();
+        // }
     }
 
     public void initiateElection() {
@@ -372,20 +391,43 @@ public class LeaderElectionManager {
         }
     }
 
+    // private void declareSelfAsLeader() {
+    //     this.isLeader = true;
+    //     this.currentLeader = serverAddress;
+    //     System.out.println("I am the new leader: " + serverAddress);
+
+    //     // Notify all servers that this server is the leader
+    //     for (String server : allServersElection) {
+    //         if (!server.equals(heartBeatAddress)) {
+    //             sendLeaderMessage(server);
+    //         }
+    //     }
+
+    //     // Notify the web server that this is the leader
+    //     webServer.setIsPrimary(true);
+    // }
     private void declareSelfAsLeader() {
         this.isLeader = true;
         this.currentLeader = serverAddress;
+        running = false;
         System.out.println("I am the new leader: " + serverAddress);
-
-        // Notify all servers that this server is the leader
+    
+        // Immediately update its own heartbeat
+        heartBeatManager.updateHeartbeat(serverAddress);
+        heartBeatManager.startHeartbeatSender();
+    
+        // Ensure the leader's ID is stored
+        WebServer.serverAddressToIdMap.put(serverAddress, getServerId(serverAddress));
+    
+        // Notify all servers
         for (String server : allServersElection) {
             if (!server.equals(heartBeatAddress)) {
                 sendLeaderMessage(server);
             }
         }
-
-        // Notify the web server that this is the leader
+    
         webServer.setIsPrimary(true);
+        webServer.notifyClientsNewLeader(serverAddress);
     }
 
     private int getServerId(String address) {

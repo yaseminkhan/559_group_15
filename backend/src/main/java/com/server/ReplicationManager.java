@@ -1,11 +1,7 @@
 package com.server;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import java.lang.reflect.Type;
-import org.java_websocket.WebSocket;
-
 import java.io.OutputStream;
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -14,15 +10,19 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.java_websocket.WebSocket;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 public class ReplicationManager {
 
@@ -76,7 +76,7 @@ public class ReplicationManager {
             //Start thread to consume messages from Kafka
             new Thread(() -> {
                 while (true) {
-                    System.out.println("polling from kafka");
+                    // System.out.println("polling from kafka");
                     ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000));
                     for (ConsumerRecord<String, String> record : records) {
                         if (record.topic().equals("game-state")) {
