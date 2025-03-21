@@ -56,7 +56,7 @@ public class WebServer extends WebSocketServer {
         }
 
         if (isPrimary) {
-            heartBeatManager.setCurrentLeader(serverAddress);
+            heartBeatManager.getLeaderElectionManager().initializeAsLeader();
         }
         
         //Set timer to periodically send the full game state to backups
@@ -365,7 +365,7 @@ public class WebServer extends WebSocketServer {
         System.out.println("All Servers for leader election: " + allServersElection);
         
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
+        WebServer server = new WebServer(new InetSocketAddress("localhost", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
