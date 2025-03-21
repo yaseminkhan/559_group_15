@@ -73,7 +73,10 @@ public class WebServer extends WebSocketServer {
             @Override
             public void run() {
                 System.out.println("Check leader status");
-                heartBeatManager.leaderStatus();
+                try {
+                    heartBeatManager.leaderStatus();
+                } catch (InterruptedException ex) {
+                }
             }
         }, 0, 5000); // Check every 5 seconds
     }

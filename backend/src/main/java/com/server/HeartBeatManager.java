@@ -25,9 +25,9 @@ public class HeartBeatManager {
         this.leaderElectionManager = new LeaderElectionManager(serverAddress, allServersElection, heartBeatAddress, this, webServer);
     }
 
-    public void setCurrentLeader(String address) {
-        leaderElectionManager.setCurrentLeader(address);
-    }
+    // public void setCurrentLeader(String address) {
+    //     leaderElectionManager.setCurrentLeader(address);
+    // }
 
     //Send heartbeats to all peer servers
     public void sendHeartbeatToAllServers() {
@@ -81,7 +81,10 @@ public class HeartBeatManager {
                             updateHeartbeat(senderAddress);
                             System.out.println("Heartbeat received from: " + senderAddress);
                         } else {
-                            handleIncomingMessage(senderAddress, message);
+                            try {
+                                handleIncomingMessage(senderAddress, message);
+                            } catch (InterruptedException ex) {
+                            }
                         }
                     }
                     socket.close();
@@ -114,23 +117,35 @@ public class HeartBeatManager {
         return lastHeartbeatTime;
     }
 
-    public void leaderStatus() {
+    public void leaderStatus() throws InterruptedException {
         leaderElectionManager.checkLeaderStatus();
     }
 
-    public boolean isServerAlive(String serverAddress) {
+    public boolean isServerAlive(String serverAddress) throws InterruptedException {
         long currentTime = System.currentTimeMillis();
-        Long lastHeartbeat = lastHeartbeats.get(serverAddress);
-        
-        if (lastHeartbeat == null) {
-            System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
-            // add a wait here to see if we get a heartbeat in a certain time 
-            return false;
+        long lastHeartbeat = 0L;
+        if (serverAddress != null) {
+            lastHeartbeat = lastHeartbeats.getOrDefault(serverAddress, 0L);
         }
+        
+        if (lastHeartbeat == 0L) {
+            return true;
+        }
+        //     System.out.println("Last Heart beat was null for: " + serverAddress);
+        //     Thread.sleep(30000);
+        //     lastHeartbeat = lastHeartbeats.get(serverAddress);
+        //     if (lastHeartbeat == null) {
+        //         System.out.println("Null again");
+        //         return true;
+        //     }
+        //     // System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
+        //     // // add a wait here to see if we get a heartbeat in a certain time 
+        //     // return false;
+        // }
 
-        long diff = (currentTime - lastHeartbeat);
-        System.out.println("Last heart beat: " + lastHeartbeat);
-        System.out.println("Current time - last heart beat: " + diff);
+        // long diff = (currentTime - lastHeartbeat);
+        // System.out.println("Last heart beat: " + lastHeartbeat);
+        // System.out.println("Current time - last heart beat: " + diff);
     
         boolean alive = (currentTime - lastHeartbeat) < HEARTBEAT_TIMEOUT;
         if (!alive) {
@@ -140,6 +155,7 @@ public class HeartBeatManager {
     
         System.out.println("Checking if " + serverAddress + " is alive: " + alive);
         return alive;
+        // return true;
     }
 
     // Update heartbeat when received
@@ -166,7 +182,7 @@ public class HeartBeatManager {
         }
     }
 
-    public void handleIncomingMessage(String senderAddress, String message) {
+    public void handleIncomingMessage(String senderAddress, String message) throws InterruptedException {
         if (message.equals("ELECTION")) {
             leaderElectionManager.handleElectionMessage(senderAddress);
         } else if (message.equals("BULLY")) {
@@ -174,10 +190,11 @@ public class HeartBeatManager {
         } else if (message.startsWith("LEADER")) {
             String newLeader = message.split(":", 2)[1];
             leaderElectionManager.handleLeaderMessage(newLeader);
-        } else if (message.startsWith("NEW_LEADER:")) {
-            String newLeader = message.split(":", 2)[1];
-            leaderElectionManager.setCurrentLeader(newLeader);
         }
+        // } else if (message.startsWith("NEW_LEADER:")) {
+        //     String newLeader = message.split(":", 2)[1];
+        //     leaderElectionManager.setCurrentLeader(newLeader);
+        // }
 
     }
 
