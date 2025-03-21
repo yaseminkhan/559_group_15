@@ -13,18 +13,23 @@ public class HeartBeatManager {
     private final String serverAddress;
     private final int heartbeatPort;
     private final List<ServerInfo> allServers;
-    public static final int HEARTBEAT_TIMEOUT = 10000;
+    public static final int HEARTBEAT_TIMEOUT = 3000; // can make this longer to accomodate latency 
 
     private final String primaryServerAddress;
     private final Map<Integer, ServerInfo> knownServers = new HashMap<>();
     public final int id;
+    private final ElectionManager electionManager;
+    private final boolean isPrimary;
+    private boolean hasTriggeredElection = false;
 
-    public HeartBeatManager(String serverAddress, int heartbeatPort, List<ServerInfo> allServers, String primaryServerAddress, int serverID) {
+    public HeartBeatManager(String serverAddress, int heartbeatPort, List<ServerInfo> allServers, String primaryServerAddress, int serverID, boolean isPrimary) {
         this.serverAddress = serverAddress;
         this.heartbeatPort = heartbeatPort;
         this.allServers = allServers;
         this.primaryServerAddress = primaryServerAddress;
         this.id = serverID;
+        this.electionManager = new ElectionManager(serverAddress, serverID);
+        this.isPrimary = isPrimary;
 
         for (ServerInfo server : allServers) {
             if (!server.getIp().equals(serverAddress)) {
@@ -33,16 +38,40 @@ public class HeartBeatManager {
         }
     }
 
-    public boolean isPrimaryAlive() {
+    public void startPrimaryMonitor() {
+        new Thread(() -> {
+            while (true) {
+                if (!isPrimary) {
+                    System.out.println("\nCHECKING IF PRIMARY ALIVE\n");
+                    isPrimaryAlive(); // triggers election if needed
+                }
+                try {
+                    Thread.sleep(1000); // or 500ms for even quicker checks
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    public void isPrimaryAlive() {
         ServerInfo primaryInfo = knownServers.values().stream()
             .filter(s -> (s.getIp() + ":" + s.getPort()).equals(primaryServerAddress))
             .findFirst()
             .orElse(null);
-
-        if (primaryInfo == null) return false;
-
-        long currentTime = System.currentTimeMillis();
-        return (currentTime - primaryInfo.getLastHeartbeatTime()) < HEARTBEAT_TIMEOUT;
+        
+        System.out.println("Last heartbeat from primary was " + (System.currentTimeMillis() - primaryInfo.getLastHeartbeatTime()) + "ms ago.");
+        if (primaryInfo == null || (System.currentTimeMillis() - primaryInfo.getLastHeartbeatTime()) >= HEARTBEAT_TIMEOUT) {
+            System.out.println("Primary is considered dead.");
+            if (!hasTriggeredElection) {
+                hasTriggeredElection = true;
+                electionManager.triggerElection();
+            } else {
+                hasTriggeredElection = false; // Reset if primary becomes alive again
+            }
+        }else { 
+            System.out.println("Primary is alive and well.");
+        }
     }
 
     public void sendHeartbeatToAllServers() {
@@ -97,10 +126,14 @@ public class HeartBeatManager {
     public void startHeartbeatSender() {
         new Thread(() -> {
             while (true) {
+                //printServerStatus();
+                // if(!isPrimary){
+                //     System.out.println("\nCHECKING IF PRIMARY ALIVE\n");
+                //     isPrimaryAlive(); // only backups check is primary is alive 
+                // } 
                 sendHeartbeatToAllServers();
-                printServerStatus();
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }

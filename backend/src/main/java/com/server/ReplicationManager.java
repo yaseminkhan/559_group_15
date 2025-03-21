@@ -75,7 +75,12 @@ public class ReplicationManager {
             new Thread(() -> {
                 while (true) {
                     System.out.println("polling from kafka");
-                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000));
+                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
+                    // try {
+                    //     Thread.sleep(100); // Prevent CPU hogging + give heartbeat room
+                    // } catch (InterruptedException e) {
+                    //     e.printStackTrace(); // Or handle interruption more gracefully if needed
+                    // }
                     for (ConsumerRecord<String, String> record : records) {
                         if (record.topic().equals("game-state")) {
                             // Handle game-state messages (JSON)

@@ -23,8 +23,6 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
-    //Map to store the output streams
-    // private final Map<String, OutputStream> backupOutputs = new ConcurrentHashMap<>();
 
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
@@ -38,14 +36,15 @@ public class WebServer extends WebSocketServer {
         this.isPrimary = isPrimary;
         this.serverID = serverId; // Hardcoded values for now
         
-        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServerInfos, primaryServerAddress, serverID); //Initialize the HeartbeatManager
-        // Initialize the ReplicationManager with a reference to this WebServer instance
-        this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServerInfos,
-                activeGames, connectedUsers, temporarilyDisconnectedUsers);
+        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServerInfos, primaryServerAddress, serverID, isPrimary); //Initialize the HeartbeatManager
         if (!allServerInfos.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
             this.heartBeatManager.startHeartbeatSender();
+            this.heartBeatManager.startPrimaryMonitor();
         }
+        // Initialize the ReplicationManager with a reference to this WebServer instance
+        this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServerInfos,
+                activeGames, connectedUsers, temporarilyDisconnectedUsers);
         //Set timer to periodically send the full game state to backups
         if (isPrimary) {
             new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -186,8 +185,6 @@ public class WebServer extends WebSocketServer {
             String gameCode = message.split(" ")[1];
             String userId = message.split(" ")[2];
             handleStartGame(conn, gameCode, userId);
-            //Game game = activeGames.get(gameCode);
-            //startNewRound(game);
         } else if (message.startsWith("/select-word ")) {
             String[] parts = message.split(" ");
             if (parts.length < 3) {
@@ -388,10 +385,8 @@ public class WebServer extends WebSocketServer {
                 if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
                     game.clearGame();
                     activeGames.remove(gameCode);
-                    // connectedUsers.clear(); // causing issues
                     temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
-                    //broadcastToGame(game, "GAME_ENDED");
                 }
             }
         }
