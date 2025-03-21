@@ -27,6 +27,7 @@ public class LeaderElectionManager {
     public void initializeAsLeader() {
         System.out.println("Bootstrapping as leader: " + serverAddress);
         this.isLeader = true;
+        System.out.println("leader change 4");
         this.currentLeader = serverAddress;
         running = false;
     
@@ -151,7 +152,8 @@ public class LeaderElectionManager {
 
     public void handleLeaderMessage(String leaderAddress) {
         this.currentLeader = leaderAddress;
-        this.isLeader = false;
+        // this.isLeader = false;
+        // System.out.println("leader change 1");
         running = false; // Stop the election
         System.out.println("Leader elected: " + leaderAddress);
     }
@@ -164,6 +166,7 @@ public class LeaderElectionManager {
         if (senderId > currentId) {
             this.currentLeader = senderAddress;
             this.isLeader = false;
+            System.out.println("leader change 2");
             running = false; // Stop the election process
             System.out.println("Leader determined: " + senderAddress);
         }
@@ -171,6 +174,7 @@ public class LeaderElectionManager {
 
     private void declareSelfAsLeader() {
         this.isLeader = true;
+        System.out.println("leader change 3");
         this.currentLeader = serverAddress;
         running = false;
         System.out.println("I am the new leader: " + serverAddress);

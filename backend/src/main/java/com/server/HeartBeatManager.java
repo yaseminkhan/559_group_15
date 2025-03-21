@@ -75,7 +75,7 @@ public class HeartBeatManager {
                         String senderAddress = cleanHost + ":" + port;
 
                         // Format in WebSocket style
-                        //System.out.println("Sender Address for heartbeat listener: " + senderAddress);
+                        System.out.println("Sender Address for heartbeat listener: " + senderAddress);
                         
                         if (message.equals("HEARTBEAT")) {
                             updateHeartbeat(senderAddress);
@@ -121,14 +121,16 @@ public class HeartBeatManager {
     public boolean isServerAlive(String serverAddress) {
         long currentTime = System.currentTimeMillis();
         Long lastHeartbeat = lastHeartbeats.get(serverAddress);
-        long diff = (currentTime - lastHeartbeat);
-        System.out.println("Last heart beat: " + lastHeartbeat);
-        System.out.println("Current time - last heart beat: " + diff);
         
         if (lastHeartbeat == null) {
             System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
+            // add a wait here to see if we get a heartbeat in a certain time 
             return false;
         }
+
+        long diff = (currentTime - lastHeartbeat);
+        System.out.println("Last heart beat: " + lastHeartbeat);
+        System.out.println("Current time - last heart beat: " + diff);
     
         boolean alive = (currentTime - lastHeartbeat) < HEARTBEAT_TIMEOUT;
         if (!alive) {
