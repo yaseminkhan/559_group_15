@@ -31,7 +31,7 @@ public class LeaderElectionManager {
         this.currentLeader = serverAddress;
         running = false;
     
-        heartBeatManager.updateHeartbeat(serverAddress); // Add yourself
+        // heartBeatManager.updateHeartbeat(serverAddress); // Add yourself
         heartBeatManager.startHeartbeatSender();
     
         WebServer.serverAddressToIdMap.put(serverAddress, getServerId(serverAddress));
@@ -67,22 +67,24 @@ public class LeaderElectionManager {
 
     public void checkLeaderStatus() throws InterruptedException {
         System.out.println("\nisLeader value: " + isLeader + "\n");
-        System.out.flush();
+        if (!isLeader) {
+            System.out.flush();
 
-        System.out.println("Current leader: " + this.currentLeader);
-        // if (this.currentLeader == null) {
-        //     Thread.sleep(30000);
-        //     if (this.currentLeader == null) {
-        //         initiateElection();
-        //     }
-        //     // initiateElection();
-        // }
-        // else 
-        if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
-            System.out.println("Leader is down. Starting election...");
-            initiateElection();
+            System.out.println("Current leader: " + this.currentLeader);
+            // if (this.currentLeader == null) {
+            //     Thread.sleep(30000);
+            //     if (this.currentLeader == null) {
+            //         initiateElection();
+            //     }
+            //     // initiateElection();
+            // }
+            // else 
+            if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
+                System.out.println("Leader is down. Starting election...");
+                initiateElection();
+            }
+            System.out.println("if-else block");
         }
-        System.out.println("if-else block");
     }
 
     public void initiateElection() throws InterruptedException {
@@ -186,7 +188,7 @@ public class LeaderElectionManager {
         System.out.println("I am the new leader: " + serverAddress);
     
         // Immediately update its own heartbeat
-        heartBeatManager.updateHeartbeat(serverAddress);
+        // heartBeatManager.updateHeartbeat(serverAddress);
         heartBeatManager.startHeartbeatSender();
     
         // Ensure the leader's ID is stored

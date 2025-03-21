@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class HeartBeatManager {
@@ -15,7 +14,7 @@ public class HeartBeatManager {
     private final List<String> allServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
     public static final int HEARTBEAT_TIMEOUT = 10000; //Set server time out as 10 seconds
-    private final Map<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
 
     public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
@@ -121,46 +120,79 @@ public class HeartBeatManager {
         leaderElectionManager.checkLeaderStatus();
     }
 
-    public boolean isServerAlive(String serverAddress) throws InterruptedException {
-        long currentTime = System.currentTimeMillis();
-        long lastHeartbeat = 0L;
-        if (serverAddress != null) {
-            lastHeartbeat = lastHeartbeats.getOrDefault(serverAddress, 0L);
-        }
+    // public boolean isServerAlive(String serverAddress) throws InterruptedException {
+    //     System.out.println("Server address: " + serverAddress);
+    //     long currentTime = System.currentTimeMillis();
+    //     long lastHeartbeat = 0L;
+    //     if (serverAddress != null) {
+    //         lastHeartbeat = lastHeartbeats.get(serverAddress);
+    //         System.out.println("Last heart beat: " + lastHeartbeat);
+    //     }
         
-        if (lastHeartbeat == 0L) {
+    //     if (lastHeartbeat == 0L) {
+    //         return true;
+    //     }
+    //     //     System.out.println("Last Heart beat was null for: " + serverAddress);
+    //     //     Thread.sleep(30000);
+    //     //     lastHeartbeat = lastHeartbeats.get(serverAddress);
+    //     //     if (lastHeartbeat == null) {
+    //     //         System.out.println("Null again");
+    //     //         return true;
+    //     //     }
+    //     //     // System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
+    //     //     // // add a wait here to see if we get a heartbeat in a certain time 
+    //     //     // return false;
+    //     // }
+
+    //     long diff = (currentTime - lastHeartbeat);
+    //     System.out.println("Current time: " + currentTime);
+    //     System.out.println("Last heart beat: " + lastHeartbeat);
+    //     System.out.println("Current time - last heart beat: " + diff);
+    
+    //     boolean alive = (currentTime - lastHeartbeat) < HEARTBEAT_TIMEOUT;
+    //     if (!alive) {
+    //         System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
+    //         lastHeartbeats.remove(serverAddress); // Ensure it's not falsely marked as alive
+    //     }
+    
+    //     System.out.println("Checking if " + serverAddress + " is alive: " + alive);
+    //     return alive;
+    //     // return true;
+    // }
+
+    public boolean isServerAlive(String serverAddress) throws InterruptedException {
+        if (serverAddress == null) {
             return true;
         }
-        //     System.out.println("Last Heart beat was null for: " + serverAddress);
-        //     Thread.sleep(30000);
-        //     lastHeartbeat = lastHeartbeats.get(serverAddress);
-        //     if (lastHeartbeat == null) {
-        //         System.out.println("Null again");
-        //         return true;
-        //     }
-        //     // System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
-        //     // // add a wait here to see if we get a heartbeat in a certain time 
-        //     // return false;
-        // }
+        System.out.println("Server address: " + serverAddress);
+        long currentTime = System.currentTimeMillis();
 
-        // long diff = (currentTime - lastHeartbeat);
-        // System.out.println("Last heart beat: " + lastHeartbeat);
-        // System.out.println("Current time - last heart beat: " + diff);
-    
-        boolean alive = (currentTime - lastHeartbeat) < HEARTBEAT_TIMEOUT;
+        Long lastHeartbeat = lastHeartbeats.get(serverAddress);
+        if (lastHeartbeat == null) {
+            System.out.println("No heartbeat found for " + serverAddress);
+            return true;
+        }
+
+        long diff = currentTime - lastHeartbeat;
+        System.out.println("Current time: " + currentTime);
+        System.out.println("Last heartbeat: " + lastHeartbeat);
+        System.out.println("Time diff: " + diff);
+
+        boolean alive = diff < HEARTBEAT_TIMEOUT;
         if (!alive) {
             System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
-            lastHeartbeats.remove(serverAddress); // Ensure it's not falsely marked as alive
+            lastHeartbeats.remove(serverAddress);
         }
-    
+
         System.out.println("Checking if " + serverAddress + " is alive: " + alive);
         return alive;
-        // return true;
     }
 
     // Update heartbeat when received
     public void updateHeartbeat(String serverAddress) {
-        lastHeartbeats.put(serverAddress, System.currentTimeMillis());
+        long time = System.currentTimeMillis();
+        System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
+        lastHeartbeats.put(serverAddress, time);
     }
 
     public Long getLastHeartbeat(String serverAddress) {
