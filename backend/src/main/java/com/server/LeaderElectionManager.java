@@ -20,10 +20,10 @@ public class LeaderElectionManager {
         "primary_server", 5001
     );
     private static final Map<String, String> serverNameToAddressMap = Map.of(
-        "backup_server_1", "ws://backup_server_2:8888",
+        "backup_server_1", "ws://backup_server_1:8888",
         "backup_server_2", "ws://backup_server_2:8889",
-        "backup_server_3", "ws://backup_server_2:8890",
-        "primary_server", "ws://backup_server_2:8887"
+        "backup_server_3", "ws://backup_server_3:8890",
+        "primary_server", "ws://primary_server:8887"
     );
 
 
@@ -207,7 +207,7 @@ public class LeaderElectionManager {
     public void handleBullyMessage(String senderAddress) {
         int senderId = getServerId(senderAddress);
         int currentId = getServerId(heartBeatAddress);
-
+        System.out.println("received bully message from: " + senderAddress);
         // If sender's id is higher, it might be the leader, so we stop the election
         if (senderId > currentId) {
             String[] hostParts = senderAddress.split(":"); // Split at ":"

@@ -101,6 +101,7 @@ public class HeartBeatManager {
                             try {
                                 handleIncomingMessage(senderAddress, message);
                             } catch (InterruptedException ex) {
+                                System.err.println("Error wiht handling incoming message from :" + senderAddress);
                             }
                         }
                     }
