@@ -114,7 +114,10 @@ public class WebServer extends WebSocketServer {
             @Override
             public void run() {
                 System.out.println("Check leader status");
-                heartBeatManager.leaderStatus();
+                try {
+                    heartBeatManager.leaderStatus();
+                } catch (InterruptedException ex) {
+                }
             }
         }, 5000, 5000); // Check every 5 seconds with a 5s delay for first check 
     }
@@ -352,6 +355,7 @@ public class WebServer extends WebSocketServer {
     }
 
     public void setIsPrimary(boolean val) {
+        System.out.println("Is Primary: " + val);
         this.isPrimary = val;
     }
 
@@ -403,7 +407,7 @@ public class WebServer extends WebSocketServer {
         System.out.println("All Servers for leader election: " + allServersElection);
         
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("localhost", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
+        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);

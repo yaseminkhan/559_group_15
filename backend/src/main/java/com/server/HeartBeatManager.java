@@ -15,8 +15,13 @@ public class HeartBeatManager {
     private final List<String> allServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
     public static final int HEARTBEAT_TIMEOUT = 10000; //Set server time out as 10 seconds
-    private final Map<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
+    private static final Map<String, Integer> serverNameToPortMap = Map.of(
+        "backup_server_1", 6001,
+        "backup_server_2", 7001,
+        "primary_server", 5001
+    );
 
     public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
         this.serverAddress = serverAddress;
@@ -25,18 +30,16 @@ public class HeartBeatManager {
         this.leaderElectionManager = new LeaderElectionManager(serverAddress, allServersElection, heartBeatAddress, this, webServer);
     }
 
-    public void setCurrentLeader(String address) {
-        leaderElectionManager.setCurrentLeader(address);
-    }
+    // public void setCurrentLeader(String address) {
+    //     leaderElectionManager.setCurrentLeader(address);
+    // }
 
     //Send heartbeats to all peer servers
     public void sendHeartbeatToAllServers() {
         for (String server : allServers) {
-            if (!server.equals(serverAddress)) { //Exclude self
-                String[] serverInfo = server.split(":");
-                int otherServerHBPort = Integer.parseInt(serverInfo[1]);
-                sendHeartbeat(serverInfo[0], otherServerHBPort);
-            }
+            String[] serverInfo = server.split(":");
+            int otherServerHBPort = Integer.parseInt(serverInfo[1]);
+            sendHeartbeat(serverInfo[0], otherServerHBPort);
         }
 
     }
@@ -72,7 +75,7 @@ public class HeartBeatManager {
                         String cleanHost = senderHost.split("\\.")[0]; 
                         
                         // Format in WebSocket style
-                        String senderAddress = cleanHost + ":" + port;
+                        String senderAddress = cleanHost + ":" + serverNameToPortMap.get(cleanHost);
 
                         // Format in WebSocket style
                         System.out.println("Sender Address for heartbeat listener: " + senderAddress);
@@ -81,7 +84,10 @@ public class HeartBeatManager {
                             updateHeartbeat(senderAddress);
                             System.out.println("Heartbeat received from: " + senderAddress);
                         } else {
-                            handleIncomingMessage(senderAddress, message);
+                            try {
+                                handleIncomingMessage(senderAddress, message);
+                            } catch (InterruptedException ex) {
+                            }
                         }
                     }
                     socket.close();
@@ -114,51 +120,74 @@ public class HeartBeatManager {
         return lastHeartbeatTime;
     }
 
-    public void leaderStatus() {
+    public void leaderStatus() throws InterruptedException {
         leaderElectionManager.checkLeaderStatus();
     }
 
-    public boolean isServerAlive(String serverAddress) {
+
+    public boolean isServerAlive(String serverAddress) throws InterruptedException {
+        if (serverAddress == null) {
+            return true;
+        }
+        System.out.println("Server address: " + serverAddress);
+        String cleanHost;
+
+        if (serverAddress.contains("://")) {
+            // Case 1: "ws://primary_server:8887"
+            String[] parts = serverAddress.split("://"); // Split at "://"
+            String[] hostParts = parts[1].split(":"); // Split at ":"
+            String serverName = hostParts[0]; // Get "primary_server"
+            System.out.println("Server name: " + serverName);
+
+            cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
+        } else {
+            // Case 2: "primary_server:5001" (already in correct format)
+            cleanHost = serverAddress;
+        }
+        // String cleanHost = "primary_server:7001";
+        System.out.println("Clean host: " + cleanHost);
+        System.out.println("Stored keys in lastHeartbeats: " + lastHeartbeats.keySet());
         long currentTime = System.currentTimeMillis();
-        Long lastHeartbeat = lastHeartbeats.get(serverAddress);
-        
+
+        Long lastHeartbeat = lastHeartbeats.get(cleanHost);
         if (lastHeartbeat == null) {
-            System.out.println("Server " + serverAddress + " has no recorded heartbeat.");
-            // add a wait here to see if we get a heartbeat in a certain time 
-            return false;
+            System.out.println("No heartbeat found for " + cleanHost);
+            return true;
         }
 
-        long diff = (currentTime - lastHeartbeat);
-        System.out.println("Last heart beat: " + lastHeartbeat);
-        System.out.println("Current time - last heart beat: " + diff);
-    
-        boolean alive = (currentTime - lastHeartbeat) < HEARTBEAT_TIMEOUT;
+        long diff = currentTime - lastHeartbeat;
+        System.out.println("Current time: " + currentTime);
+        System.out.println("Last heartbeat: " + lastHeartbeat);
+        System.out.println("Time diff: " + diff);
+
+        boolean alive = diff < HEARTBEAT_TIMEOUT;
+        System.out.println("Alive: " + alive + "HEARTBEAT timeout: " + HEARTBEAT_TIMEOUT);
         if (!alive) {
-            System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
-            lastHeartbeats.remove(serverAddress); // Ensure it's not falsely marked as alive
+            System.out.println("Server " + cleanHost + " is considered dead. Removing from lastHeartbeats.");
+            lastHeartbeats.remove(cleanHost);
         }
-    
-        System.out.println("Checking if " + serverAddress + " is alive: " + alive);
+
+        System.out.println("Checking if " + cleanHost + " is alive: " + alive);
         return alive;
     }
 
     // Update heartbeat when received
     public void updateHeartbeat(String serverAddress) {
-        System.out.println("==== Heartbeat Received ====");
-        System.out.println("Storing heartbeat for key: " + serverAddress);
-        System.out.println("Current time: " + System.currentTimeMillis());
-        System.out.println("============================");
-    
-        lastHeartbeats.put(serverAddress, System.currentTimeMillis());
+        long time = System.currentTimeMillis();
+        System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
+        lastHeartbeats.put(serverAddress, time);
+        
+        // Debugging: Print all stored heartbeats
+        System.out.println("Current heartbeat map: " + lastHeartbeats);
     }
 
     public Long getLastHeartbeat(String serverAddress) {
         return lastHeartbeats.getOrDefault(serverAddress, -1L);
     }
 
-    public void sendMessage(String serverAddress, String message) {
-        System.out.println("Server Address in sendMessage: " + serverAddress);
-        String[] parts = serverAddress.split(":"); // Split by ":"
+    public void sendMessage(String serverAddressRecieve, String message) {
+        System.out.println("Server Address in sendMessage: " + serverAddressRecieve);
+        String[] parts = serverAddressRecieve.split(":"); // Split by ":"
         String server = parts[0]; 
         int port = Integer.parseInt(parts[1]);
         System.out.println("Server: " + server + "port: " + port);
@@ -171,7 +200,7 @@ public class HeartBeatManager {
         }
     }
 
-    public void handleIncomingMessage(String senderAddress, String message) {
+    public void handleIncomingMessage(String senderAddress, String message) throws InterruptedException {
         if (message.equals("ELECTION")) {
             leaderElectionManager.handleElectionMessage(senderAddress);
         } else if (message.equals("BULLY")) {
@@ -179,10 +208,11 @@ public class HeartBeatManager {
         } else if (message.startsWith("LEADER")) {
             String newLeader = message.split(":", 2)[1];
             leaderElectionManager.handleLeaderMessage(newLeader);
-        } else if (message.startsWith("NEW_LEADER:")) {
-            String newLeader = message.split(":", 2)[1];
-            leaderElectionManager.setCurrentLeader(newLeader);
         }
+        // } else if (message.startsWith("NEW_LEADER:")) {
+        //     String newLeader = message.split(":", 2)[1];
+        //     leaderElectionManager.setCurrentLeader(newLeader);
+        // }
 
     }
 

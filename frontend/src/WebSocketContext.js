@@ -31,6 +31,7 @@ export const WebSocketProvider = ({ children }) => {
                         const userId = message.split(" ")[1];
                         console.log(`Connected as user: ${userId}`);
                         localStorage.setItem("userId", userId);
+
                     } 
                     // else if (message.startsWith("NEW_LEADER:")) {
                     //     const newLeaderAddress = message.split(":")[1].trim();
