@@ -6,8 +6,8 @@ let ws = null;
 export const WebSocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
-    const [serverAddress, setServerAddress] = useState("ws://localhost:9999"); // Coordinator 
-    // const [serverAddress, setServerAddress] = useState("ws://localhost:8887"); 
+    // const [serverAddress, setServerAddress] = useState("ws://localhost:9999"); // Coordinator 
+    const [serverAddress, setServerAddress] = useState("ws://localhost:8887"); 
 
     useEffect(() => {
         const connectWebSocket = () => {
