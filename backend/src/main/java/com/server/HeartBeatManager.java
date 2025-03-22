@@ -107,7 +107,7 @@ public class HeartBeatManager {
             while (true) {
                 sendHeartbeatToAllServers();
                 try {
-                    Thread.sleep(5000); //Send heartbeat every 5 seconds
+                    Thread.sleep(1000); //Send heartbeat every 1 second
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
@@ -165,6 +165,9 @@ public class HeartBeatManager {
         if (!alive) {
             System.out.println("Server " + cleanHost + " is considered dead. Removing from lastHeartbeats.");
             lastHeartbeats.remove(cleanHost);
+            System.out.println("Remove old primary server:  " + cleanHost);
+            allServers.remove(cleanHost);
+            System.out.println("Updated HB allServers: " + allServers);
         }
 
         System.out.println("Checking if " + cleanHost + " is alive: " + alive);
@@ -195,8 +198,10 @@ public class HeartBeatManager {
             OutputStream output = socket.getOutputStream()) {
             output.write(message.getBytes());
             System.out.println("Sent message to " + server + " on port: " + port + " Message: " + message);
-        } catch (IOException e) {
-            System.err.println("Failed to send message to " + server + ": " + e.getMessage());
+        } catch (IOException ioe) {
+            System.err.println("Failed to send message to " + server + ": " + ioe.getMessage());
+        } catch (Exception e) {
+            System.out.println("general exception is called, err msg " + e.getMessage());
         }
     }
 

@@ -77,7 +77,7 @@ public class ReplicationManager {
             new Thread(() -> {
                 while (true) {
                     // System.out.println("polling from kafka");
-                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000));
+                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
                     for (ConsumerRecord<String, String> record : records) {
                         if (record.topic().equals("game-state")) {
                             // Handle game-state messages (JSON)

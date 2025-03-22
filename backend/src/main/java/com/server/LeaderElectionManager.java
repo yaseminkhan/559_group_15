@@ -1,6 +1,7 @@
 package com.server;
 
 import java.util.List;
+import java.util.Map;
 
 public class LeaderElectionManager {
     private final String serverAddress;
@@ -12,6 +13,11 @@ public class LeaderElectionManager {
     private boolean running; // Indicates if the election process is running
     private final WebServer webServer;
     private final int timeout = 2000; // Timeout for waiting for responses
+    private static final Map<String, Integer> serverNameToPortMap = Map.of(
+        "backup_server_1", 6001,
+        "backup_server_2", 7001,
+        "primary_server", 5001
+    );
 
     public LeaderElectionManager(String serverAddress, List<String> allServersElection, String heartBeatAddress, HeartBeatManager heartBeatManager, WebServer webServer) {
         this.serverAddress = serverAddress;
@@ -81,6 +87,19 @@ public class LeaderElectionManager {
             // else 
             if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
                 System.out.println("Leader is down. Starting election...");
+                System.out.println("allServersElection:  " + allServersElection);
+                System.out.println("Remove old primary heartbeat port:  " + this.currentLeader);
+
+                String cleanHost;
+                String[] parts = this.currentLeader.split("://"); // Split at "://"
+                String[] hostParts = parts[1].split(":"); // Split at ":"
+                String serverName = hostParts[0]; // Get "primary_server"
+                System.out.println("Server name to be removed: " + serverName);
+                cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
+
+
+                allServersElection.remove(cleanHost);
+                System.out.println("Updated LE allServersElection:  " + allServersElection);
                 initiateElection();
             }
             System.out.println("if-else block");
@@ -89,6 +108,7 @@ public class LeaderElectionManager {
 
     public void initiateElection() throws InterruptedException {
         System.out.println("Initiate Election called");
+        
         running = true;
 
         // Send an election message to servers with higher ids
@@ -98,7 +118,7 @@ public class LeaderElectionManager {
             }
 
             int otherServerId = getServerId(server);
-            System.out.println("Election call to server: " + server + " It's id: " + otherServerId);
+            System.out.println("Election call to server: " + server + " It's id: " + otherServerId + ". My id: "+ getServerId(heartBeatAddress));
 
             // If this server has a lower ID than current server, it sends an election message to higher-id servers
             if (otherServerId > getServerId(heartBeatAddress)) {
@@ -110,7 +130,7 @@ public class LeaderElectionManager {
         long startTime = System.currentTimeMillis();
         while (running && (System.currentTimeMillis() - startTime) < timeout) {
             try {
-                Thread.sleep(100); // Sleep for a short period before checking again
+                Thread.sleep(200); // Sleep for a short period before checking again
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
