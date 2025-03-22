@@ -202,6 +202,7 @@ public class LeaderElectionManager {
         }
     
         webServer.setIsPrimary(true);
+        webServer.connectToCoordinatorAndAnnounce();
         webServer.notifyClientsNewLeader(serverAddress);
     }
 

@@ -40,6 +40,7 @@ public class WebServer extends WebSocketServer {
         "primary_server:5001", 3
     );
     private String heartBeatAddress;
+    private final String myServerAddress;
 
     private final String coordinatorAddress = "ws://connection_coordinator:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
@@ -49,6 +50,7 @@ public class WebServer extends WebSocketServer {
 
     public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String currentServer) {
         super(address);
+        this.myServerAddress = serverAddress;
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
         
@@ -63,39 +65,7 @@ public class WebServer extends WebSocketServer {
 
         if (isPrimary) {
             heartBeatManager.getLeaderElectionManager().initializeAsLeader();
-
-            try {
-                for (int i = 0; i < 5; i++) {
-                    try {
-                        coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
-                            @Override
-                            public void onOpen(ServerHandshake handshake) {
-                                System.out.println("Connected to coordinator.");
-                            }
-        
-                            @Override
-                            public void onMessage(String message) {}
-        
-                            @Override
-                            public void onClose(int code, String reason, boolean remote) {
-                                System.out.println("Disconnected from coordinator.");
-                            }
-        
-                            @Override
-                            public void onError(Exception ex) {
-                                System.err.println("Coordinator WebSocket error: " + ex.getMessage());
-                            }
-                        };
-                        coordinatorConnection.connectBlocking(); // this waits for the connection
-                        break; // success, exit loop
-                    } catch (Exception e) {
-                        System.err.println("Attempt " + (i+1) + " failed to connect to coordinator. Retrying...");
-                        Thread.sleep(1000); // wait 1s before trying again
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Final failure: Could not connect to coordinator after multiple attempts.");
-            }
+            connectToCoordinatorAndAnnounce();
         }
         
         //Set timer to periodically send the full game state to backups
@@ -122,6 +92,18 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
+        String remoteHost = conn.getRemoteSocketAddress().getHostString();
+        int remotePort = conn.getRemoteSocketAddress().getPort();
+
+        // Debug log
+        System.out.println("Connection from: " + remoteHost + ":" + remotePort);
+
+        // Identify coordinator by its IP/hostname or fixed port
+        if (remotePort == 9999 || remoteHost.contains("connection_coordinator")) {
+            System.out.println("Coordinator connected — skipping user registration.");
+            return;
+        }
+
         String existingUserId = handshake.getFieldValue("User-ID"); //Handle new WebSocket connections
         User user;
 
@@ -335,16 +317,6 @@ public class WebServer extends WebSocketServer {
     }
 
     public void notifyClientsNewLeader(String newLeaderAddress) {
-        // System.out.println("Notifying clients to switch to new leader: " + newLeaderAddress);
-
-        // for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-        //     WebSocket ws = entry.getKey();
-        //     try {
-        //         ws.send("NEW_LEADER:" + newLeaderAddress);
-        //     } catch (Exception e) {
-        //         System.err.println("Failed to send new leader message to client: " + e.getMessage());
-        //     }
-        // }
         System.out.println("Notifying coordinator about new leader: " + newLeaderAddress);
 
         if (coordinatorConnection != null && coordinatorConnection.isOpen()) {
@@ -422,6 +394,39 @@ public class WebServer extends WebSocketServer {
         System.out.println("Heartbeat listener running on port: " + heartbeatPort);
     }
 
+    public void connectToCoordinatorAndAnnounce() {
+        if (coordinatorConnection != null && coordinatorConnection.isOpen()) {
+            coordinatorConnection.send("NEW_LEADER:" + myServerAddress);
+            System.out.println("Sent NEW_LEADER to coordinator.");
+            return;
+        }
+    
+        try {
+            coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
+                @Override
+                public void onOpen(ServerHandshake handshake) {
+                    System.out.println("Connected to coordinator.");
+                    coordinatorConnection.send("NEW_LEADER:" + myServerAddress);
+                }
+    
+                @Override
+                public void onMessage(String message) {}
+    
+                @Override
+                public void onClose(int code, String reason, boolean remote) {
+                    System.out.println("Coordinator connection closed.");
+                }
+    
+                @Override
+                public void onError(Exception ex) {
+                    System.err.println("Coordinator WebSocket error: " + ex.getMessage());
+                }
+            };
+            coordinatorConnection.connectBlocking();
+        } catch (Exception e) {
+            System.err.println("Failed to connect to coordinator: " + e.getMessage());
+        }
+    }
 
     // ======================================================== Game Logic Methods ========================================================
 

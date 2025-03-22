@@ -57,6 +57,7 @@ services:
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8889 7001 primary_server:5001,backup_server_1:6001 false"
     depends_on:
       - kafka
+      - connection_coordinator
 
   primary_server:
     image: server
@@ -74,6 +75,7 @@ services:
     depends_on:
       - backup_server_1 # Guarantee startup order.
       - backup_server_2
+      - connection_coordinator
 
   connection_coordinator:
       build:
@@ -85,8 +87,6 @@ services:
         - "9999:9999"
       command: >
           mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
-      depends_on:
-        - primary_server
 
   client_1:
     build:
