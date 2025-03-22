@@ -22,14 +22,14 @@
     <dependency>
       <groupId>org.java-websocket</groupId>
       <artifactId>Java-WebSocket</artifactId>
-      <version>1.6.0</version> <!-- or the latest version -->
+      <version>1.6.0</version> 
     </dependency>
 
     <!-- SLF4J API & Simple Binding (to avoid ClassNotFoundException) -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.36</version> <!-- match versions with your binding -->
+      <version>1.7.36</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
