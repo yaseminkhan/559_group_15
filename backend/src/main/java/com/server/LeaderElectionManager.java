@@ -10,6 +10,7 @@ public class LeaderElectionManager {
     private final String heartBeatAddress;
     private boolean isLeader;
     private String currentLeader;
+    private boolean wasBullied;
     private boolean running; // Indicates if the election process is running
     private final WebServer webServer;
     private final int timeout = 2000; // Timeout for waiting for responses
@@ -36,6 +37,7 @@ public class LeaderElectionManager {
         this.running = false;
         this.webServer = webServer;
         this.heartBeatAddress = heartBeatAddress;
+        this.wasBullied = false;
     }
 
 
@@ -208,18 +210,33 @@ public class LeaderElectionManager {
         int senderId = getServerId(senderAddress);
         int currentId = getServerId(heartBeatAddress);
         System.out.println("received bully message from: " + senderAddress);
+        this.wasBullied = true;
         // If sender's id is higher, it might be the leader, so we stop the election
         if (senderId > currentId) {
-            String[] hostParts = senderAddress.split(":"); // Split at ":"
-            String serverName = hostParts[0]; // Get "primary_server"
-            System.out.println("Server name: " + serverName);
-
-            String serverAddress = serverNameToAddressMap.get(serverName);
-            // this.currentLeader = serverAddress;
-            this.isLeader = false;
-            running = false; // Stop the election process
-            System.out.println("Got bullied by: " + serverAddress);
+            if (this.wasBullied && (senderId > getServerId(this.currentLeader))) {
+                String[] hostParts = senderAddress.split(":"); // Split at ":"
+                String serverName = hostParts[0]; // Get "primary_server"
+                System.out.println("Server name: " + serverName);
+    
+                String serverAddress = serverNameToAddressMap.get(serverName);
+                this.currentLeader = serverAddress;
+                this.isLeader = false;
+                running = false; // Stop the election process
+                System.out.println("Got bullied by: " + serverAddress);
+            }
+            else if (!this.wasBullied) {
+                String[] hostParts = senderAddress.split(":"); // Split at ":"
+                String serverName = hostParts[0]; // Get "primary_server"
+                System.out.println("Server name: " + serverName);
+    
+                String serverAddress = serverNameToAddressMap.get(serverName);
+                this.currentLeader = serverAddress;
+                this.isLeader = false;
+                running = false; // Stop the election process
+                System.out.println("Got bullied by: " + serverAddress);
+            }
         }
+        
     }
 
     private void declareSelfAsLeader() {
