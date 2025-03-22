@@ -75,6 +75,19 @@ services:
       - backup_server_1 # Guarantee startup order.
       - backup_server_2
 
+  connection_coordinator:
+      build:
+        context: ./backend
+      image: coordinator
+      container_name: coordinator
+      hostname: coordinator
+      ports:
+        - "9999:9999"
+      command: >
+        mvn exec:java -D"exec.mainClass"="com.server.ConnectionCoordinator"
+      depends_on:
+        - primary_server
+
   client_1:
     build:
       context: ./frontend
@@ -84,6 +97,7 @@ services:
       - "3000:3000"
     depends_on:
       - primary_server
+      - connection_coordinator
 
   client_2:
     image: client
@@ -92,6 +106,7 @@ services:
       - "3001:3000"
     depends_on:
       - primary_server
+      - connection_coordinator
   
   client_3:
     image: client
@@ -100,6 +115,7 @@ services:
       - "3002:3000"
     depends_on:
       - primary_server
+      - connection_coordinator
 
   client_4:
     image: client
@@ -108,3 +124,4 @@ services:
       - "3003:3000"
     depends_on:
       - primary_server
+      - connection_coordinator
