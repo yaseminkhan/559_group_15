@@ -2,6 +2,10 @@ package com.server;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.client.WebSocketClient;
@@ -13,6 +17,7 @@ public class ConnectionCoordinator extends WebSocketServer {
 
     private String currentPrimaryUrl = "ws://primary_server:8887"; // Updated on leader change
     private WebSocketClient backendConnection;
+    private final Queue<String> messageQueue = new ConcurrentLinkedQueue<>();
 
     public ConnectionCoordinator(InetSocketAddress address) {
         super(address);
@@ -20,34 +25,73 @@ public class ConnectionCoordinator extends WebSocketServer {
     }
 
     private void connectToPrimary() {
-        try {
-            backendConnection = new WebSocketClient(new URI(currentPrimaryUrl)) {
-                @Override
-                public void onOpen(ServerHandshake handshake) {
-                    System.out.println("Connected to primary at: " + currentPrimaryUrl);
-                }
+        new Thread(() -> {
+            int retries = 5;
+            int attempt = 1;
+            while (retries-- > 0) {
+                try {
+                    System.out.println("[Attempt " + attempt + "] Trying to connect to backend at: " + currentPrimaryUrl);
+                    URI targetUri = new URI(currentPrimaryUrl);
+                    System.out.println("[Attempt " + attempt + "] Parsed URI: " + targetUri);
 
-                @Override
-                public void onMessage(String message) {
-                    // Relay messages from backend to all connected clients
-                    broadcast(message);
-                }
+                    backendConnection = new WebSocketClient(targetUri) {
+                        @Override
+                        public void onOpen(ServerHandshake handshake) {
+                            System.out.println("Connected to primary at: " + currentPrimaryUrl);
 
-                @Override
-                public void onClose(int code, String reason, boolean remote) {
-                    System.out.println("Primary connection closed.");
-                }
+                            // Flush queued messages after a short delay
+                            new Timer().schedule(new TimerTask() {
+                                @Override
+                                public void run() {
+                                    while (!messageQueue.isEmpty()) {
+                                        String queuedMessage = messageQueue.poll();
+                                        backendConnection.send(queuedMessage);
+                                        System.out.println("Flushed queued message: " + queuedMessage);
+                                    }
+                                    System.out.println("Backend ready. Queued messages sent.");
+                                }
+                            }, 1000);
+                        }
 
-                @Override
-                public void onError(Exception ex) {
-                    System.err.println("Error from backend: " + ex.getMessage());
+                        @Override
+                        public void onMessage(String message) {
+                            broadcast(message); // Forward message from backend to all clients
+                        }
+
+                        @Override
+                        public void onClose(int code, String reason, boolean remote) {
+                            System.out.println("Primary connection closed: " + reason);
+                        }
+
+                        @Override
+                        public void onError(Exception ex) {
+                            System.err.println("Error from backend: " + ex.getMessage());
+                        }
+                    };
+
+                    backendConnection.connectBlocking();
+
+                    if (!backendConnection.isOpen()) {
+                        System.err.println("Connected but socket was closed immediately. Retrying...");
+                        attempt++;
+                        continue;
+                    }
+
+                    System.out.println("Successfully connected to backend after retries");
+                    return;
+
+                } catch (Exception e) {
+                    System.err.println("Failed to connect to primary at " + currentPrimaryUrl + ". Retrying...");
+                    e.printStackTrace();
+                    attempt++;
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException ignored) {}
                 }
-            };
-            backendConnection.connect();
-        } catch (Exception e) {
-            System.err.println("Failed to connect to primary server: " + e.getMessage());
-            e.printStackTrace();
-        }
+            }
+
+            System.err.println("Could not connect to backend after multiple attempts.");
+        }).start();
     }
 
     @Override
@@ -59,9 +103,10 @@ public class ConnectionCoordinator extends WebSocketServer {
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Message from client: " + message);
         if (backendConnection != null && backendConnection.isOpen()) {
-            backendConnection.send(message); // Forward message to backend server
+            backendConnection.send(message);
         } else {
-            System.err.println("Backend connection is not open.");
+            System.err.println("Backend connection not open. Queuing message: " + message);
+            messageQueue.add(message);
         }
     }
 
@@ -72,8 +117,8 @@ public class ConnectionCoordinator extends WebSocketServer {
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
-        System.err.println("Error in coordinator: " + ex.getMessage());
-        ex.printStackTrace();
+        System.err.println("Coordinator error: " + ex.getMessage());
+        if (ex != null) ex.printStackTrace();
     }
 
     @Override
@@ -82,7 +127,12 @@ public class ConnectionCoordinator extends WebSocketServer {
     }
 
     public void updateLeader(String newUrl) {
-        System.out.println("Updating leader to: " + newUrl);
+        System.out.println("Raw leader update received: " + newUrl);
+        if (!newUrl.startsWith("ws://") && !newUrl.startsWith("wss://")) {
+            System.out.println("Prepending ws:// to leader address.");
+            newUrl = "ws://" + newUrl;
+        }
+        System.out.println("Setting currentPrimaryUrl to: " + newUrl);
         currentPrimaryUrl = newUrl;
         connectToPrimary();
     }

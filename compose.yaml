@@ -84,7 +84,7 @@ services:
       ports:
         - "9999:9999"
       command: >
-        mvn exec:java -D"exec.mainClass"="com.server.ConnectionCoordinator"
+          mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
       depends_on:
         - primary_server
 
