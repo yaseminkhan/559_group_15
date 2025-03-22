@@ -217,9 +217,8 @@ public class LeaderElectionManager {
             String serverAddress = serverNameToAddressMap.get(serverName);
             // this.currentLeader = serverAddress;
             this.isLeader = false;
-            System.out.println("leader change 2");
             running = false; // Stop the election process
-            System.out.println("Leader determined: " + serverAddress);
+            System.out.println("Got bullied by: " + serverAddress);
         }
     }
 
