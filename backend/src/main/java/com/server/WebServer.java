@@ -34,7 +34,8 @@ public class WebServer extends WebSocketServer {
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
         "backup_server_1:6001", 1,
         "backup_server_2:7001", 2,
-        "primary_server:5001", 3
+        "backup_server_3:4001", 3,
+        "primary_server:5001", 4
     );
     private String heartBeatAddress;
 
@@ -69,16 +70,17 @@ public class WebServer extends WebSocketServer {
             }, 0, 10000); //Send full game every 10 seconds
         }
 
-        new Timer().scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
+        new Thread(() -> {
+            while (true) {
                 System.out.println("Check leader status");
                 try {
                     heartBeatManager.leaderStatus();
-                } catch (InterruptedException ex) {
+                    Thread.sleep(5000); //check leader status every 5 second
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace();
                 }
             }
-        }, 0, 5000); // Check every 5 seconds
+        }).start();
     }
 
     @Override

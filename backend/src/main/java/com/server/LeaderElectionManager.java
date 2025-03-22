@@ -16,6 +16,7 @@ public class LeaderElectionManager {
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
         "backup_server_1", 6001,
         "backup_server_2", 7001,
+        "backup_server_3", 4001,
         "primary_server", 5001
     );
 
@@ -44,6 +45,7 @@ public class LeaderElectionManager {
     
         for (String server : allServersElection) {
             if (!server.equals(heartBeatAddress)) {
+                System.out.println("Sent leader message to: "+ server);
                 sendLeaderMessage(server);
             }
         }
@@ -87,19 +89,6 @@ public class LeaderElectionManager {
             // else 
             if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
                 System.out.println("Leader is down. Starting election...");
-                System.out.println("allServersElection:  " + allServersElection);
-                System.out.println("Remove old primary heartbeat port:  " + this.currentLeader);
-
-                String cleanHost;
-                String[] parts = this.currentLeader.split("://"); // Split at "://"
-                String[] hostParts = parts[1].split(":"); // Split at ":"
-                String serverName = hostParts[0]; // Get "primary_server"
-                System.out.println("Server name to be removed: " + serverName);
-                cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
-
-
-                allServersElection.remove(cleanHost);
-                System.out.println("Updated LE allServersElection:  " + allServersElection);
                 initiateElection();
             }
             System.out.println("if-else block");
@@ -108,6 +97,19 @@ public class LeaderElectionManager {
 
     public void initiateElection() throws InterruptedException {
         System.out.println("Initiate Election called");
+        System.out.println("allServersElection:  " + allServersElection);
+        System.out.println("Remove old primary heartbeat port:  " + this.currentLeader);
+
+        String cleanHost;
+        String[] parts = this.currentLeader.split("://"); // Split at "://"
+        String[] hostParts = parts[1].split(":"); // Split at ":"
+        String serverName = hostParts[0]; // Get "primary_server"
+        System.out.println("Server name to be removed: " + serverName);
+        cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
+
+
+        allServersElection.remove(cleanHost);
+        System.out.println("Updated LE allServersElection:  " + allServersElection);
         
         running = true;
 
@@ -130,7 +132,7 @@ public class LeaderElectionManager {
         long startTime = System.currentTimeMillis();
         while (running && (System.currentTimeMillis() - startTime) < timeout) {
             try {
-                Thread.sleep(200); // Sleep for a short period before checking again
+                Thread.sleep(1000); // Sleep for a short period before checking again
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -161,8 +163,8 @@ public class LeaderElectionManager {
         int senderId = getServerId(senderAddress);
         int currentId = getServerId(heartBeatAddress);
 
-        // If the sender has a higher ID, send a bully message
-        if (senderId > currentId) {
+        // If the sender has a lower ID, send a bully message
+        if (senderId < currentId) {
             sendBullyMessage(senderAddress);
         }
 

@@ -3,8 +3,10 @@ package com.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +22,7 @@ public class HeartBeatManager {
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
         "backup_server_1", 6001,
         "backup_server_2", 7001,
+        "backup_server_3", 4001,
         "primary_server", 5001
     );
 
@@ -35,11 +38,12 @@ public class HeartBeatManager {
     // }
 
     //Send heartbeats to all peer servers
-    public void sendHeartbeatToAllServers() {
+    public void sendHeartbeatToAllServers() throws NumberFormatException, InterruptedException {
         for (String server : allServers) {
             String[] serverInfo = server.split(":");
             int otherServerHBPort = Integer.parseInt(serverInfo[1]);
             sendHeartbeat(serverInfo[0], otherServerHBPort);
+            
         }
 
     }
@@ -47,13 +51,19 @@ public class HeartBeatManager {
     //Send heartbeats to a specific server
     public void sendHeartbeat(String serverIp, int port) {
         // System.out.println("serverip: " + serverIp + ", port: " + port);
-        try (Socket socket = new Socket(serverIp, port)) {
+        try {
+            Socket socket = new Socket();
+            socket.connect(new InetSocketAddress(serverIp, port), 1000);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
             System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
-        } catch (IOException ioe) {
+        } catch (SocketTimeoutException ste) {
+            System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 2 seconds.");
+        }
+         catch (IOException ioe) {
             System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
         }
+        socket.close();
     }
 
     //Start listening for heartbeats from other servers
@@ -105,7 +115,12 @@ public class HeartBeatManager {
     public void startHeartbeatSender() {
         new Thread(() -> {
             while (true) {
-                sendHeartbeatToAllServers();
+                try {
+                    sendHeartbeatToAllServers();
+                } catch (NumberFormatException | InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
                 try {
                     Thread.sleep(1000); //Send heartbeat every 1 second
                 } catch (InterruptedException ie) {
