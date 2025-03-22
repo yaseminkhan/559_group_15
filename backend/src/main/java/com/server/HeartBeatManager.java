@@ -53,7 +53,7 @@ public class HeartBeatManager {
     
     //Send heartbeats to a specific server
     public void sendHeartbeat(String serverIp, int port) {
-        // System.out.println("serverip: " + serverIp + ", port: " + port);
+        System.out.println("Attempting to connect to serverip: " + serverIp + ", port: " + port);
         try {
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(serverIp, port), 1000);
@@ -180,13 +180,13 @@ public class HeartBeatManager {
         System.out.println("Time diff: " + diff);
 
         boolean alive = diff < HEARTBEAT_TIMEOUT;
-        System.out.println("Alive: " + alive + "HEARTBEAT timeout: " + HEARTBEAT_TIMEOUT);
+        System.out.println("Alive: " + alive + " HEARTBEAT timeout: " + HEARTBEAT_TIMEOUT);
         if (!alive) {
-            System.out.println("Server " + cleanHost + " is considered dead. Removing from lastHeartbeats.");
+            System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
             lastHeartbeats.remove(cleanHost);
-            System.out.println("Remove old primary server:  " + cleanHost);
+            System.out.println("Remove old primary server:  " + serverAddress);
             allServers.remove(cleanHost);
-            System.out.println("Updated HB allServers: " + allServers);
+            System.out.println("Updated HB allServers: " + cleanHost);
         }
 
         System.out.println("Checking if " + cleanHost + " is alive: " + alive);
@@ -233,10 +233,6 @@ public class HeartBeatManager {
             String newLeader = message.split(":", 2)[1];
             leaderElectionManager.handleLeaderMessage(newLeader);
         }
-        // } else if (message.startsWith("NEW_LEADER:")) {
-        //     String newLeader = message.split(":", 2)[1];
-        //     leaderElectionManager.setCurrentLeader(newLeader);
-        // }
 
     }
 

@@ -19,7 +19,15 @@ public class LeaderElectionManager {
         "backup_server_3", 4001,
         "primary_server", 5001
     );
+    private static final Map<String, String> serverNameToAddressMap = Map.of(
+        "backup_server_1", "ws://backup_server_2:8888",
+        "backup_server_2", "ws://backup_server_2:8889",
+        "backup_server_3", "ws://backup_server_2:8890",
+        "primary_server", "ws://backup_server_2:8887"
+    );
 
+
+    
     public LeaderElectionManager(String serverAddress, List<String> allServersElection, String heartBeatAddress, HeartBeatManager heartBeatManager, WebServer webServer) {
         this.serverAddress = serverAddress;
         this.allServersElection = allServersElection;
@@ -187,7 +195,9 @@ public class LeaderElectionManager {
     }
 
     public void handleLeaderMessage(String leaderAddress) {
+        System.out.println("old leader: "+ this.currentLeader);
         this.currentLeader = leaderAddress;
+        System.out.println("new leader: "+ this.currentLeader);
         // this.isLeader = false;
         // System.out.println("leader change 1");
         running = false; // Stop the election
@@ -200,11 +210,16 @@ public class LeaderElectionManager {
 
         // If sender's id is higher, it might be the leader, so we stop the election
         if (senderId > currentId) {
-            this.currentLeader = senderAddress;
+            String[] hostParts = senderAddress.split(":"); // Split at ":"
+            String serverName = hostParts[0]; // Get "primary_server"
+            System.out.println("Server name: " + serverName);
+
+            String serverAddress = serverNameToAddressMap.get(serverName);
+            // this.currentLeader = serverAddress;
             this.isLeader = false;
             System.out.println("leader change 2");
             running = false; // Stop the election process
-            System.out.println("Leader determined: " + senderAddress);
+            System.out.println("Leader determined: " + serverAddress);
         }
     }
 
