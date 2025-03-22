@@ -39,6 +39,7 @@ services:
     depends_on:
       - backup_server_1 # Guarantee startup order.
       - backup_server_2
+      - backup_server_3
   
   backup_server_1:
     build:
