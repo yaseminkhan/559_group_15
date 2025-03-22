@@ -101,12 +101,18 @@ public class LeaderElectionManager {
         System.out.println("Remove old primary heartbeat port:  " + this.currentLeader);
 
         String cleanHost;
-        String[] parts = this.currentLeader.split("://"); // Split at "://"
-        String[] hostParts = parts[1].split(":"); // Split at ":"
-        String serverName = hostParts[0]; // Get "primary_server"
-        System.out.println("Server name to be removed: " + serverName);
-        cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
+        if (serverAddress.contains("://")) {
+            // Case 1: "ws://primary_server:8887"
+            String[] parts = this.currentLeader.split("://"); // Split at "://"
+            String[] hostParts = parts[1].split(":"); // Split at ":"
+            String serverName = hostParts[0]; // Get "primary_server"
+            System.out.println("Server name to be removed 1: " + serverName);
 
+            cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
+        } else {
+            // Case 2: "primary_server:5001" (already in correct format)
+            cleanHost = serverAddress;
+        }
 
         allServersElection.remove(cleanHost);
         System.out.println("Updated LE allServersElection:  " + allServersElection);

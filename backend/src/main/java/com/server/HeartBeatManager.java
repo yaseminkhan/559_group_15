@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,6 +16,7 @@ public class HeartBeatManager {
     private final String serverAddress;
     private final int heartbeatPort; //Port for heartbeat communication
     private final List<String> allServers; //List of all server addresses
+    private List<String> allHBServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
     public static final int HEARTBEAT_TIMEOUT = 10000; //Set server time out as 10 seconds
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
@@ -39,7 +41,8 @@ public class HeartBeatManager {
 
     //Send heartbeats to all peer servers
     public void sendHeartbeatToAllServers() throws NumberFormatException, InterruptedException {
-        for (String server : allServers) {
+        allHBServers = new ArrayList<>(allServers); //Create a copy to iterate through
+        for (String server : allHBServers) {
             String[] serverInfo = server.split(":");
             int otherServerHBPort = Integer.parseInt(serverInfo[1]);
             sendHeartbeat(serverInfo[0], otherServerHBPort);
@@ -57,13 +60,14 @@ public class HeartBeatManager {
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
             System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
+            socket.close();
         } catch (SocketTimeoutException ste) {
-            System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 2 seconds.");
+            System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
         }
          catch (IOException ioe) {
             System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
         }
-        socket.close();
+        
     }
 
     //Start listening for heartbeats from other servers
