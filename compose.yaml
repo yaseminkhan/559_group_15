@@ -80,9 +80,9 @@ services:
   connection_coordinator:
       build:
         context: ./backend
-      image: coordinator
-      container_name: coordinator
-      hostname: coordinator
+      image: connection_coordinator
+      container_name: connection_coordinator
+      hostname: connection_coordinator
       ports:
         - "9999:9999"
       command: >

@@ -1,6 +1,8 @@
 package com.server;
 
 import java.net.InetSocketAddress;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -12,6 +14,13 @@ public class ConnectionCoordinator extends WebSocketServer {
 
     public ConnectionCoordinator(InetSocketAddress address) {
         super(address);
+
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("[Coordinator] I am alive at " + getAddress());
+            }
+        }, 0, 1000); // Run every 1 second
     }
 
     @Override

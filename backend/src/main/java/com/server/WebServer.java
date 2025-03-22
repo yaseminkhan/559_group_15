@@ -42,7 +42,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://connection_coordinator:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://172.18.0.2:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -395,37 +395,50 @@ public class WebServer extends WebSocketServer {
     }
 
     public void connectToCoordinatorAndAnnounce() {
-        if (coordinatorConnection != null && coordinatorConnection.isOpen()) {
-            coordinatorConnection.send("NEW_LEADER:" + myServerAddress);
-            System.out.println("Sent NEW_LEADER to coordinator.");
-            return;
-        }
+        new Thread(() -> {
+            while (true) {
+                try {
+                    if (coordinatorConnection == null || coordinatorConnection.isClosed()) {
+                        System.out.println("Attempting to connect to coordinator...");
     
-        try {
-            coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
-                @Override
-                public void onOpen(ServerHandshake handshake) {
-                    System.out.println("Connected to coordinator.");
-                    coordinatorConnection.send("NEW_LEADER:" + myServerAddress);
+                        coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
+                            @Override
+                            public void onOpen(ServerHandshake handshake) {
+                                System.out.println("Connected to coordinator.");
+                                send("NEW_LEADER:" + myServerAddress);
+                            }
+    
+                            @Override
+                            public void onMessage(String message) {}
+    
+                            @Override
+                            public void onClose(int code, String reason, boolean remote) {
+                                System.out.println("Coordinator connection closed. Will retry...");
+                            }
+    
+                            @Override
+                            public void onError(Exception ex) {
+                                System.err.println("Coordinator WebSocket error: " + ex.getMessage());
+                            }
+                        };
+    
+                        coordinatorConnection.connectBlocking();
+                    }
+    
+                    // Sleep and then check again
+                    Thread.sleep(5000);
+    
+                } catch (Exception e) {
+                    System.err.println("Failed to connect to coordinator: " + e.getMessage());
+                    try {
+                        Thread.sleep(5000); // wait before retrying
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
-    
-                @Override
-                public void onMessage(String message) {}
-    
-                @Override
-                public void onClose(int code, String reason, boolean remote) {
-                    System.out.println("Coordinator connection closed.");
-                }
-    
-                @Override
-                public void onError(Exception ex) {
-                    System.err.println("Coordinator WebSocket error: " + ex.getMessage());
-                }
-            };
-            coordinatorConnection.connectBlocking();
-        } catch (Exception e) {
-            System.err.println("Failed to connect to coordinator: " + e.getMessage());
-        }
+            }
+        }).start();
     }
 
     // ======================================================== Game Logic Methods ========================================================
