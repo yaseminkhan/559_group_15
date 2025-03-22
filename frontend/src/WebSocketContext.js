@@ -6,7 +6,7 @@ let ws = null;
 export const WebSocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
-    const [serverAddress, setServerAddress] = useState("ws://localhost:8887"); 
+    const [serverAddress, setServerAddress] = useState("ws://localhost:9999"); // Coordinator 
 
     useEffect(() => {
         const connectWebSocket = () => {
@@ -31,17 +31,18 @@ export const WebSocketProvider = ({ children }) => {
                         const userId = message.split(" ")[1];
                         console.log(`Connected as user: ${userId}`);
                         localStorage.setItem("userId", userId);
-                    } else if (message.startsWith("NEW_LEADER:")) {
-                        const newLeaderAddress = message.split(":")[1].trim();
-                        console.log(`New leader detected: ${newLeaderAddress}`);
+                    } 
+                    // else if (message.startsWith("NEW_LEADER:")) {
+                    //     const newLeaderAddress = message.split(":")[1].trim();
+                    //     console.log(`New leader detected: ${newLeaderAddress}`);
 
-                        // Update state instead of modifying a variable
-                        setServerAddress(`ws://${newLeaderAddress}`);
+                    //     // Update state instead of modifying a variable
+                    //     setServerAddress(`ws://${newLeaderAddress}`);
 
-                        // Close current connection and reconnect to the new leader
-                        ws.close();
-                        setTimeout(connectWebSocket, 1000); // Short delay before reconnecting
-                    }
+                    //     // Close current connection and reconnect to the new leader
+                    //     ws.close();
+                    //     setTimeout(connectWebSocket, 1000); // Short delay before reconnecting
+                    // }
                 };
 
                 ws.onerror = (error) => console.error("WebSocket Error:", error);

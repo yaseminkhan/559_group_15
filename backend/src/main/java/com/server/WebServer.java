@@ -1,6 +1,7 @@
 package com.server;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,7 +13,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.java_websocket.WebSocket;
+import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.handshake.ServerHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 import com.google.gson.Gson;
@@ -38,6 +41,9 @@ public class WebServer extends WebSocketServer {
     );
     private String heartBeatAddress;
 
+    private final String coordinatorAddress = "ws://connection_coordinator:9999"; //proxy to frontend 
+    private WebSocketClient coordinatorConnection;
+
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
     public static final Map<String, Integer> serverAddressToIdMap = new HashMap<>();
 
@@ -57,7 +63,42 @@ public class WebServer extends WebSocketServer {
 
         if (isPrimary) {
             heartBeatManager.getLeaderElectionManager().initializeAsLeader();
+        
+            try {
+                for (int i = 0; i < 5; i++) {
+                    try {
+                        coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
+                            @Override
+                            public void onOpen(ServerHandshake handshake) {
+                                System.out.println("Connected to coordinator.");
+                            }
+        
+                            @Override
+                            public void onMessage(String message) {}
+        
+                            @Override
+                            public void onClose(int code, String reason, boolean remote) {
+                                System.out.println("Disconnected from coordinator.");
+                            }
+        
+                            @Override
+                            public void onError(Exception ex) {
+                                System.err.println("Coordinator WebSocket error: " + ex.getMessage());
+                            }
+                        };
+                        coordinatorConnection.connectBlocking(); // this waits for the connection
+                        break; // success, exit loop
+                    } catch (Exception e) {
+                        System.err.println("Attempt " + (i+1) + " failed to connect to coordinator. Retrying...");
+                        Thread.sleep(1000); // wait 1s before trying again
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Final failure: Could not connect to coordinator after multiple attempts.");
+            }
         }
+
+        
         
         //Set timer to periodically send the full game state to backups
         if (isPrimary) {
@@ -75,7 +116,7 @@ public class WebServer extends WebSocketServer {
                 System.out.println("Check leader status");
                 heartBeatManager.leaderStatus();
             }
-        }, 0, 5000); // Check every 5 seconds
+        }, 5000, 5000); // Check every 5 seconds with a 5s delay for first check 
     }
 
     @Override
@@ -293,15 +334,12 @@ public class WebServer extends WebSocketServer {
     }
 
     public void notifyClientsNewLeader(String newLeaderAddress) {
-        System.out.println("Notifying clients to switch to new leader: " + newLeaderAddress);
+        System.out.println("Notifying coordinator about new leader: " + newLeaderAddress);
 
-        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-            WebSocket ws = entry.getKey();
-            try {
-                ws.send("NEW_LEADER:" + newLeaderAddress);
-            } catch (Exception e) {
-                System.err.println("Failed to send new leader message to client: " + e.getMessage());
-            }
+        if (coordinatorConnection != null && coordinatorConnection.isOpen()) {
+            coordinatorConnection.send("NEW_LEADER:" + newLeaderAddress);
+        } else {
+            System.err.println("Coordinator connection not open!");
         }
     }
 

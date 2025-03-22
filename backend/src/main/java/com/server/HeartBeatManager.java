@@ -144,6 +144,11 @@ public class HeartBeatManager {
 
     // Update heartbeat when received
     public void updateHeartbeat(String serverAddress) {
+        System.out.println("==== Heartbeat Received ====");
+        System.out.println("Storing heartbeat for key: " + serverAddress);
+        System.out.println("Current time: " + System.currentTimeMillis());
+        System.out.println("============================");
+    
         lastHeartbeats.put(serverAddress, System.currentTimeMillis());
     }
 
