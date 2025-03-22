@@ -14,8 +14,8 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 public class ConnectionCoordinator extends WebSocketServer {
-
-    private String currentPrimaryUrl = "ws://primary_server:8887"; // Updated on leader change
+    // 172.18.0.5
+    private String currentPrimaryUrl = "ws://172.18.0.5:8887"; // Updated on leader change
     private WebSocketClient backendConnection;
     private final Queue<String> messageQueue = new ConcurrentLinkedQueue<>();
 
@@ -74,6 +74,7 @@ public class ConnectionCoordinator extends WebSocketServer {
                     if (!backendConnection.isOpen()) {
                         System.err.println("Connected but socket was closed immediately. Retrying...");
                         attempt++;
+                        Thread.sleep(2000);
                         continue;
                     }
 
@@ -113,6 +114,7 @@ public class ConnectionCoordinator extends WebSocketServer {
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         System.out.println("Client disconnected from coordinator: " + conn.getRemoteSocketAddress());
+        System.out.println("Connection closed. Code: " + code + ", Reason: " + reason);
     }
 
     @Override
