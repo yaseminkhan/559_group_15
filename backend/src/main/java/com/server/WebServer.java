@@ -42,7 +42,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://172.18.0.2:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://172.18.0.3:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -92,33 +92,34 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        String remoteHost = conn.getRemoteSocketAddress().getHostString();
-        int remotePort = conn.getRemoteSocketAddress().getPort();
+        String existingUserId = handshake.getFieldValue("User-ID");
+        User user = null;
 
-        // Debug log
-        System.out.println("Connection from: " + remoteHost + ":" + remotePort);
-
-        // Identify coordinator by its IP/hostname or fixed port
-        if (remotePort == 9999 || remoteHost.contains("connection_coordinator")) {
-            System.out.println("Coordinator connected — skipping user registration.");
-            return;
+        if (existingUserId != null) {
+            // First check temporarilyDisconnected
+            if (temporarilyDisconnectedUsers.containsKey(existingUserId)) {
+                user = temporarilyDisconnectedUsers.remove(existingUserId);
+                System.out.println("Reconnected from temp list: " + user.getUsername());
+            } else {
+                // Then check currently connected users
+                for (User u : connectedUsers.values()) {
+                    if (u.getId().equals(existingUserId)) {
+                        user = u;
+                        System.out.println("Reconnected using existing connected user: " + user.getUsername());
+                        break;
+                    }
+                }
+            }
         }
 
-        String existingUserId = handshake.getFieldValue("User-ID"); //Handle new WebSocket connections
-        User user;
-
-        //Check if user is reconnecting
-        if (existingUserId != null && temporarilyDisconnectedUsers.containsKey(existingUserId)) {
-            user = temporarilyDisconnectedUsers.remove(existingUserId);
-            connectedUsers.put(conn, user);
-            System.out.println("Reconnected user: " + user.getUsername());
-        } else {
-            //Create new user for the connection
+        // If user is still null, it's a brand new connection
+        if (user == null) {
             user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
-            connectedUsers.put(conn, user);
+            System.out.println("New user connection: " + user.getUsername());
         }
 
-        conn.send("USER_ID:" + user.getId()); //Send user's ID back to the client
+        connectedUsers.put(conn, user);
+        conn.send("USER_ID:" + user.getId());
         System.out.println("User connected: " + user.getUsername() + " (" + user.getId() + ")");
     }
 
@@ -387,7 +388,7 @@ public class WebServer extends WebSocketServer {
         System.out.println("All Servers for leader election: " + allServersElection);
         
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
+        WebServer server = new WebServer(new InetSocketAddress("0.0.0.0", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
@@ -395,6 +396,29 @@ public class WebServer extends WebSocketServer {
     }
 
     public void connectToCoordinatorAndAnnounce() {
+        // ===== DEBUG PRINTS =====
+         System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
+         System.out.println("Connected Users:");
+         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+             User user = entry.getValue();
+             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+         }
+
+         System.out.println("\nActive Games:");
+         for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+             System.out.println(" - Game Code: " + entry.getKey());
+             Game game = entry.getValue();
+             for (User player : game.getPlayers()) {
+                 System.out.println("   * Player: " + player.getUsername() + " (ID: " + player.getId() + ")");
+             }
+         }
+
+         System.out.println("\nTemporarily Disconnected Users:");
+         for (User user : temporarilyDisconnectedUsers.values()) {
+             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+         }
+         System.out.println("===== END DEBUG =====\n");
+         
         new Thread(() -> {
             while (true) {
                 try {

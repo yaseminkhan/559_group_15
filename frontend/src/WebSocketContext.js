@@ -71,7 +71,7 @@ export const WebSocketProvider = ({ children }) => {
                     console.log("Received new leader update:", newAddress);
                     const port = newAddress.split(":").pop();
                     console.log("Port: ", port);
-                    const newLeaderAddress = `ws://127.0.0.1:${port}`;
+                    const newLeaderAddress = `ws://localhost:${port}`;
 
                     if (gameSocket) {
                         gameSocket.close();
