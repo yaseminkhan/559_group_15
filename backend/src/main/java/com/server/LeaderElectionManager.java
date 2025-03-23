@@ -13,7 +13,7 @@ public class LeaderElectionManager {
     private boolean wasBullied;
     private boolean running; // Indicates if the election process is running
     private final WebServer webServer;
-    private final int timeout = 2000; // Timeout for waiting for responses
+    private final int timeout = 5000; // Timeout for waiting for responses
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
         "backup_server_1", 6001,
         "backup_server_2", 7001,
@@ -59,25 +59,9 @@ public class LeaderElectionManager {
                 sendLeaderMessage(server);
             }
         }
-    
         webServer.setIsPrimary(true);
         // webServer.notifyClientsNewLeader(serverAddress);
     }
-
-    // public void setCurrentLeader(String address) {
-    //     System.out.println("setCurrentLeader called! Setting leader to: " + address);
-    //     this.currentLeader = address;
-    //     System.out.println("Current leader Address: " + this.currentLeader);
-    //     // Notify all other servers about the leader
-    //     if (this.serverAddress.equals(this.currentLeader)) {
-    //         for (String server : this.allServersElection) {
-    //             if (!server.equals(this.heartBeatAddress)) {  // Avoid sending to self
-    //                 System.out.println("Notifying servers about current leader");
-    //                 heartBeatManager.sendMessage(server, "NEW_LEADER:" + address);
-    //             }
-    //         }
-    //     }
-    // }
 
     public String getCurrentLeader() {
         return this.currentLeader;
@@ -89,14 +73,6 @@ public class LeaderElectionManager {
             System.out.flush();
 
             System.out.println("Current leader: " + this.currentLeader);
-            // if (this.currentLeader == null) {
-            //     Thread.sleep(30000);
-            //     if (this.currentLeader == null) {
-            //         initiateElection();
-            //     }
-            //     // initiateElection();
-            // }
-            // else 
             if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
                 System.out.println("Leader is down. Starting election...");
                 initiateElection();
@@ -180,12 +156,9 @@ public class LeaderElectionManager {
         int currentId = getServerId(heartBeatAddress);
 
         // If the sender has a lower ID, send a bully message
-        if (senderId < currentId) {
+        if (senderId < currentId && !this.wasBullied) {
             sendBullyMessage(senderAddress);
-        }
-
-        // If the sender has the same or lower ID, initiate election
-        if (!running) {
+            running = true;
             initiateElection();
         }
     }
@@ -210,10 +183,9 @@ public class LeaderElectionManager {
         int senderId = getServerId(senderAddress);
         int currentId = getServerId(heartBeatAddress);
         System.out.println("received bully message from: " + senderAddress);
-        this.wasBullied = true;
         // If sender's id is higher, it might be the leader, so we stop the election
         if (senderId > currentId) {
-            if (this.wasBullied && (senderId > getServerId(this.currentLeader))) {
+            if ((this.wasBullied && (senderId > getServerId(this.currentLeader)) || !this.wasBullied)) {
                 String[] hostParts = senderAddress.split(":"); // Split at ":"
                 String serverName = hostParts[0]; // Get "primary_server"
                 System.out.println("Server name: " + serverName);
@@ -223,20 +195,9 @@ public class LeaderElectionManager {
                 this.isLeader = false;
                 running = false; // Stop the election process
                 System.out.println("Got bullied by: " + serverAddress);
-            }
-            else if (!this.wasBullied) {
-                String[] hostParts = senderAddress.split(":"); // Split at ":"
-                String serverName = hostParts[0]; // Get "primary_server"
-                System.out.println("Server name: " + serverName);
-    
-                String serverAddress = serverNameToAddressMap.get(serverName);
-                this.currentLeader = serverAddress;
-                this.isLeader = false;
-                running = false; // Stop the election process
-                System.out.println("Got bullied by: " + serverAddress);
-            }
+            }              
         }
-        
+        this.wasBullied = true;
     }
 
     private void declareSelfAsLeader() {
@@ -255,11 +216,10 @@ public class LeaderElectionManager {
     
         // Notify all servers
         for (String server : allServersElection) {
-            if (!server.equals(heartBeatAddress)) {
+            if (!server.equals(heartBeatAddress)) {                
                 sendLeaderMessage(server);
             }
         }
-    
         webServer.setIsPrimary(true);
         webServer.connectToCoordinatorAndAnnounce();
         // webServer.notifyClientsNewLeader(serverAddress);

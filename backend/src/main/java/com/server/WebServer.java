@@ -43,7 +43,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://172.18.0.3:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://172.18.0.2:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -84,7 +84,7 @@ public class WebServer extends WebSocketServer {
                 System.out.println("Check leader status");
                 try {
                     heartBeatManager.leaderStatus();
-                    Thread.sleep(5000); //check leader status every 5 second
+                    Thread.sleep(1000); //check leader status every second
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
