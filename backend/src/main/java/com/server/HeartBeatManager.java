@@ -53,13 +53,13 @@ public class HeartBeatManager {
     
     //Send heartbeats to a specific server
     public void sendHeartbeat(String serverIp, int port) {
-        System.out.println("Attempting to connect to serverip: " + serverIp + ", port: " + port);
+        //System.out.println("Attempting to connect to serverip: " + serverIp + ", port: " + port);
         try {
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(serverIp, port), 1000);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
-            System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
+            //System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
             socket.close();
         } catch (SocketTimeoutException ste) {
             System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
@@ -96,7 +96,7 @@ public class HeartBeatManager {
                         
                         if (message.equals("HEARTBEAT")) {
                             updateHeartbeat(senderAddress);
-                            System.out.println("Heartbeat received from: " + senderAddress);
+                            //System.out.println("Heartbeat received from: " + senderAddress);
                         } else {
                             try {
                                 handleIncomingMessage(senderAddress, message);

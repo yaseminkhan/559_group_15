@@ -94,35 +94,57 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        String existingUserId = handshake.getFieldValue("User-ID");
-        User user = null;
+        System.out.println("\n========== onOpen() CALLED ==========");
+        System.out.println("Socket opened from: " + conn.getRemoteSocketAddress());
 
-        if (existingUserId != null) {
-            // First check temporarilyDisconnected
-            if (temporarilyDisconnectedUsers.containsKey(existingUserId)) {
-                user = temporarilyDisconnectedUsers.remove(existingUserId);
-                System.out.println("Reconnected from temp list: " + user.getUsername());
-            } else {
-                // Then check currently connected users
-                for (User u : connectedUsers.values()) {
-                    if (u.getId().equals(existingUserId)) {
-                        user = u;
-                        System.out.println("Reconnected using existing connected user: " + user.getUsername());
-                        break;
-                    }
-                }
+        // Just track the socket without assigning a user yet
+        connectedUsers.put(conn, null);
+    }
+
+    public void handleReconnect(WebSocket conn, String userId) {
+        System.out.println("\n========== HANDLE RECONNECT ==========");
+        System.out.println("Attempting to reconnect user: " + userId);
+
+        // First, prevent duplicate reconnection
+        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+            if (userId.equals(entry.getValue() != null ? entry.getValue().getId() : null)) {
+                System.out.println("User already connected. Ignoring duplicate reconnect.");
+                return;
             }
         }
 
-        // If user is still null, it's a brand new connection
-        if (user == null) {
-            user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
-            System.out.println("New user connection: " + user.getUsername());
+        User user = null;
+
+        // Check temporarily disconnected users
+        if (temporarilyDisconnectedUsers.containsKey(userId)) {
+            user = temporarilyDisconnectedUsers.remove(userId);
+            System.out.println("Reconnected from temporarily disconnected list: " + user.getUsername());
         }
 
+        // If still null, it's a brand new user
+        if (user == null) {
+            user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
+            System.out.println("Created new user: " + user.getUsername());
+        }
+
+        // Bind the socket to the user
         connectedUsers.put(conn, user);
+
+        // Send user ID so frontend can store it if needed
         conn.send("USER_ID:" + user.getId());
-        System.out.println("User connected: " + user.getUsername() + " (" + user.getId() + ")");
+        System.out.println("Finalized connection for user: " + user.getUsername() + " (" + user.getId() + ")");
+
+        // If user was in a game, re-add to the game and update player list
+        if (user.getGameCode() != null && activeGames.containsKey(user.getGameCode())) {
+            Game game = activeGames.get(user.getGameCode());
+
+            if (!game.hasPlayer(user)) {
+                game.addPlayer(user);
+                System.out.println("Re-added user to game: " + game.getGameCode());
+            }
+
+            broadcastGamePlayers(game);
+        }
     }
 
     @Override
@@ -138,15 +160,15 @@ public class WebServer extends WebSocketServer {
             temporarilyDisconnectedUsers.put(removedUser.getId(), removedUser);
 
             // Print users for debugging
-            System.out.println("Current connected users:");
-            for (User user : connectedUsers.values()) {
-                System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-            }
+            // System.out.println("Current connected users:");
+            // for (User user : connectedUsers.values()) {
+            //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+            // }
 
-            System.out.println("Temporarily disconnected users:");
-            for (User user : temporarilyDisconnectedUsers.values()) {
-                System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-            }
+            // System.out.println("Temporarily disconnected users:");
+            // for (User user : temporarilyDisconnectedUsers.values()) {
+            //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+            // }
             
             // Get the game the user was in
             String gameCode = removedUser.getGameCode();
@@ -428,7 +450,7 @@ public class WebServer extends WebSocketServer {
         //  for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
         //     temporarilyDisconnectedUsers.put(entry.getKey(), entry.getValue().clone());
         //  }
-         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
+        temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
 
 
         new Thread(() -> {
@@ -630,81 +652,6 @@ public class WebServer extends WebSocketServer {
                 broadcastToGame(game, "TIMER_UPDATE: " + game.getTimeLeft());
             }
         }, 0, 1000); // Run every second
-    }
-
-    public void handleReconnect(WebSocket conn, String userId) {
-        System.out.println("\n========== HANDLE RECONNECT ==========");
-        System.out.println("Attempting to reconnect user: " + userId);
-        
-        // Check if user is already connected
-        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-            if (entry.getValue().getId().equals(userId)) {
-                System.out.println("User is already connected. Ignoring duplicate reconnect.");
-                return;
-            }
-        }
-        
-
-        // Check if user is in temporarilyDisconnectedUsers
-        if (temporarilyDisconnectedUsers.containsKey(userId)) {
-            User existingUser = temporarilyDisconnectedUsers.remove(userId);
-            connectedUsers.put(conn, existingUser);
-            System.out.println("User reconnected: " + existingUser.getUsername() + " (" + userId + ")");
-
-            // Restore game if they were in one
-            if (existingUser.getGameCode() != null && activeGames.containsKey(existingUser.getGameCode())) {
-                Game game = activeGames.get(existingUser.getGameCode());
-
-                // Ensure user is added back to the game
-                if (!game.hasPlayer(existingUser)) {
-                    game.addPlayer(existingUser);
-                    System.out.println("Re-added " + existingUser.getUsername() + " to game: " + game.getGameCode());
-                }
-
-                System.out.println("User " + existingUser.getUsername() + " was in game: " + game.getGameCode());
-
-                // Instead of sending "RECONNECTED", immediately send updated player list
-                broadcastGamePlayers(game);
-                return;
-            }  else {
-                // Search active games for a user match
-                for (Game game : activeGames.values()) {
-                    for (User player : game.getPlayers()) {
-                        if (player.getId().equals(userId)) {
-                            // Associate the current WebSocket with the recovered user
-                            connectedUsers.put(conn, player);
-                
-                            // Make sure they're only added to the game once
-                            if (!game.hasPlayer(player)) {
-                                game.addPlayer(player);
-                                System.out.println("Re-added " + player.getUsername() + " to game: " + game.getGameCode());
-                            }
-                
-                            System.out.println("User recovered from active game state: " + player.getUsername());
-                
-                            broadcastGamePlayers(game);
-                            return;
-                        }
-                    }
-                }
-            }
-
-            System.out.println("User was not in a game.");
-            return;
-        }
-
-        System.out.println("ERROR: User ID not found, unable to reconnect.");
-        conn.send("ERROR: User ID not found.");
-
-        // Debugging logs
-        System.out.println("Current connected users:");
-        for (User user : connectedUsers.values()) {
-            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-        }
-        System.out.println("Temporarily disconnected users:");
-        for (User user : temporarilyDisconnectedUsers.values()) {
-            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-        }
     }
 
     public void handleGetGame(WebSocket conn, String gameCode) {
