@@ -50,7 +50,7 @@ public class HeartBeatManager {
         try (Socket socket = new Socket(serverIp, port)) {
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
-            System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
+            //System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
         } catch (IOException ioe) {
             System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
         }
@@ -78,11 +78,11 @@ public class HeartBeatManager {
                         String senderAddress = cleanHost + ":" + serverNameToPortMap.get(cleanHost);
 
                         // Format in WebSocket style
-                        System.out.println("Sender Address for heartbeat listener: " + senderAddress);
+                        //System.out.println("Sender Address for heartbeat listener: " + senderAddress);
                         
                         if (message.equals("HEARTBEAT")) {
                             updateHeartbeat(senderAddress);
-                            System.out.println("Heartbeat received from: " + senderAddress);
+                            //System.out.println("Heartbeat received from: " + senderAddress);
                         } else {
                             try {
                                 handleIncomingMessage(senderAddress, message);

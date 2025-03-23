@@ -115,7 +115,7 @@ public class ReplicationManager {
             String gameState = serializeGameState();
             ProducerRecord<String, String> record = new ProducerRecord<>("game-state", gameState);
              // ===== DEBUG PRINTS =====
-            System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
+            System.out.println("\n===== DEBUG: PRIMARY SENDING GAME STATE =====");
             System.out.println("Connected Users:");
             for (Map.Entry<String, User> entry : connectedUsersById.entrySet()) {
                 User user = entry.getValue();
@@ -292,8 +292,7 @@ public class ReplicationManager {
             Map<String, User> deserializedDisconnectedUsers = gson.fromJson(gson.toJson(gameState.get("temporarilyDisconnectedUsers")), new TypeToken<Map<String, User>>() {}.getType());
             temporarilyDisconnectedUsers.putAll(deserializedDisconnectedUsers);
             
-            // ===== DEBUG PRINTS =====
-            System.out.println("\n===== DEBUG: Starting DESERIALIZEEEE=====");
+            System.out.println("\n===== DEBUG: BACKUP RECEIVED GAME STATE =====");
             System.out.println("Connected Users:");
             for (Map.Entry<String, User> entry : connectedUsersById.entrySet()) {
                 User user = entry.getValue();
@@ -313,7 +312,7 @@ public class ReplicationManager {
             for (User user : temporarilyDisconnectedUsers.values()) {
                 System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
             }
-            System.out.println("===== END DEBUG GAME STATE UPDATESSSSSSS =====\n");
+            System.out.println("===== END BACKUP DEBUG =====\n");
 
 
             // // Restart timers for all active games

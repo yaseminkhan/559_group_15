@@ -79,7 +79,7 @@ public class WebServer extends WebSocketServer {
         }
 
         new Timer().scheduleAtFixedRate(new TimerTask() {
-            @Overridex
+            @Override
             public void run() {
                 System.out.println("Check leader status");
                 try {
@@ -418,7 +418,7 @@ public class WebServer extends WebSocketServer {
              System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
          }
          System.out.println("===== END DEBUG =====\n");
-         
+
         new Thread(() -> {
             while (true) {
                 try {
