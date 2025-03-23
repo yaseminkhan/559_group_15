@@ -275,7 +275,7 @@ public class ReplicationManager {
 
             // Clear the existing game state
             activeGames.clear();
-            connectedUsersById.clear();
+            // connectedUsersById.clear();
             temporarilyDisconnectedUsers.clear();
 
             // Deserialize and update the active games
@@ -333,4 +333,9 @@ public class ReplicationManager {
             System.out.println("Kafka consumer offsets reset for game: " + gameCode);
         }
     }
+
+    public ConcurrentHashMap<String, User> getConnectedUsersById() {
+        return connectedUsersById;
+    }
+
 }

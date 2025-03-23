@@ -97,6 +97,15 @@ public class WebServer extends WebSocketServer {
         String existingUserId = handshake.getFieldValue("User-ID");
         User user = null;
 
+        if (!replicationManager.getConnectedUsersById().isEmpty()){
+            connectedUsers.clear();
+            for (User u : replicationManager.getConnectedUsersById().values()) {
+                connectedUsers.put(conn, u);
+                user = u;
+                System.out.println("Reconnected using existing connected user: " + user.getUsername());
+            }
+        }
+
         if (existingUserId != null) {
             // First check temporarilyDisconnected
             if (temporarilyDisconnectedUsers.containsKey(existingUserId)) {
@@ -400,6 +409,12 @@ public class WebServer extends WebSocketServer {
     public void connectToCoordinatorAndAnnounce() {
         // ===== DEBUG PRINTS =====
          System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
+         System.out.println("Connected users by id from replication manager:");
+         for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
+             User user = entry.getValue();
+             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+         }
+
          System.out.println("Connected Users:");
          for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
              User user = entry.getValue();
@@ -617,13 +632,30 @@ public class WebServer extends WebSocketServer {
         System.out.println("\n========== HANDLE RECONNECT ==========");
         System.out.println("Attempting to reconnect user: " + userId);
 
-        // Check if user is already connected
-        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-            if (entry.getValue().getId().equals(userId)) {
-                System.out.println("User is already connected. Ignoring duplicate reconnect.");
-                return;
+        if (!replicationManager.getConnectedUsersById().isEmpty()){
+            for (User u : replicationManager.getConnectedUsersById().values()) {
+                 if (u.getId().equals(userId)) {
+                    System.out.println("User is already connected. Found in replication manager. Ignoring duplicate reconnect.");
+                    return;
+                }
+            }
+        } else {
+            for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+                if (entry.getValue().getId().equals(userId)) {
+                    System.out.println("User is already connected. Ignoring duplicate reconnect.");
+                    return;
+                }
             }
         }
+
+        // Check if user is already connected
+        // for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+        //     if (entry.getValue().getId().equals(userId)) {
+        //         System.out.println("User is already connected. Ignoring duplicate reconnect.");
+        //         return;
+        //     }
+        // }
+        
 
         // Check if user is in temporarilyDisconnectedUsers
         if (temporarilyDisconnectedUsers.containsKey(userId)) {
