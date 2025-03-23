@@ -757,7 +757,14 @@ public class WebServer extends WebSocketServer {
 
     public void broadcastToGame(Game game, String message) {
         if (game != null) {
+            System.out.println("game:" + game);
             for (User player : game.getPlayers()) {
+                System.out.println("players user:" + player);
+                System.out.println("Connected Users:");
+                for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+                    User user = entry.getValue();
+                    System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+                }
                 WebSocket conn = getConnectionByUser(player);
                 if (conn != null) {
                     conn.send(message);
@@ -785,6 +792,7 @@ public class WebServer extends WebSocketServer {
 
         for (User player : game.getPlayers()) {
             WebSocket conn = getConnectionByUser(player);
+            
             if ((conn != null)) {
                 conn.send(message);
                 System.out.println("Sent player list to: " + player.getUsername());
