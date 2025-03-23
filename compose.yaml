@@ -18,11 +18,13 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
       # Retention policy settings
-      KAFKA_LOG_RETENTION_HOURS: "1"  # i Hour
-      KAFKA_LOG_CLEANUP_POLICY: "delete"  # Delete old messages based on retention settings
+      KAFKA_LOG_RETENTION_HOURS: "1" # i Hour
+      KAFKA_LOG_CLEANUP_POLICY: "delete" # Delete old messages based on retention settings
     # volumes:
     #   - ./log4j.properties:/opt/kafka/config/log4j.properties  # Mount custom log4j.properties
-  
+    networks:
+      - mynetwork
+
   primary_server:
     image: server
     container_name: primary_server
@@ -41,7 +43,9 @@ services:
       - backup_server_2
       - backup_server_3
       - connection_coordinator
-  
+    networks:
+      - mynetwork
+
   backup_server_1:
     build:
       context: ./backend
@@ -79,7 +83,9 @@ services:
     depends_on:
       - kafka
       - connection_coordinator
-  
+    networks:
+      - mynetwork
+
   backup_server_3:
     build:
       context: ./backend
@@ -98,17 +104,21 @@ services:
     depends_on:
       - kafka
       - connection_coordinator
+    networks:
+      - mynetwork
 
   connection_coordinator:
-      build:
-        context: ./backend
-      image: connection_coordinator
-      container_name: connection_coordinator
-      hostname: connection_coordinator
-      ports:
-        - "9999:9999"
-      command: >
-          mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
+    build:
+      context: ./backend
+    image: connection_coordinator
+    container_name: connection_coordinator
+    hostname: connection_coordinator
+    ports:
+      - "9999:9999"
+    command: >
+      mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
+    networks:
+      - mynetwork
 
   client_1:
     build:
@@ -120,6 +130,8 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
+    networks:
+      - mynetwork
 
   client_2:
     image: client
@@ -129,7 +141,9 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
-  
+    networks:
+      - mynetwork
+
   client_3:
     image: client
     container_name: client_3
@@ -138,6 +152,8 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
+    networks:
+      - mynetwork
 
   client_4:
     image: client
@@ -147,3 +163,9 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
