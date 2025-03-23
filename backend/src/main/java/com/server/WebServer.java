@@ -42,7 +42,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://172.18.0.3:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://172.18.0.2:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -79,7 +79,7 @@ public class WebServer extends WebSocketServer {
         }
 
         new Timer().scheduleAtFixedRate(new TimerTask() {
-            @Override
+            @Overridex
             public void run() {
                 System.out.println("Check leader status");
                 try {
