@@ -424,6 +424,12 @@ public class WebServer extends WebSocketServer {
              System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
          }
          System.out.println("===== END DEBUG =====\n");
+        
+        //  for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
+        //     temporarilyDisconnectedUsers.put(entry.getKey(), entry.getValue().clone());
+        //  }
+         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
+
 
         new Thread(() -> {
             while (true) {
