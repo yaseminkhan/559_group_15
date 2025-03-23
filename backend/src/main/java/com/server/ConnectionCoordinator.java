@@ -43,8 +43,9 @@ public class ConnectionCoordinator extends WebSocketServer {
             currentPrimaryUrl = newLeaderUrl;
             backendConnection = conn; // Store this connection to broadcast messages from backend
             System.out.println("Updated currentPrimaryUrl to: " + currentPrimaryUrl);
-        } else if (conn == backendConnection) {
+        } if (conn == backendConnection) {
             // Forward messages from the backend to all clients
+            System.out.println("Message broadcasted: " + message);
             broadcast(message);
         } else {
             System.out.println("Ignoring non-backend message: " + message);

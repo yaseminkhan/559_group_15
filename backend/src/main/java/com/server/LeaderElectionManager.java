@@ -38,6 +38,7 @@ public class LeaderElectionManager {
     
         for (String server : allServersElection) {
             if (!server.equals(heartBeatAddress)) {
+                System.out.println("Leader message sent to " + server + " on initialization");
                 sendLeaderMessage(server);
             }
         }
@@ -203,7 +204,7 @@ public class LeaderElectionManager {
     
         webServer.setIsPrimary(true);
         webServer.connectToCoordinatorAndAnnounce();
-        webServer.notifyClientsNewLeader(serverAddress);
+        // webServer.notifyClientsNewLeader(serverAddress);
     }
 
     private int getServerId(String address) {

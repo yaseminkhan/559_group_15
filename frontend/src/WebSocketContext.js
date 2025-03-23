@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 const WebSocketContext = createContext(null);
 let gameSocket = null;
@@ -6,13 +6,15 @@ let gameSocket = null;
 export const WebSocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
-    const [serverAddress, setServerAddress] = useState("ws://localhost:8887"); // initial backend
-    const [coordinatorSocket, setCoordinatorSocket] = useState(null);
+    const [serverAddress, setServerAddress] = useState("ws://localhost:8887");
+
+    const coordinatorRef = useRef(null);
 
     // Main game socket to backend server
     useEffect(() => {
         const connectGameSocket = () => {
             if (!gameSocket || gameSocket.readyState === WebSocket.CLOSED) {
+                console.log(`Server address: ${serverAddress}`);
                 gameSocket = new WebSocket(serverAddress);
 
                 gameSocket.onopen = () => {
@@ -41,6 +43,7 @@ export const WebSocketProvider = ({ children }) => {
 
                 gameSocket.onclose = () => {
                     console.warn("Game WebSocket closed. Reconnecting...");
+                    gameSocket.close();
                     setIsConnected(false);
                     setTimeout(connectGameSocket, 3000);
                 };
@@ -52,39 +55,45 @@ export const WebSocketProvider = ({ children }) => {
         connectGameSocket();
     }, [serverAddress]);
 
-    // Separate socket to coordinator (only for NEW_LEADER messages)
+    // Coordinator connection with auto-reconnect
     useEffect(() => {
-        const coordinator = new WebSocket("ws://localhost:9999");
-        coordinator.onopen = () => {
-            console.log("Connected to coordinator.");
-        };
+        const connectCoordinator = () => {
+            const coordinator = new WebSocket("ws://localhost:9999");
 
-        coordinator.onmessage = (event) => {
-            const message = event.data;
-            if (message.startsWith("NEW_LEADER:")) {
-                const newAddress = message.split("NEW_LEADER:")[1].trim();
-                console.log("Received new leader update:", newAddress);
+            coordinator.onopen = () => {
+                console.log("Connected to coordinator.");
+            };
 
-                // Close existing gameSocket
-                if (gameSocket) {
-                    gameSocket.close();
+            coordinator.onmessage = (event) => {
+                const message = event.data;
+                if (message.startsWith("NEW_LEADER:")) {
+                    const newAddress = message.split("NEW_LEADER:")[1].trim();
+                    console.log("Received new leader update:", newAddress);
+                    const port = newAddress.split(":").pop();
+                    console.log("Port: ", port);
+                    const newLeaderAddress = `ws://127.0.0.1:${port}`;
+
+                    if (gameSocket) {
+                        gameSocket.close();
+                    }
+
+                    setServerAddress(newLeaderAddress);
                 }
+            };
 
-                // Update backend connection address
-                setServerAddress(newAddress);
-            }
+            coordinator.onerror = (error) => {
+                console.error("Coordinator WebSocket error:", error);
+            };
+
+            coordinator.onclose = () => {
+                console.warn("Coordinator WebSocket closed. Reconnecting...");
+                setTimeout(connectCoordinator, 3000); // Reconnect after 3 seconds
+            };
+
+            coordinatorRef.current = coordinator;
         };
 
-        coordinator.onerror = (error) => {
-            console.error("Coordinator WebSocket error:", error);
-        };
-
-        coordinator.onclose = () => {
-            console.warn("Coordinator WebSocket closed.");
-            // Optional: Reconnect logic if needed
-        };
-
-        setCoordinatorSocket(coordinator);
+        connectCoordinator();
     }, []);
 
     return (
