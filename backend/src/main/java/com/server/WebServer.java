@@ -79,7 +79,7 @@ public class WebServer extends WebSocketServer {
         }
 
         new Timer().scheduleAtFixedRate(new TimerTask() {
-            @Overridex
+            @Override
             public void run() {
                 System.out.println("Check leader status");
                 try {
