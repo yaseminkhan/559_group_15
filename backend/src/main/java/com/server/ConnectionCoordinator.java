@@ -32,7 +32,11 @@ public class ConnectionCoordinator extends WebSocketServer {
     public void onMessage(WebSocket conn, String message) {
         System.out.println("Message from client: " + message);
 
-        if (message.startsWith("NEW_LEADER:")) {
+        if (message.equals("GET_LEADER")) {
+            System.out.println("Client requested current leader.");
+            conn.send("NEW_LEADER:" + currentPrimaryUrl);
+            return;
+        } else if (message.startsWith("NEW_LEADER:")) {
             String newLeaderUrl = message.substring("NEW_LEADER:".length()).trim();
             System.out.println("Received NEW_LEADER message: " + newLeaderUrl);
 

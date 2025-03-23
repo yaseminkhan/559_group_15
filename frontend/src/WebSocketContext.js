@@ -6,13 +6,15 @@ let gameSocket = null;
 export const WebSocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
-    const [serverAddress, setServerAddress] = useState("ws://localhost:8887");
+    const [serverAddress, setServerAddress] = useState(null);
 
     const coordinatorRef = useRef(null);
 
     // Main game socket to backend server
     useEffect(() => {
         const connectGameSocket = () => {
+            if (!serverAddress) return;
+
             if (!gameSocket || gameSocket.readyState === WebSocket.CLOSED) {
                 console.log(`Server address: ${serverAddress}`);
                 gameSocket = new WebSocket(serverAddress);
@@ -62,6 +64,7 @@ export const WebSocketProvider = ({ children }) => {
 
             coordinator.onopen = () => {
                 console.log("Connected to coordinator.");
+                coordinator.send("GET_LEADER");
             };
 
             coordinator.onmessage = (event) => {

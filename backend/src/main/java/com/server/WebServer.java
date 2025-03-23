@@ -43,7 +43,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://172.18.0.2:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://172.18.0.3:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -217,9 +217,7 @@ public class WebServer extends WebSocketServer {
         //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
         //Send data to backups whenever a message is received from the client
-        if (isPrimary) {
-            replicationManager.sendIncrementalUpdate(message);
-        }
+        if (!isPrimary) return;
 
         if (message.startsWith("/reconnect ")) {
             String userId = message.substring(11).trim();
@@ -562,6 +560,9 @@ public class WebServer extends WebSocketServer {
     }
 
     public void handleDrawerJoined(WebSocket conn, String gameCode) {
+
+        if (!isPrimary) return;
+
         Game game = activeGames.get(gameCode);
         if (game != null) {
             // Notify all players that the drawer has joined
@@ -571,6 +572,9 @@ public class WebServer extends WebSocketServer {
     }
 
     public void startNewRound(Game game) {
+
+        if (!isPrimary) return;
+
         if (game == null) return;
 
         game.resetForRound();  // Reset round state
@@ -593,6 +597,9 @@ public class WebServer extends WebSocketServer {
      * game timer handled by server 
      */
     public void startRoundTimer(Game game) {
+
+        if (!isPrimary) return;
+
         if (game == null)
             return;
 
@@ -878,6 +885,9 @@ public class WebServer extends WebSocketServer {
     }
 
     public void handleWordSelection(WebSocket conn, String gameCode, String word) {
+
+        if (!isPrimary) return;
+        
         Game game = activeGames.get(gameCode);
         if (game != null) {
             game.setCurrentWord(word);
