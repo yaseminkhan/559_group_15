@@ -40,6 +40,7 @@ services:
       - backup_server_1 # Guarantee startup order.
       - backup_server_2
       - backup_server_3
+      - connection_coordinator
   
   backup_server_1:
     build:
@@ -58,6 +59,7 @@ services:
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8888 6001 primary_server:5001,backup_server_2:7001,backup_server_3:4001 false"
     depends_on:
       - kafka
+      - connection_coordinator
 
   backup_server_2:
     build:
@@ -76,6 +78,7 @@ services:
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8889 7001 primary_server:5001,backup_server_1:6001,backup_server_3:4001 false"
     depends_on:
       - kafka
+      - connection_coordinator
   
   backup_server_3:
     build:
@@ -94,6 +97,18 @@ services:
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8890 4001 primary_server:5001,backup_server_1:6001,backup_server_2:7001 false"
     depends_on:
       - kafka
+      - connection_coordinator
+
+  connection_coordinator:
+      build:
+        context: ./backend
+      image: connection_coordinator
+      container_name: connection_coordinator
+      hostname: connection_coordinator
+      ports:
+        - "9999:9999"
+      command: >
+          mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
 
   client_1:
     build:
@@ -104,6 +119,7 @@ services:
       - "3000:3000"
     depends_on:
       - primary_server
+      - connection_coordinator
 
   client_2:
     image: client
@@ -112,6 +128,7 @@ services:
       - "3001:3000"
     depends_on:
       - primary_server
+      - connection_coordinator
   
   client_3:
     image: client
@@ -120,6 +137,7 @@ services:
       - "3002:3000"
     depends_on:
       - primary_server
+      - connection_coordinator
 
   client_4:
     image: client
@@ -128,3 +146,4 @@ services:
       - "3003:3000"
     depends_on:
       - primary_server
+      - connection_coordinator

@@ -1,6 +1,7 @@
 package com.server;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,7 +13,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.java_websocket.WebSocket;
+import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.handshake.ServerHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 import com.google.gson.Gson;
@@ -38,12 +41,17 @@ public class WebServer extends WebSocketServer {
         "primary_server:5001", 4
     );
     private String heartBeatAddress;
+    private final String myServerAddress;
+
+    private final String coordinatorAddress = "ws://172.18.0.2:9999"; //proxy to frontend 
+    private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
     public static final Map<String, Integer> serverAddressToIdMap = new HashMap<>();
 
     public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String currentServer) {
         super(address);
+        this.myServerAddress = serverAddress;
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
         
@@ -58,6 +66,7 @@ public class WebServer extends WebSocketServer {
 
         if (isPrimary) {
             heartBeatManager.getLeaderElectionManager().initializeAsLeader();
+            connectToCoordinatorAndAnnounce();
         }
         
         //Set timer to periodically send the full game state to backups
@@ -85,21 +94,34 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        String existingUserId = handshake.getFieldValue("User-ID"); //Handle new WebSocket connections
-        User user;
+        String existingUserId = handshake.getFieldValue("User-ID");
+        User user = null;
 
-        //Check if user is reconnecting
-        if (existingUserId != null && temporarilyDisconnectedUsers.containsKey(existingUserId)) {
-            user = temporarilyDisconnectedUsers.remove(existingUserId);
-            connectedUsers.put(conn, user);
-            System.out.println("Reconnected user: " + user.getUsername());
-        } else {
-            //Create new user for the connection
-            user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
-            connectedUsers.put(conn, user);
+        if (existingUserId != null) {
+            // First check temporarilyDisconnected
+            if (temporarilyDisconnectedUsers.containsKey(existingUserId)) {
+                user = temporarilyDisconnectedUsers.remove(existingUserId);
+                System.out.println("Reconnected from temp list: " + user.getUsername());
+            } else {
+                // Then check currently connected users
+                for (User u : connectedUsers.values()) {
+                    if (u.getId().equals(existingUserId)) {
+                        user = u;
+                        System.out.println("Reconnected using existing connected user: " + user.getUsername());
+                        break;
+                    }
+                }
+            }
         }
 
-        conn.send("USER_ID:" + user.getId()); //Send user's ID back to the client
+        // If user is still null, it's a brand new connection
+        if (user == null) {
+            user = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
+            System.out.println("New user connection: " + user.getUsername());
+        }
+
+        connectedUsers.put(conn, user);
+        conn.send("USER_ID:" + user.getId());
         System.out.println("User connected: " + user.getUsername() + " (" + user.getId() + ")");
     }
 
@@ -298,15 +320,12 @@ public class WebServer extends WebSocketServer {
     }
 
     public void notifyClientsNewLeader(String newLeaderAddress) {
-        System.out.println("Notifying clients to switch to new leader: " + newLeaderAddress);
+        System.out.println("Notifying coordinator about new leader: " + newLeaderAddress);
 
-        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-            WebSocket ws = entry.getKey();
-            try {
-                ws.send("NEW_LEADER:" + newLeaderAddress);
-            } catch (Exception e) {
-                System.err.println("Failed to send new leader message to client: " + e.getMessage());
-            }
+        if (coordinatorConnection != null && coordinatorConnection.isOpen()) {
+            coordinatorConnection.send("NEW_LEADER:" + newLeaderAddress);
+        } else {
+            System.err.println("Coordinator connection not open!");
         }
     }
 
@@ -371,13 +390,82 @@ public class WebServer extends WebSocketServer {
         System.out.println("All Servers for leader election: " + allServersElection);
         
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("primary_server", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
+        WebServer server = new WebServer(new InetSocketAddress("0.0.0.0", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
         System.out.println("Heartbeat listener running on port: " + heartbeatPort);
     }
 
+    public void connectToCoordinatorAndAnnounce() {
+        // ===== DEBUG PRINTS =====
+         System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
+         System.out.println("Connected Users:");
+         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+             User user = entry.getValue();
+             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+         }
+
+         System.out.println("\nActive Games:");
+         for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+             System.out.println(" - Game Code: " + entry.getKey());
+             Game game = entry.getValue();
+             for (User player : game.getPlayers()) {
+                 System.out.println("   * Player: " + player.getUsername() + " (ID: " + player.getId() + ")");
+             }
+         }
+
+         System.out.println("\nTemporarily Disconnected Users:");
+         for (User user : temporarilyDisconnectedUsers.values()) {
+             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+         }
+         System.out.println("===== END DEBUG =====\n");
+
+        new Thread(() -> {
+            while (true) {
+                try {
+                    if (coordinatorConnection == null || coordinatorConnection.isClosed()) {
+                        System.out.println("Attempting to connect to coordinator...");
+    
+                        coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
+                            @Override
+                            public void onOpen(ServerHandshake handshake) {
+                                System.out.println("Connected to coordinator.");
+                                send("NEW_LEADER:" + myServerAddress);
+                            }
+    
+                            @Override
+                            public void onMessage(String message) {}
+    
+                            @Override
+                            public void onClose(int code, String reason, boolean remote) {
+                                System.out.println("Coordinator connection closed. Will retry...");
+                            }
+    
+                            @Override
+                            public void onError(Exception ex) {
+                                System.err.println("Coordinator WebSocket error: " + ex.getMessage());
+                            }
+                        };
+    
+                        coordinatorConnection.connectBlocking();
+                    }
+    
+                    // Sleep and then check again
+                    Thread.sleep(5000);
+    
+                } catch (Exception e) {
+                    System.err.println("Failed to connect to coordinator: " + e.getMessage());
+                    try {
+                        Thread.sleep(5000); // wait before retrying
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }).start();
+    }
 
     // ======================================================== Game Logic Methods ========================================================
 

@@ -75,7 +75,8 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.1.0</version>
         <configuration>
-          <mainClass>com.server.WebServer</mainClass>
+          <!-- <mainClass>com.server.WebServer</mainClass> -->
+          <mainClass>${exec.mainClass}</mainClass>
         </configuration>
       </plugin>
     </plugins>

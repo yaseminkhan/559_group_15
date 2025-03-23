@@ -92,7 +92,7 @@ public class HeartBeatManager {
                         String senderAddress = cleanHost + ":" + serverNameToPortMap.get(cleanHost);
 
                         // Format in WebSocket style
-                        System.out.println("Sender Address for heartbeat listener: " + senderAddress);
+                        //System.out.println("Sender Address for heartbeat listener: " + senderAddress);
                         
                         if (message.equals("HEARTBEAT")) {
                             updateHeartbeat(senderAddress);
