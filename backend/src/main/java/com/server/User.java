@@ -170,17 +170,16 @@ public class User {
         return username + " (" + icon + ")" + (isDrawer ? " [DRAWER]" : "");
     }
 
-    // @Override
-    // public boolean equals(Object o) {
-    //     if (this == o) return true;
-    //     if (!(o instanceof User)) return false;
-    //     User other = (User) o;
-    //     return this.id.equals(other.id); // assuming id is unique
-    // }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User other = (User) o;
+        return this.id.equals(other.id); // assuming id is unique
+    }
 
-    // @Override
-    // public int hashCode() {
-    //     return id.hashCode();
-    // }
-
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }
