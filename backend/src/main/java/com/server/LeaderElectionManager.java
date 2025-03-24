@@ -156,11 +156,15 @@ public class LeaderElectionManager {
         int currentId = getServerId(heartBeatAddress);
 
         // If the sender has a lower ID, send a bully message
-        if (senderId < currentId && !this.wasBullied) {
+        if (senderId < currentId) {
             sendBullyMessage(senderAddress);
             running = true;
-            initiateElection();
+            if (!this.wasBullied) {
+                initiateElection();
+            }
+            
         }
+
     }
 
     private void sendBullyMessage(String server) throws InterruptedException {
