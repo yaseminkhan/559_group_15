@@ -62,10 +62,10 @@ public class HeartBeatManager {
             // System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
             socket.close();
         } catch (SocketTimeoutException ste) {
-            System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
+            //System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
         }
          catch (IOException ioe) {
-            System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
+            //System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
         }
         
     }
@@ -203,6 +203,7 @@ public class HeartBeatManager {
         
         // Debugging: Print all stored heartbeats
         // System.out.println("Current heartbeat map: " + lastHeartbeats);
+        //System.out.println("Current heartbeat map: " + lastHeartbeats);
     }
 
     public Long getLastHeartbeat(String serverAddress) {

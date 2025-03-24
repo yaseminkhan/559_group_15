@@ -345,6 +345,15 @@ public class Game {
             return gson.toJson(playerList);
         }
 
+        public boolean isRoundInProgress() {
+            return gameStarted
+                && !gameEnded
+                && wordToDraw != null
+                && !wordToDraw.isEmpty()
+                && drawer != null
+                && timeLeft > 0;
+        }
+
         /*
         * Resets all player scores to 0.
         */
