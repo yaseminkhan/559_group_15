@@ -471,15 +471,27 @@ public class WebServer extends WebSocketServer {
         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
         replicationManager.stopKafkaConsumer();
 
-        // System.out.println("Promoted to primary. Checking if any game rounds need to be resumed...");
-        // for (Game game : activeGames.values()) {
-        //     if (game.isRoundInProgress()) {
-        //         System.out.println("Resuming round for game: " + game.getGameCode());
-        //         startRoundTimer(game);
-        //     } else {
-        //         System.out.println("No active round to resume for game: " + game.getGameCode());
-        //     }
-        // }
+        System.out.println("\n--- RESUMING ANY INCOMPLETE ROUNDS ---");
+        for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+            Game game = entry.getValue();
+            System.out.println("Checking game: " + entry.getKey());
+            System.out.println("  - wordToDraw: " + game.getWordToDraw());
+            System.out.println("  - Time Left: " + game.getTimeLeft());
+            System.out.println("  - Timer Exists: " + (game.getTimer() != null));
+            System.out.println("  - gameStarted: " + game.hasGameStarted());
+            System.out.println("  - gameEnded: " + game.isGameEnded());
+            System.out.println("  - drawer: " + (game.getDrawer() != null ? game.getDrawer().getUsername() : "null"));
+        }
+
+        System.out.println("Promoted to primary. Checking if any game rounds need to be resumed...");
+        for (Game game : activeGames.values()) {
+            if (game.isRoundInProgress()) {
+                System.out.println("Resuming round for game: " + game.getGameCode());
+                startRoundTimer(game);
+            } else {
+                System.out.println("No active round to resume for game: " + game.getGameCode());
+            }
+        }
 
         new Thread(() -> {
             while (true) {
@@ -566,6 +578,7 @@ public class WebServer extends WebSocketServer {
 
             // Reset all players scores to 0
             game.resetScores();
+            game.setGameStarted(true);
             // Assign a drawer 
             System.out.println("Assign next drawer called\n");
             game.assignNextDrawer();
@@ -634,7 +647,8 @@ public class WebServer extends WebSocketServer {
         }
 
         game.nextTurn();
-        
+        game.setRoundStarted(false);
+
         // Notify all players about the new round and new drawer
         broadcastToGame(game, "NEW_ROUND: " + game.getCurrentRound() + " DRAWER: " + game.getDrawer().getId());
         broadcastToGame(game, "CANVAS_CLEAR");
@@ -653,7 +667,11 @@ public class WebServer extends WebSocketServer {
         // Cancel the existing timer if it exists
         game.cancelTimer();
 
-        game.setTimeLeft(60); // Reset timer for new round
+        //game.setTimeLeft(60); // Reset timer for new round
+
+        if (game.getTimeLeft() <= 0 || game.getTimeLeft() > 60) {
+            game.setTimeLeft(60); // Only reset if invalid or uninitialized
+        }
 
         game.clearCanvasHistory();
 
@@ -873,6 +891,7 @@ public class WebServer extends WebSocketServer {
             String message = "WORD_SELECTED: " + word;
             broadcastToGame(game, message);
             System.out.println("Word selected: " + word + ". Starting round...");
+            game.setRoundStarted(true);
         }
 
         // Reset timer 
