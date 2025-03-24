@@ -80,7 +80,7 @@ public class ReplicationManager {
                 try {
                     while (true) {
                         ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
-                        System.out.println("polling from kafka");
+                        //System.out.println("polling from kafka");
                         for (ConsumerRecord<String, String> record : records) {
                             if (record.topic().equals("game-state")) {
                                 updateGameState(record.value());

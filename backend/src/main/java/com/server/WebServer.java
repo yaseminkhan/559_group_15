@@ -81,7 +81,7 @@ public class WebServer extends WebSocketServer {
 
         new Thread(() -> {
             while (true) {
-                System.out.println("Check leader status");
+                //System.out.println("Check leader status");
                 try {
                     heartBeatManager.leaderStatus();
                     Thread.sleep(1000); //check leader status every second
@@ -448,12 +448,18 @@ public class WebServer extends WebSocketServer {
          }
          System.out.println("===== END DEBUG =====\n");
         
-        //  for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
-        //     temporarilyDisconnectedUsers.put(entry.getKey(), entry.getValue().clone());
-        //  }
         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
         replicationManager.stopKafkaConsumer();
 
+        // System.out.println("Promoted to primary. Checking if any game rounds need to be resumed...");
+        // for (Game game : activeGames.values()) {
+        //     if (game.isRoundInProgress()) {
+        //         System.out.println("Resuming round for game: " + game.getGameCode());
+        //         startRoundTimer(game);
+        //     } else {
+        //         System.out.println("No active round to resume for game: " + game.getGameCode());
+        //     }
+        // }
 
         new Thread(() -> {
             while (true) {
@@ -715,14 +721,14 @@ public class WebServer extends WebSocketServer {
 
     public void broadcastToGame(Game game, String message) {
         if (game != null) {
-            System.out.println("game:" + game);
+            // System.out.println("game:" + game);
             for (User player : game.getPlayers()) {
-                System.out.println("players user:" + player);
-                System.out.println("Connected Users:");
-                for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-                    User user = entry.getValue();
-                    System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-                }
+                // System.out.println("players user:" + player);
+                // System.out.println("Connected Users:");
+                // for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+                //     User user = entry.getValue();
+                //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+                // }
                 WebSocket conn = getConnectionByUser(player);
                 if (conn != null) {
                     conn.send(message);

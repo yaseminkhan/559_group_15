@@ -1,63 +1,57 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 const WebSocketContext = createContext(null);
-let gameSocket = null;
 
 export const WebSocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [serverAddress, setServerAddress] = useState(null);
-
     const coordinatorRef = useRef(null);
 
-    // Main game socket to backend server
+    // Connect to backend server
     useEffect(() => {
-        const connectGameSocket = () => {
-            if (!serverAddress) return;
+        if (!serverAddress) return;
 
-            if (!gameSocket || gameSocket.readyState === WebSocket.CLOSED) {
-                console.log(`Server address: ${serverAddress}`);
-                gameSocket = new WebSocket(serverAddress);
+        const ws = new WebSocket(serverAddress);
 
-                gameSocket.onopen = () => {
-                    console.log(`Connected to backend: ${serverAddress}`);
-                    setIsConnected(true);
+        ws.onopen = () => {
+            console.log(`✅ Connected to backend: ${serverAddress}`);
+            setIsConnected(true);
+            setSocket(ws);
 
-                    const storedUserId = localStorage.getItem("userId");
-                    if (storedUserId) {
-                        console.log(`Reconnecting as user: ${storedUserId}`);
-                        gameSocket.send(`/reconnect ${storedUserId}`);
-                    }
-                };
-
-                gameSocket.onmessage = (event) => {
-                    const message = event.data;
-                    if (message.startsWith("USER_ID:")) {
-                        const userId = message.split(":")[1];
-                        console.log(`Received user ID: ${userId}`);
-                        localStorage.setItem("userId", userId);
-                    }
-                };
-
-                gameSocket.onerror = (error) => {
-                    console.error("Game WebSocket error:", error);
-                };
-
-                gameSocket.onclose = () => {
-                    console.warn("Game WebSocket closed. Reconnecting...");
-                    gameSocket.close();
-                    setIsConnected(false);
-                    setTimeout(connectGameSocket, 3000);
-                };
-
-                setSocket(gameSocket);
+            const storedUserId = localStorage.getItem("userId");
+            if (storedUserId) {
+                console.log(`Reconnecting as user: ${storedUserId}`);
+                ws.send(`/reconnect ${storedUserId}`);
             }
         };
 
-        connectGameSocket();
+        ws.onmessage = (event) => {
+            const message = event.data;
+            if (message.startsWith("USER_ID:")) {
+                const userId = message.split(":")[1];
+                console.log(`Received user ID: ${userId}`);
+                localStorage.setItem("userId", userId);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error("Game WebSocket error:", error);
+        };
+
+        ws.onclose = () => {
+            console.warn("Game WebSocket closed.");
+            setIsConnected(false);
+            setSocket(null);
+        };
+
+        return () => {
+            console.log("🔌 Cleaning up old socket connection.");
+            ws.close();
+        };
     }, [serverAddress]);
 
-    // Coordinator connection with auto-reconnect
+    // Connect to coordinator
     useEffect(() => {
         const connectCoordinator = () => {
             const coordinator = new WebSocket("ws://localhost:9999");
@@ -71,15 +65,12 @@ export const WebSocketProvider = ({ children }) => {
                 const message = event.data;
                 if (message.startsWith("NEW_LEADER:")) {
                     const newAddress = message.split("NEW_LEADER:")[1].trim();
-                    console.log("Received new leader update:", newAddress);
                     const port = newAddress.split(":").pop();
-                    console.log("Port: ", port);
                     const newLeaderAddress = `ws://localhost:${port}`;
 
-                    if (gameSocket) {
-                        gameSocket.close();
-                    }
+                    console.log("🧭 Received new leader update:", newLeaderAddress);
 
+                    // Trigger socket reconnection
                     setServerAddress(newLeaderAddress);
                 }
             };
@@ -90,7 +81,7 @@ export const WebSocketProvider = ({ children }) => {
 
             coordinator.onclose = () => {
                 console.warn("Coordinator WebSocket closed. Reconnecting...");
-                setTimeout(connectCoordinator, 3000); // Reconnect after 3 seconds
+                setTimeout(connectCoordinator, 3000);
             };
 
             coordinatorRef.current = coordinator;

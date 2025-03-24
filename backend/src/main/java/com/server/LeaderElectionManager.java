@@ -77,7 +77,7 @@ public class LeaderElectionManager {
                 System.out.println("Leader is down. Starting election...");
                 initiateElection();
             }
-            System.out.println("if-else block");
+            //System.out.println("if-else block");
         }
     }
 
