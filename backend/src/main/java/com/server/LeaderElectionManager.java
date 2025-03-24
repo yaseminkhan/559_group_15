@@ -95,6 +95,7 @@ public class LeaderElectionManager {
     }
 
     public void initiateElection() throws InterruptedException {
+        boolean higherId = false;
         // System.out.println("Initiate Election called");
         electionId = System.currentTimeMillis();  // Generate a unique election ID
         System.out.println("Initiate Election called with ID: " + electionId);
@@ -132,6 +133,7 @@ public class LeaderElectionManager {
 
             // If this server has a lower ID than current server, it sends an election message to higher-id servers
             if (otherServerId > getServerId(heartBeatAddress)) {
+                higherId = true;
                 sendElectionMessage(server, electionId);
             }
         }
@@ -147,7 +149,7 @@ public class LeaderElectionManager {
         }
 
         // If no response received (no higher priority server), declare self as leader
-        if (this.running) {
+        if (this.running && !higherId) {
             System.out.println("No response received. Declaring self as leader...");
             declareSelfAsLeader();
         } else {
