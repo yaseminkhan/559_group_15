@@ -227,10 +227,12 @@ public class HeartBeatManager {
     }
 
     public void handleIncomingMessage(String senderAddress, String message) throws InterruptedException {
-        if (message.equals("ELECTION")) {
-            leaderElectionManager.handleElectionMessage(senderAddress);
-        } else if (message.equals("BULLY")) {
-            leaderElectionManager.handleBullyMessage(senderAddress);
+        if (message.startsWith("ELECTION")) {
+            long electionId = Long.parseLong(message.split(":", 2)[1]);
+            leaderElectionManager.handleElectionMessage(senderAddress, electionId);
+        } else if (message.startsWith("BULLY")) {
+            long electionId = Long.parseLong(message.split(":", 2)[1]);
+            leaderElectionManager.handleBullyMessage(senderAddress, electionId);
         } else if (message.startsWith("LEADER")) {
             String newLeader = message.split(":", 2)[1];
             leaderElectionManager.handleLeaderMessage(newLeader);

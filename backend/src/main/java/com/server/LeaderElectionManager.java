@@ -12,6 +12,7 @@ public class LeaderElectionManager {
     private String currentLeader;
     private boolean wasBullied;
     private boolean running; // Indicates if the election process is running
+    private long electionId = 0;
     private final WebServer webServer;
     private final int timeout = 5000; // Timeout for waiting for responses
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
@@ -46,7 +47,7 @@ public class LeaderElectionManager {
         this.isLeader = true;
         System.out.println("leader change 4");
         this.currentLeader = serverAddress;
-        running = false;
+        this.running = false;
     
         // heartBeatManager.updateHeartbeat(serverAddress); // Add yourself
         heartBeatManager.startHeartbeatSender();
@@ -69,10 +70,21 @@ public class LeaderElectionManager {
 
     public void checkLeaderStatus() throws InterruptedException {
         System.out.println("\nisLeader value: " + isLeader + "\n");
+        // if (isLeader) {
+        //     for (String server : allServersElection) {
+        //         if (!server.equals(heartBeatAddress)) {
+        //             System.out.println("Leader message sent to " + server + " on initialization");
+        //             sendLeaderMessage(server);
+        //         }
+        //     }
+        // }
         if (!isLeader) {
             System.out.flush();
 
             System.out.println("Current leader: " + this.currentLeader);
+            // if(this.currentLeader == null) {
+            //     System.out.println("Check for leader again");
+            // }
             if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
                 System.out.println("Leader is down. Starting election...");
                 initiateElection();
@@ -82,7 +94,10 @@ public class LeaderElectionManager {
     }
 
     public void initiateElection() throws InterruptedException {
-        System.out.println("Initiate Election called");
+        // System.out.println("Initiate Election called");
+        electionId = System.currentTimeMillis();  // Generate a unique election ID
+        System.out.println("Initiate Election called with ID: " + electionId);
+
         System.out.println("allServersElection:  " + allServersElection);
         System.out.println("Remove old primary heartbeat port:  " + this.currentLeader);
 
@@ -103,7 +118,7 @@ public class LeaderElectionManager {
         allServersElection.remove(cleanHost);
         System.out.println("Updated LE allServersElection:  " + allServersElection);
         
-        running = true;
+        this.running = true;
 
         // Send an election message to servers with higher ids
         for (String server : allServersElection) {
@@ -116,13 +131,13 @@ public class LeaderElectionManager {
 
             // If this server has a lower ID than current server, it sends an election message to higher-id servers
             if (otherServerId > getServerId(heartBeatAddress)) {
-                sendElectionMessage(server);
+                sendElectionMessage(server, electionId);
             }
         }
 
         // Wait for responses (simulate timeout)
         long startTime = System.currentTimeMillis();
-        while (running && (System.currentTimeMillis() - startTime) < timeout) {
+        while (this.running && (System.currentTimeMillis() - startTime) < timeout) {
             try {
                 Thread.sleep(1000); // Sleep for a short period before checking again
             } catch (InterruptedException e) {
@@ -131,7 +146,7 @@ public class LeaderElectionManager {
         }
 
         // If no response received (no higher priority server), declare self as leader
-        if (running) {
+        if (this.running) {
             System.out.println("No response received. Declaring self as leader...");
             declareSelfAsLeader();
         } else {
@@ -139,9 +154,9 @@ public class LeaderElectionManager {
         }
     }
 
-    private void sendElectionMessage(String server) throws InterruptedException {
+    private void sendElectionMessage(String server, long receivedElectionId) throws InterruptedException {
         if (heartBeatManager.isServerAlive(server)) {
-            heartBeatManager.sendMessage(server, "ELECTION");
+            heartBeatManager.sendMessage(server, "ELECTION:" + receivedElectionId);
         } else {
             System.out.println("Server " + server + " is not alive, skipping election message.");
         }
@@ -151,14 +166,20 @@ public class LeaderElectionManager {
         heartBeatManager.sendMessage(server, "LEADER:" + serverAddress);
     }
 
-    public void handleElectionMessage(String senderAddress) throws InterruptedException {
+    public void handleElectionMessage(String senderAddress, long receivedElectionId) throws InterruptedException {
+        if (receivedElectionId > this.electionId) {
+            this.electionId = receivedElectionId;
+            System.out.println("Ignoring outdated election message from " + senderAddress);
+            return;
+        }
+        electionId = receivedElectionId; // Update to the latest election ID
         int senderId = getServerId(senderAddress);
         int currentId = getServerId(heartBeatAddress);
 
         // If the sender has a lower ID, send a bully message
         if (senderId < currentId) {
-            sendBullyMessage(senderAddress);
-            running = true;
+            sendBullyMessage(senderAddress, receivedElectionId);
+            this.running = true;
             if (!this.wasBullied) {
                 initiateElection();
             }
@@ -167,9 +188,9 @@ public class LeaderElectionManager {
 
     }
 
-    private void sendBullyMessage(String server) throws InterruptedException {
+    private void sendBullyMessage(String server, long receivedElectionId) throws InterruptedException {
         if (heartBeatManager.isServerAlive(server)) {
-            heartBeatManager.sendMessage(server, "BULLY");
+            heartBeatManager.sendMessage(server, "BULLY:" + receivedElectionId);
         }
     }
 
@@ -179,11 +200,18 @@ public class LeaderElectionManager {
         System.out.println("new leader: "+ this.currentLeader);
         // this.isLeader = false;
         // System.out.println("leader change 1");
-        running = false; // Stop the election
+        this.running = false; // Stop the election
         System.out.println("Leader elected: " + leaderAddress);
     }
 
-    public void handleBullyMessage(String senderAddress) {
+    public void handleBullyMessage(String senderAddress, long receivedElectionId) {
+        if (receivedElectionId > this.electionId) {
+            this.electionId = receivedElectionId;
+            System.out.println("Ignoring outdated bully message from " + senderAddress);
+            return;
+        }
+
+        electionId = receivedElectionId;  // Update the current election ID
         int senderId = getServerId(senderAddress);
         int currentId = getServerId(heartBeatAddress);
         System.out.println("received bully message from: " + senderAddress);
@@ -197,7 +225,7 @@ public class LeaderElectionManager {
                 String serverAddress = serverNameToAddressMap.get(serverName);
                 this.currentLeader = serverAddress;
                 this.isLeader = false;
-                running = false; // Stop the election process
+                this.running = false; // Stop the election process
                 System.out.println("Got bullied by: " + serverAddress);
             }              
         }
@@ -208,7 +236,7 @@ public class LeaderElectionManager {
         this.isLeader = true;
         System.out.println("leader change 3");
         this.currentLeader = serverAddress;
-        running = false;
+        this.running = false;
         System.out.println("I am the new leader: " + serverAddress);
     
         // Immediately update its own heartbeat
