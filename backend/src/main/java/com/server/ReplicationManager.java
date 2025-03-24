@@ -27,7 +27,7 @@ import com.google.gson.reflect.TypeToken;
 public class ReplicationManager {
 
     private final WebServer webServer;
-    private final boolean isPrimary;
+    private boolean isPrimary;
     private final String serverAddress;
     private final List<String> allServers;
     private final int heartbeatPort;
@@ -59,50 +59,130 @@ public class ReplicationManager {
         }
 
         if (isPrimary) {
-            // Initialize Kafka producer for primary server
-            Properties producerProps = new Properties();
-            producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
-            producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-            producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-            kafkaProducer = new KafkaProducer<>(producerProps);
+            initializeKafkaProducer();
         } else {
-            
-            Properties consumerProps = new Properties();
-            consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
-            consumerProps.put(ConsumerConfig. GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); //Unique Group for each server
-            consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-            consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-            kafkaConsumer = new KafkaConsumer<>(consumerProps);
-            kafkaConsumer.subscribe(Arrays.asList("game-state", "incremental-updates"));
+            initializeKafkaConsumer();
+        }
+    }
+    private void initializeKafkaProducer() {
+        if (kafkaProducer != null) {
+            System.out.println("Kafka producer is already initialized");
+        }
+        Properties producerProps = new Properties();
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        kafkaProducer = new KafkaProducer<>(producerProps);
+        System.out.println("Kafka producer initialized for primary server.");
+    }
 
-            //Start thread to consume messages from Kafka
-            consumerThread = new Thread(() -> {
-                try {
-                    while (true) {
-                        ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
-                        System.out.println("polling from kafka");
-                        for (ConsumerRecord<String, String> record : records) {
-                            if (record.topic().equals("game-state")) {
-                                updateGameState(record.value());
-                            } else if (record.topic().equals("incremental-updates")) {
-                                processIncrementalUpdate(record.value());
-                            }
+    private void initializeKafkaConsumer() {
+        if (kafkaConsumer != null) {
+            System.out.println("Kafka consumer is already initialized.");
+            return;
+        }
+        Properties consumerProps = new Properties();
+        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); // Unique Group for each server
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        kafkaConsumer = new KafkaConsumer<>(consumerProps);
+        kafkaConsumer.subscribe(Arrays.asList("game-state", "incremental-updates"));
+
+        consumerThread = new Thread(() -> {
+            try {
+                while (true) {
+                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
+                    System.out.println("Polling from Kafka");
+                    for (ConsumerRecord<String, String> record : records) {
+                        if (record.topic().equals("game-state")) {
+                            updateGameState(record.value());
+                        } else if (record.topic().equals("incremental-updates")) {
+                            processIncrementalUpdate(record.value());
                         }
                     }
-                } catch (org.apache.kafka.common.errors.WakeupException e) {
-                    System.out.println("Kafka consumer wakeup triggered, shutting down.");
-                    // Expected during shutdown — no need to log stack trace
-                } catch (Exception e) {
-                    // Log any unexpected errors
-                    System.err.println("Unexpected error in Kafka consumer: " + e.getMessage());
-                    //e.printStackTrace();
-                } finally {
-                    kafkaConsumer.close();
-                    System.out.println("Kafka consumer closed.");
                 }
-            });
-            consumerThread.start();
+            } catch (org.apache.kafka.common.errors.WakeupException e) {
+                System.out.println("Kafka consumer wakeup triggered, shutting down.");
+            } catch (Exception e) {
+                System.err.println("Unexpected error in Kafka consumer: " + e.getMessage());
+            } finally {
+                kafkaConsumer.close();
+                System.out.println("Kafka consumer closed.");
+            }
+        });
+        consumerThread.start();
+        System.out.println("Kafka consumer initialized for backup server.");
+        
+            // if (isPrimary) {
+            //     // Initialize Kafka producer for primary server
+            //     Properties producerProps = new Properties();
+            //     producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+            //     producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+            //     producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+            //     kafkaProducer = new KafkaProducer<>(producerProps);
+            // } else {
+                
+            //     Properties consumerProps = new Properties();
+            //     consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+            //     consumerProps.put(ConsumerConfig. GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); //Unique Group for each server
+            //     consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+            //     consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+            //     kafkaConsumer = new KafkaConsumer<>(consumerProps);
+            //     kafkaConsumer.subscribe(Arrays.asList("game-state", "incremental-updates"));
+
+            //     //Start thread to consume messages from Kafka
+            //     consumerThread = new Thread(() -> {
+            //         try {
+            //             while (true) {
+            //                 ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
+            //                 System.out.println("polling from kafka");
+            //                 for (ConsumerRecord<String, String> record : records) {
+            //                     if (record.topic().equals("game-state")) {
+            //                         updateGameState(record.value());
+            //                     } else if (record.topic().equals("incremental-updates")) {
+            //                         processIncrementalUpdate(record.value());
+            //                     }
+            //                 }
+            //             }
+            //         } catch (org.apache.kafka.common.errors.WakeupException e) {
+            //             System.out.println("Kafka consumer wakeup triggered, shutting down.");
+            //             // Expected during shutdown — no need to log stack trace
+            //         } catch (Exception e) {
+            //             // Log any unexpected errors
+            //             System.err.println("Unexpected error in Kafka consumer: " + e.getMessage());
+            //             //e.printStackTrace();
+            //         } finally {
+            //             kafkaConsumer.close();
+            //             System.out.println("Kafka consumer closed.");
+            //         }
+            //     });
+            //     consumerThread.start();
+            // }
+    }
+
+    public void switchToPrimary() {
+        if (kafkaConsumer != null) {
+            stopKafkaConsumer();
         }
+        if (kafkaProducer == null) {
+            initializeKafkaProducer();
+        }
+        isPrimary = true;
+        System.out.println("Switched to primary role. Kafka producer started.");
+    }
+
+    public void switchToBackup() {
+        if (kafkaProducer != null) {
+            kafkaProducer.close();
+            kafkaProducer = null;
+        }
+        if (kafkaConsumer == null) {
+            initializeKafkaConsumer();
+        }
+        
+        isPrimary = false;
+        System.out.println("Switched to backup role. Kafka consumer started.");
     }
 
     public void stopKafkaConsumer() {

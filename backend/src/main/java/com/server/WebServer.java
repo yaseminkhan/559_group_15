@@ -75,8 +75,9 @@ public class WebServer extends WebSocketServer {
                 @Override
                 public void run() {
                     replicationManager.sendFullGameState();
+                    System.out.println("Sent full game state");
                 }
-            }, 0, 10000); //Send full game every 10 seconds
+            }, 0, 5000); //Send full game every 5 seconds
         }
 
         new Thread(() -> {
@@ -90,6 +91,25 @@ public class WebServer extends WebSocketServer {
                 }
             }
         }).start();
+    }
+
+
+    public void promoteToPrimary() {
+        this.isPrimary = true;
+        replicationManager.switchToPrimary();
+        connectToCoordinatorAndAnnounce();
+        // Start sending full game state periodically
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                replicationManager.sendFullGameState();
+            }
+        }, 0, 10000); // Send full game every 10 seconds
+    }
+
+    public void demoteToBackup() {
+        this.isPrimary = false;
+        replicationManager.switchToBackup();
     }
 
     @Override
