@@ -35,15 +35,15 @@ public class WebServer extends WebSocketServer {
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
-            "172.16.238.12:6001", 1,
-            "172.16.238.13:7001", 2,
-            "172.16.238.14:4001", 3,
-            "172.16.238.11:5001", 4);
+            "backup_server_1:6001", 1,
+            "backup_server_2:7001", 2,
+            "backup_server_3:4001", 3,
+            "primary_server:5001", 4);
     private String heartBeatAddress;
     private final String myServerAddress;
 
     // private final String coordinatorAddress = "ws://172.18.0.3:9999"; //proxy to frontend 
-    private final String coordinatorAddress = "ws://connection_coordinator:9999"; // This can be commented out in case it doesn't work.
+    private final String coordinatorAddress = "ws://172.16.238.14:9999"; // This can be commented out in case it doesn't work.
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
