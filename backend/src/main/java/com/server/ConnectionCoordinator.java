@@ -10,7 +10,7 @@ import org.java_websocket.server.WebSocketServer;
 
 public class ConnectionCoordinator extends WebSocketServer {
     // private String currentPrimaryUrl = "ws://172.18.0.5:8887"; // Initial default
-    private String currentPrimaryUrl = "ws://primary_server:8887"; // This can be commented out in case it doesn't work.s
+    private String currentPrimaryUrl = "ws://172.16.238.11:8887"; // This can be commented out in case it doesn't work.s
     private WebSocket backendConnection;
 
     public ConnectionCoordinator(InetSocketAddress address) {

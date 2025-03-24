@@ -22,17 +22,18 @@ public class HeartBeatManager {
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
-        "backup_server_1", 6001,
-        "backup_server_2", 7001,
-        "backup_server_3", 4001,
-        "primary_server", 5001
-    );
+            "172.16.238.12", 6001,
+            "172.16.238.13", 7001,
+            "172.16.238.14", 4001,
+            "172.16.238.11", 5001);
 
-    public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
+    public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers,
+            List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
         this.serverAddress = serverAddress;
         this.heartbeatPort = heartbeatPort;
         this.allServers = allServers;
-        this.leaderElectionManager = new LeaderElectionManager(serverAddress, allServersElection, heartBeatAddress, this, webServer);
+        this.leaderElectionManager = new LeaderElectionManager(serverAddress, allServersElection, heartBeatAddress,
+                this, webServer);
     }
 
     // public void setCurrentLeader(String address) {
@@ -46,11 +47,11 @@ public class HeartBeatManager {
             String[] serverInfo = server.split(":");
             int otherServerHBPort = Integer.parseInt(serverInfo[1]);
             sendHeartbeat(serverInfo[0], otherServerHBPort);
-            
+
         }
 
     }
-    
+
     //Send heartbeats to a specific server
     public void sendHeartbeat(String serverIp, int port) {
         System.out.println("Attempting to connect to serverip: " + serverIp + ", port: " + port);
@@ -63,11 +64,11 @@ public class HeartBeatManager {
             socket.close();
         } catch (SocketTimeoutException ste) {
             System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
+        } catch (IOException ioe) {
+            System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port
+                    + ". This is the message: " + ioe.getMessage());
         }
-         catch (IOException ioe) {
-            System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
-        }
-        
+
     }
 
     //Start listening for heartbeats from other servers
@@ -84,16 +85,16 @@ public class HeartBeatManager {
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
                         // Resolve hostname
-                        String senderIp = socket.getInetAddress().getHostAddress();
+                        // String senderIp = socket.getInetAddress().getHostAddress();
                         String senderHost = socket.getInetAddress().getHostName();
-                        String cleanHost = senderHost.split("\\.")[0]; 
-                        
+                        String cleanHost = senderHost.split("\\.")[0];
+
                         // Format in WebSocket style
                         String senderAddress = cleanHost + ":" + serverNameToPortMap.get(cleanHost);
 
                         // Format in WebSocket style
                         //System.out.println("Sender Address for heartbeat listener: " + senderAddress);
-                        
+
                         if (message.equals("HEARTBEAT")) {
                             updateHeartbeat(senderAddress);
                             System.out.println("Heartbeat received from: " + senderAddress);
@@ -117,6 +118,7 @@ public class HeartBeatManager {
     public LeaderElectionManager getLeaderElectionManager() {
         return this.leaderElectionManager;
     }
+
     //Start sending heartbeats to other servers periodically
     public void startHeartbeatSender() {
         new Thread(() -> {
@@ -144,7 +146,6 @@ public class HeartBeatManager {
     public void leaderStatus() throws InterruptedException {
         leaderElectionManager.checkLeaderStatus();
     }
-
 
     public boolean isServerAlive(String serverAddress) throws InterruptedException {
         if (serverAddress == null) {
@@ -200,7 +201,7 @@ public class HeartBeatManager {
         long time = System.currentTimeMillis();
         System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
-        
+
         // Debugging: Print all stored heartbeats
         System.out.println("Current heartbeat map: " + lastHeartbeats);
     }
@@ -212,11 +213,11 @@ public class HeartBeatManager {
     public void sendMessage(String serverAddressRecieve, String message) {
         System.out.println("Server Address in sendMessage: " + serverAddressRecieve);
         String[] parts = serverAddressRecieve.split(":"); // Split by ":"
-        String server = parts[0]; 
+        String server = parts[0];
         int port = Integer.parseInt(parts[1]);
         System.out.println("Server: " + server + "port: " + port);
         try (Socket socket = new Socket(server, port);
-            OutputStream output = socket.getOutputStream()) {
+                OutputStream output = socket.getOutputStream()) {
             output.write(message.getBytes());
             System.out.println("Sent message to " + server + " on port: " + port + " Message: " + message);
         } catch (IOException ioe) {

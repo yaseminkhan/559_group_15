@@ -35,11 +35,10 @@ public class WebServer extends WebSocketServer {
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
-        "backup_server_1:6001", 1,
-        "backup_server_2:7001", 2,
-        "backup_server_3:4001", 3,
-        "primary_server:5001", 4
-    );
+            "172.16.238.12:6001", 1,
+            "172.16.238.13:7001", 2,
+            "172.16.238.14:4001", 3,
+            "172.16.238.11:5001", 4);
     private String heartBeatAddress;
     private final String myServerAddress;
 
@@ -50,14 +49,15 @@ public class WebServer extends WebSocketServer {
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
     public static final Map<String, Integer> serverAddressToIdMap = new HashMap<>();
 
-    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String currentServer) {
+    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort,
+            List<String> allServers, List<String> allServersElection, String currentServer) {
         super(address);
         this.myServerAddress = serverAddress;
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
-        
-        
-        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection, heartBeatAddress, this); //Initialize the HeartbeatManager
+
+        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
+                heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
                 activeGames, connectedUsers, temporarilyDisconnectedUsers);
         if (!allServers.isEmpty()) {
@@ -69,7 +69,7 @@ public class WebServer extends WebSocketServer {
             heartBeatManager.getLeaderElectionManager().initializeAsLeader();
             connectToCoordinatorAndAnnounce();
         }
-        
+
         //Set timer to periodically send the full game state to backups
         if (isPrimary) {
             new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -148,7 +148,7 @@ public class WebServer extends WebSocketServer {
             for (User user : temporarilyDisconnectedUsers.values()) {
                 System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
             }
-            
+
             // Get the game the user was in
             String gameCode = removedUser.getGameCode();
             if (gameCode != null) {
@@ -163,20 +163,20 @@ public class WebServer extends WebSocketServer {
                             game.removePlayer(removedUser);
                             broadcastGamePlayers(game);
                             System.out.println("User permanently removed from game: " + removedUser.getUsername());
-                            
+
                             game.resetForRound();
                             // Notify players that the drawer has disconnected
                             broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
-                                
+
                                 game.cancelTimer();
 
                                 // Drawer did not reconnect, so select a new drawer            
-                                if(game.getPlayers().size() >= 2){
+                                if (game.getPlayers().size() >= 2) {
                                     System.out.println("Starting new round...");
                                     startNewRound(game);
-                                } else{
+                                } else {
                                     broadcastToGame(game, "GAME_OVER");
                                 }
                             }
@@ -191,14 +191,14 @@ public class WebServer extends WebSocketServer {
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 game.removePlayer(removedUser);
                                 broadcastGamePlayers(game);
-                                if(game.getPlayers().size() < 2){
+                                if (game.getPlayers().size() < 2) {
                                     broadcastToGame(game, "GAME_OVER");
                                 }
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
                             }
                         }
-                    }, 5000); 
+                    }, 5000);
                 }
             }
         }
@@ -209,7 +209,8 @@ public class WebServer extends WebSocketServer {
         //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
         //Send data to backups whenever a message is received from the client
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
         if (message.startsWith("/reconnect ")) {
             String userId = message.substring(11).trim();
@@ -293,10 +294,10 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("NEW_LEADER:")) {
             String newLeaderAddress = message.split(":")[1].trim();
             System.out.println("Received new leader update: " + newLeaderAddress);
-    
+
             // Notify the connected client to reconnect
             conn.send("RECONNECT_TO_NEW_LEADER:" + newLeaderAddress);
-            
+
             // Optionally, close the current connection to force reconnection
             conn.close();
         } else {
@@ -344,19 +345,20 @@ public class WebServer extends WebSocketServer {
     public static void main(String[] args) {
         //Run as primary server if no port is indicated
         if (args.length < 3) {
-            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other-servers> <primary boolean>");
+            System.err.println(
+                    "Usage: java com.server.WebServer <port> <heart-beatport> <other-servers> <primary boolean>");
             System.exit(1);
         }
-        
+
         int port = Integer.parseInt(args[0]); //First server port
         int heartbeatPort = Integer.parseInt(args[1]); //First heartbeat port
         List<String> allServersElection = new ArrayList<>(Arrays.asList(args[2].split(","))); //Other servers
         List<String> allServers = new ArrayList<>(Arrays.asList(args[2].split(","))); //Other server
         boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
-        
+
         String serverName = System.getenv("HOSTNAME"); // This gets the Docker container name
         // Define a mapping from hostnames to integer server IDs
-        
+
         String currentServer = serverName + ":" + heartbeatPort;
         System.out.println("Current Server: " + currentServer);
         int serverId = serverNameToIdMap.getOrDefault(currentServer, -1); // Assign ID or default (-1 if unknown)
@@ -379,7 +381,7 @@ public class WebServer extends WebSocketServer {
                 serverAddressToIdMap.put(server, id);
             }
         }
-        
+
         System.out.println("Server Name: " + serverName);
         System.out.println("Server ID: " + serverId);
         System.out.println("isPrimary: " + isPrimary);
@@ -387,9 +389,10 @@ public class WebServer extends WebSocketServer {
         System.out.println("heartbeatPort: " + heartbeatPort);
         System.out.println("allServers: " + allServers);
         System.out.println("All Servers for leader election: " + allServersElection);
-        
+
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("0.0.0.0", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
+        WebServer server = new WebServer(new InetSocketAddress("0.0.0.0", port), isPrimary, serverAddress,
+                heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
@@ -398,73 +401,73 @@ public class WebServer extends WebSocketServer {
 
     public void connectToCoordinatorAndAnnounce() {
         // ===== DEBUG PRINTS =====
-         System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
-         System.out.println("Connected users by id from replication manager:");
-         for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
-             User user = entry.getValue();
-             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-         }
+        System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
+        System.out.println("Connected users by id from replication manager:");
+        for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
+            User user = entry.getValue();
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
 
-         System.out.println("Connected Users:");
-         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-             User user = entry.getValue();
-             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-         }
+        System.out.println("Connected Users:");
+        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+            User user = entry.getValue();
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
 
-         System.out.println("\nActive Games:");
-         for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
-             System.out.println(" - Game Code: " + entry.getKey());
-             Game game = entry.getValue();
-             for (User player : game.getPlayers()) {
-                 System.out.println("   * Player: " + player.getUsername() + " (ID: " + player.getId() + ")");
-             }
-         }
+        System.out.println("\nActive Games:");
+        for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+            System.out.println(" - Game Code: " + entry.getKey());
+            Game game = entry.getValue();
+            for (User player : game.getPlayers()) {
+                System.out.println("   * Player: " + player.getUsername() + " (ID: " + player.getId() + ")");
+            }
+        }
 
-         System.out.println("\nTemporarily Disconnected Users:");
-         for (User user : temporarilyDisconnectedUsers.values()) {
-             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-         }
-         System.out.println("===== END DEBUG =====\n");
-        
+        System.out.println("\nTemporarily Disconnected Users:");
+        for (User user : temporarilyDisconnectedUsers.values()) {
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
+        System.out.println("===== END DEBUG =====\n");
+
         //  for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
         //     temporarilyDisconnectedUsers.put(entry.getKey(), entry.getValue().clone());
         //  }
-         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
-
+        temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
 
         new Thread(() -> {
             while (true) {
                 try {
                     if (coordinatorConnection == null || coordinatorConnection.isClosed()) {
                         System.out.println("Attempting to connect to coordinator...");
-    
+
                         coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
                             @Override
                             public void onOpen(ServerHandshake handshake) {
                                 System.out.println("Connected to coordinator.");
                                 send("NEW_LEADER:" + myServerAddress);
                             }
-    
+
                             @Override
-                            public void onMessage(String message) {}
-    
+                            public void onMessage(String message) {
+                            }
+
                             @Override
                             public void onClose(int code, String reason, boolean remote) {
                                 System.out.println("Coordinator connection closed. Will retry...");
                             }
-    
+
                             @Override
                             public void onError(Exception ex) {
                                 System.err.println("Coordinator WebSocket error: " + ex.getMessage());
                             }
                         };
-    
+
                         coordinatorConnection.connectBlocking();
                     }
-    
+
                     // Sleep and then check again
                     Thread.sleep(5000);
-    
+
                 } catch (Exception e) {
                     System.err.println("Failed to connect to coordinator: " + e.getMessage());
                     try {
@@ -547,7 +550,7 @@ public class WebServer extends WebSocketServer {
                     temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");
-                    
+
                     // Send a special message to Kafka to indicate the game has ended
                     if (isPrimary) {
                         replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
@@ -559,7 +562,8 @@ public class WebServer extends WebSocketServer {
 
     public void handleDrawerJoined(WebSocket conn, String gameCode) {
 
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
         Game game = activeGames.get(gameCode);
         if (game != null) {
@@ -571,13 +575,15 @@ public class WebServer extends WebSocketServer {
 
     public void startNewRound(Game game) {
 
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
-        if (game == null) return;
+        if (game == null)
+            return;
 
-        game.resetForRound();  // Reset round state
+        game.resetForRound(); // Reset round state
 
-        if (!game.hasAvailableDrawer()) { 
+        if (!game.hasAvailableDrawer()) {
             broadcastToGame(game, "GAME_OVER");
             System.out.println("All rounds complete. Waiting for players to exit.");
             game.endGame();
@@ -585,7 +591,7 @@ public class WebServer extends WebSocketServer {
         }
 
         game.nextTurn();
-        
+
         // Notify all players about the new round and new drawer
         broadcastToGame(game, "NEW_ROUND: " + game.getCurrentRound() + " DRAWER: " + game.getDrawer().getId());
         broadcastToGame(game, "CANVAS_CLEAR");
@@ -596,7 +602,8 @@ public class WebServer extends WebSocketServer {
      */
     public void startRoundTimer(Game game) {
 
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
         if (game == null)
             return;
@@ -636,7 +643,7 @@ public class WebServer extends WebSocketServer {
     public void handleReconnect(WebSocket conn, String userId) {
         System.out.println("\n========== HANDLE RECONNECT ==========");
         System.out.println("Attempting to reconnect user: " + userId);
-        
+
         // Check if user is already connected
         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
             if (entry.getValue().getId().equals(userId)) {
@@ -644,7 +651,6 @@ public class WebServer extends WebSocketServer {
                 return;
             }
         }
-        
 
         // Check if user is in temporarilyDisconnectedUsers
         if (temporarilyDisconnectedUsers.containsKey(userId)) {
@@ -667,22 +673,23 @@ public class WebServer extends WebSocketServer {
                 // Instead of sending "RECONNECTED", immediately send updated player list
                 broadcastGamePlayers(game);
                 return;
-            }  else {
+            } else {
                 // Search active games for a user match
                 for (Game game : activeGames.values()) {
                     for (User player : game.getPlayers()) {
                         if (player.getId().equals(userId)) {
                             // Associate the current WebSocket with the recovered user
                             connectedUsers.put(conn, player);
-                
+
                             // Make sure they're only added to the game once
                             if (!game.hasPlayer(player)) {
                                 game.addPlayer(player);
-                                System.out.println("Re-added " + player.getUsername() + " to game: " + game.getGameCode());
+                                System.out.println(
+                                        "Re-added " + player.getUsername() + " to game: " + game.getGameCode());
                             }
-                
+
                             System.out.println("User recovered from active game state: " + player.getUsername());
-                
+
                             broadcastGamePlayers(game);
                             return;
                         }
@@ -802,12 +809,12 @@ public class WebServer extends WebSocketServer {
 
         for (User player : game.getPlayers()) {
             WebSocket conn = getConnectionByUser(player);
-            
+
             if ((conn != null)) {
                 conn.send(message);
                 System.out.println("Sent player list to: " + player.getUsername());
             } else {
-                if (isPrimary){
+                if (isPrimary) {
                     System.out.println("Could not find connection for " + player.getUsername());
                 }
             }
@@ -889,8 +896,9 @@ public class WebServer extends WebSocketServer {
 
     public void handleWordSelection(WebSocket conn, String gameCode, String word) {
 
-        if (!isPrimary) return;
-        
+        if (!isPrimary)
+            return;
+
         Game game = activeGames.get(gameCode);
         if (game != null) {
             game.setCurrentWord(word);
