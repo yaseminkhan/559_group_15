@@ -237,6 +237,8 @@ public class HeartBeatManager {
         } else if (message.startsWith("LEADER")) {
             String newLeader = message.split(":", 2)[1];
             leaderElectionManager.handleLeaderMessage(newLeader);
+        } else if (message.startsWith("GET_LEADER")) {
+            leaderElectionManager.handleGetLeaderMessage(senderAddress);
         }
 
     }

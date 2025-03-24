@@ -45,14 +45,10 @@ public class LeaderElectionManager {
     public void initializeAsLeader() {
         System.out.println("Bootstrapping as leader: " + serverAddress);
         this.isLeader = true;
-        System.out.println("leader change 4");
         this.currentLeader = serverAddress;
         this.running = false;
     
-        // heartBeatManager.updateHeartbeat(serverAddress); // Add yourself
         heartBeatManager.startHeartbeatSender();
-    
-        // WebServer.serverAddressToIdMap.put(serverAddress, getServerId(serverAddress));
     
         for (String server : allServersElection) {
             if (!server.equals(heartBeatAddress)) {
@@ -62,7 +58,6 @@ public class LeaderElectionManager {
         }
         
         webServer.setIsPrimary(true);
-        // webServer.notifyClientsNewLeader(serverAddress);
     }
 
     public String getCurrentLeader() {
@@ -71,32 +66,28 @@ public class LeaderElectionManager {
 
     public void checkLeaderStatus() throws InterruptedException {
         System.out.println("\nisLeader value: " + isLeader + "\n");
-        // if (isLeader) {
-        //     for (String server : allServersElection) {
-        //         if (!server.equals(heartBeatAddress)) {
-        //             System.out.println("Leader message sent to " + server + " on initialization");
-        //             sendLeaderMessage(server);
-        //         }
-        //     }
-        // }
         if (!isLeader) {
             System.out.flush();
 
             System.out.println("Current leader: " + this.currentLeader);
-            // if(this.currentLeader == null) {
-            //     System.out.println("Check for leader again");
-            // }
+            if(this.currentLeader == null) {
+                for (String server : allServersElection) {
+                    if (server.equals(heartBeatAddress)) {
+                        continue; // Skip self
+                    }
+                    System.out.println("Found the current leader to be null, sending the get leader message to: " + server);
+                    heartBeatManager.sendMessage(server, "GET_LEADER");
+                }
+            }
             if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 
                 System.out.println("Leader is down. Starting election...");
                 initiateElection();
             }
-            //System.out.println("if-else block");
         }
     }
 
     public void initiateElection() throws InterruptedException {
         boolean higherId = false;
-        // System.out.println("Initiate Election called");
         electionId = System.currentTimeMillis();  // Generate a unique election ID
         System.out.println("Initiate Election called with ID: " + electionId);
 
@@ -166,7 +157,14 @@ public class LeaderElectionManager {
     }
 
     private void sendLeaderMessage(String server) {
-        heartBeatManager.sendMessage(server, "LEADER:" + serverAddress);
+        heartBeatManager.sendMessage(server, "LEADER:" + this.serverAddress);
+    }
+
+    public void handleGetLeaderMessage(String senderServerAddress) {
+        if(isLeader) {
+            System.out.println("Sending the leader message again to: " + senderServerAddress);
+            sendLeaderMessage(senderServerAddress);
+        }
     }
 
     public void handleElectionMessage(String senderAddress, long receivedElectionId) throws InterruptedException {
@@ -202,7 +200,6 @@ public class LeaderElectionManager {
         this.currentLeader = leaderAddress;
         System.out.println("new leader: "+ this.currentLeader);
         // this.isLeader = false;
-        // System.out.println("leader change 1");
         this.running = false; // Stop the election
         System.out.println("Leader elected: " + leaderAddress);
 
@@ -247,7 +244,6 @@ public class LeaderElectionManager {
         System.out.println("I am the new leader: " + serverAddress);
     
         // Immediately update its own heartbeat
-        // heartBeatManager.updateHeartbeat(serverAddress);
         heartBeatManager.startHeartbeatSender();
     
         // Ensure the leader's ID is stored
@@ -262,7 +258,6 @@ public class LeaderElectionManager {
         webServer.setIsPrimary(true);
         webServer.promoteToPrimary(); // Start Kafka producer
         webServer.connectToCoordinatorAndAnnounce();
-        // webServer.notifyClientsNewLeader(serverAddress);
     }
 
     private int getServerId(String address) {
