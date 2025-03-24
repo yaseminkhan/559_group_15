@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -28,8 +29,7 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
-    //Map to store the output streams
-    // private final Map<String, OutputStream> backupOutputs = new ConcurrentHashMap<>();
+    private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
 
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
@@ -96,18 +96,17 @@ public class WebServer extends WebSocketServer {
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         System.out.println("\n========== onOpen() CALLED ==========");
         System.out.println("Socket opened from: " + conn.getRemoteSocketAddress());
-
-        // Just track the socket without assigning a user yet
-        connectedUsers.put(conn, null);
+        
+        pendingConnections.add(conn); // track as unauthenticated
     }
 
     public void handleReconnect(WebSocket conn, String userId) {
         System.out.println("\n========== HANDLE RECONNECT ==========");
         System.out.println("Attempting to reconnect user: " + userId);
 
-        // First, prevent duplicate reconnection
-        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-            if (userId.equals(entry.getValue() != null ? entry.getValue().getId() : null)) {
+        // Prevent reconnecting an already-connected user
+        for (User existing : connectedUsers.values()) {
+            if (existing != null && userId.equals(existing.getId())) {
                 System.out.println("User already connected. Ignoring duplicate reconnect.");
                 return;
             }
@@ -129,6 +128,7 @@ public class WebServer extends WebSocketServer {
 
         // Bind the socket to the user
         connectedUsers.put(conn, user);
+        pendingConnections.remove(conn); // remove from pending
 
         // Send user ID so frontend can store it if needed
         conn.send("USER_ID:" + user.getId());
@@ -150,6 +150,7 @@ public class WebServer extends WebSocketServer {
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         //Handle WebSocket disconnections
+        pendingConnections.remove(conn);
         User removedUser = connectedUsers.remove(conn);
 
         if (removedUser != null) {
