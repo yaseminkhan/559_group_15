@@ -43,7 +43,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://172.18.0.2:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://172.16.238.14:9999";
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -399,6 +399,7 @@ public class WebServer extends WebSocketServer {
         String serverName = System.getenv("HOSTNAME"); // This gets the Docker container name
         // Define a mapping from hostnames to integer server IDs
         
+        // serverName = serverNameToIPMap.get(serverName);
         String currentServer = serverName + ":" + heartbeatPort;
         System.out.println("Current Server: " + currentServer);
         int serverId = serverNameToIdMap.getOrDefault(currentServer, -1); // Assign ID or default (-1 if unknown)

@@ -1,7 +1,9 @@
+version: '3.8'
+
 services:
 
   kafka:
-    image: apache/kafka:latest # Official Confluent Kafka image
+    image: apache/kafka:latest
     container_name: kafka
     ports:
       - "9092:9092"
@@ -12,36 +14,39 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
       KAFKA_LISTENERS: "PLAINTEXT://kafka:9092,CONTROLLER://kafka:19092"
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER" # Add this line
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:19092"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
-      # Retention policy settings
-      KAFKA_LOG_RETENTION_HOURS: "1"  # i Hour
-      KAFKA_LOG_CLEANUP_POLICY: "delete"  # Delete old messages based on retention settings
-    # volumes:
-    #   - ./log4j.properties:/opt/kafka/config/log4j.properties  # Mount custom log4j.properties
-  
+      KAFKA_LOG_RETENTION_HOURS: "1"
+      KAFKA_LOG_CLEANUP_POLICY: "delete"
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.10
+
   primary_server:
     image: server
     container_name: primary_server
     hostname: primary_server
     ports:
-      - "8887:8887" # Expose port 8887 for client communication
-      - "5001:5001" # Expose port 5001 for heartbeat communication
-      - "5002:5002" # Expose port 5002 for Incremental Updates (otherServerHBPort + 1)
-      - "5003:5003" # Expose port 5003 for Full game state updates (otherServerHBPort + 2)
+      - "8887:8887"
+      - "5001:5001"
+      - "5002:5002"
+      - "5003:5003"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -D"exec.mainClass"="com.server.WebServer" -D"exec.args"="8887 5001 backup_server_1:6001,backup_server_2:7001,backup_server_3:4001 true"
     depends_on:
-      - backup_server_1 # Guarantee startup order.
+      - backup_server_1
       - backup_server_2
       - backup_server_3
       - connection_coordinator
-  
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.11
+
   backup_server_1:
     build:
       context: ./backend
@@ -49,10 +54,10 @@ services:
     container_name: backup_server_1
     hostname: backup_server_1
     ports:
-      - "8888:8888" # Expose port 8888 for client communication
-      - "6001:6001" # Expose port 6001 for heartbeat communication
-      - "6002:6002" # Expose port 6002 for Incremental Updates (otherServerHBPort + 1)
-      - "6003:6003" # Expose port 6003 for Full game state updates (otherServerHBPort + 2)
+      - "8888:8888"
+      - "6001:6001"
+      - "6002:6002"
+      - "6003:6003"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
@@ -60,6 +65,9 @@ services:
     depends_on:
       - kafka
       - connection_coordinator
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.12
 
   backup_server_2:
     build:
@@ -68,10 +76,10 @@ services:
     container_name: backup_server_2
     hostname: backup_server_2
     ports:
-      - "8889:8889" # Expose port 8889 for client communication
-      - "7001:7001" # Expose port 7001 for heartbeat communication
-      - "7002:7002" # Expose port 7002 for Incremental Updates (otherServerHBPort + 1)
-      - "7003:7003" # Expose port 7003 for Full game state updates (otherServerHBPort + 2)
+      - "8889:8889"
+      - "7001:7001"
+      - "7002:7002"
+      - "7003:7003"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
@@ -79,7 +87,10 @@ services:
     depends_on:
       - kafka
       - connection_coordinator
-  
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.13
+
   backup_server_3:
     build:
       context: ./backend
@@ -87,10 +98,10 @@ services:
     container_name: backup_server_3
     hostname: backup_server_3
     ports:
-      - "8890:8890" # Expose port 8890 for client communication
-      - "4001:4001" # Expose port 4001 for heartbeat communication
-      - "4002:4002" # Expose port 4002 for Incremental Updates (otherServerHBPort + 1)
-      - "4003:4003" # Expose port 4003 for Full game state updates (otherServerHBPort + 2)
+      - "8890:8890"
+      - "4001:4001"
+      - "4002:4002"
+      - "4003:4003"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
@@ -98,17 +109,23 @@ services:
     depends_on:
       - kafka
       - connection_coordinator
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.14
 
   connection_coordinator:
-      build:
-        context: ./backend
-      image: connection_coordinator
-      container_name: connection_coordinator
-      hostname: connection_coordinator
-      ports:
-        - "9999:9999"
-      command: >
-          mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
+    build:
+      context: ./backend
+    image: connection_coordinator
+    container_name: connection_coordinator
+    hostname: connection_coordinator
+    ports:
+      - "9999:9999"
+    command: >
+      mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.15
 
   client_1:
     build:
@@ -120,6 +137,9 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.16
 
   client_2:
     image: client
@@ -129,7 +149,10 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
-  
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.17
+
   client_3:
     image: client
     container_name: client_3
@@ -138,6 +161,9 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.18
 
   client_4:
     image: client
@@ -147,3 +173,13 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
+    networks:
+      mynetwork:
+        ipv4_address: 172.16.238.19
+
+networks:
+  mynetwork:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.238.0/24
