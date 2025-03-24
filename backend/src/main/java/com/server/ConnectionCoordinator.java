@@ -9,7 +9,7 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 public class ConnectionCoordinator extends WebSocketServer {
-    private String currentPrimaryUrl = "ws://172.18.0.5:8887"; // Initial default
+    private String currentPrimaryUrl = "ws://44.202.61.220:8887"; // Initial default
     private WebSocket backendConnection;
 
     public ConnectionCoordinator(InetSocketAddress address) {
