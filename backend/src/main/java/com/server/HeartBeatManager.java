@@ -166,8 +166,8 @@ public class HeartBeatManager {
             cleanHost = serverAddress;
         }
         // String cleanHost = "primary_server:7001";
-        System.out.println("Clean host: " + cleanHost);
-        System.out.println("Stored keys in lastHeartbeats: " + lastHeartbeats.keySet());
+        // System.out.println("Clean host: " + cleanHost);
+        // System.out.println("Stored keys in lastHeartbeats: " + lastHeartbeats.keySet());
         long currentTime = System.currentTimeMillis();
 
         Long lastHeartbeat = lastHeartbeats.get(cleanHost);
@@ -202,7 +202,7 @@ public class HeartBeatManager {
         lastHeartbeats.put(serverAddress, time);
         
         // Debugging: Print all stored heartbeats
-        System.out.println("Current heartbeat map: " + lastHeartbeats);
+        // System.out.println("Current heartbeat map: " + lastHeartbeats);
     }
 
     public Long getLastHeartbeat(String serverAddress) {
