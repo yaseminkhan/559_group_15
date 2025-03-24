@@ -452,6 +452,7 @@ public class WebServer extends WebSocketServer {
         //     temporarilyDisconnectedUsers.put(entry.getKey(), entry.getValue().clone());
         //  }
         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
+        replicationManager.stopKafkaConsumer();
 
 
         new Thread(() -> {

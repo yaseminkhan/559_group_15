@@ -39,6 +39,7 @@ public class ReplicationManager {
     private KafkaProducer<String, String> kafkaProducer;
     private KafkaConsumer<String, String> kafkaConsumer;
     private final Object gameStateLock = new Object();
+    private Thread consumerThread;
 
     public ReplicationManager(WebServer webServer, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers,
                              ConcurrentHashMap<String, Game> activeGames,
@@ -75,21 +76,47 @@ public class ReplicationManager {
             kafkaConsumer.subscribe(Arrays.asList("game-state", "incremental-updates"));
 
             //Start thread to consume messages from Kafka
-            new Thread(() -> {
-                while (true) {
-                    // System.out.println("polling from kafka");
-                    ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
-                    for (ConsumerRecord<String, String> record : records) {
-                        if (record.topic().equals("game-state")) {
-                            // Handle game-state messages (JSON)
-                            updateGameState(record.value());
-                        } else if (record.topic().equals("incremental-updates")) {
-                            // Handle incremental-updates messages (plain string)
-                            processIncrementalUpdate(record.value());
+            consumerThread = new Thread(() -> {
+                try {
+                    while (true) {
+                        ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
+                        System.out.println("polling from kafka");
+                        for (ConsumerRecord<String, String> record : records) {
+                            if (record.topic().equals("game-state")) {
+                                updateGameState(record.value());
+                            } else if (record.topic().equals("incremental-updates")) {
+                                processIncrementalUpdate(record.value());
+                            }
                         }
                     }
+                } catch (org.apache.kafka.common.errors.WakeupException e) {
+                    System.out.println("Kafka consumer wakeup triggered, shutting down.");
+                    // Expected during shutdown — no need to log stack trace
+                } catch (Exception e) {
+                    // Log any unexpected errors
+                    System.err.println("Unexpected error in Kafka consumer: " + e.getMessage());
+                    //e.printStackTrace();
+                } finally {
+                    kafkaConsumer.close();
+                    System.out.println("Kafka consumer closed.");
                 }
-            }).start();
+            });
+            consumerThread.start();
+        }
+    }
+
+    public void stopKafkaConsumer() {
+        if (kafkaConsumer != null) {
+            System.out.println("Stopping Kafka consumer thread...");
+            kafkaConsumer.wakeup(); // Trigger WakeupException in poll()
+        }
+    
+        if (consumerThread != null && consumerThread.isAlive()) {
+            try {
+                consumerThread.join(); // Wait for consumer thread to terminate
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore interrupted status
+            }
         }
     }
 
