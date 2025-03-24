@@ -14,7 +14,7 @@ public class LeaderElectionManager {
     private boolean running; // Indicates if the election process is running
     private long electionId = 0;
     private final WebServer webServer;
-    private final int timeout = 5000; // Timeout for waiting for responses
+    private final int timeout = 1000; // Timeout for waiting for responses
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
         "backup_server_1", 6001,
         "backup_server_2", 7001,
@@ -142,7 +142,7 @@ public class LeaderElectionManager {
         long startTime = System.currentTimeMillis();
         while (this.running && (System.currentTimeMillis() - startTime) < timeout) {
             try {
-                Thread.sleep(1000); // Sleep for a short period before checking again
+                Thread.sleep(250); // Sleep for a short period before checking again
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

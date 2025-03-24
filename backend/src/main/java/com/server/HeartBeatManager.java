@@ -18,7 +18,7 @@ public class HeartBeatManager {
     private final List<String> allServers; //List of all server addresses
     private List<String> allHBServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
-    public static final int HEARTBEAT_TIMEOUT = 10000; //Set server time out as 10 seconds
+    public static final int HEARTBEAT_TIMEOUT = 1000; //Set server time out as 1 second
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
@@ -128,7 +128,7 @@ public class HeartBeatManager {
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(1000); //Send heartbeat every 1 second
+                    Thread.sleep(200); //Send heartbeat every 1 second
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
