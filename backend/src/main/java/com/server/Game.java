@@ -103,6 +103,11 @@ public class Game {
             }
             return user;
         }
+
+        private int calcScore() {
+            return (1 << (players.size() - getPlayersAlreadyGuessed())) // Position bonus (exponential decay).
+                    + timeLeft; // Timing bonus.
+        }
     
         public Chat addMessage(Chat message) {
             var user = getUserById(message.id);
@@ -111,7 +116,7 @@ public class Game {
 
             if (!user.getAlreadyGuessed()) {
                 if (message.text.equalsIgnoreCase(wordToDraw)) {
-                    user.setScore(user.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
+                    user.setScore(user.getScore() + calcScore());
                     user.setAlreadyGuessed(true);
                     message.text = user.getUsername() + " guessed correctly!"; // Text is just modified to say the user guessed correctly.
                     message.correct = true;
