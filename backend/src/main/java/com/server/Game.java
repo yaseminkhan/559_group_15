@@ -29,6 +29,7 @@ public class Game {
     private int timeLeft;
     private transient Timer roundTimer; // Transient so Gson ignores it wben seri
     private List<CanvasUpdate> canvasHistory;
+    private boolean roundStarted;
     
         /*
          * constructor creates new instance of a game
@@ -46,6 +47,7 @@ public class Game {
             this.timeLeft = 60;
             this.round = 1;
             this.canvasHistory = new ArrayList<>();
+            this.roundStarted = false;
     
         }
 
@@ -101,6 +103,11 @@ public class Game {
             }
             return user;
         }
+
+        private int calcScore() {
+            return (1 << (players.size() - getPlayersAlreadyGuessed())) // Position bonus (exponential decay).
+                    + timeLeft; // Timing bonus.
+        }
     
         public Chat addMessage(Chat message) {
             var user = getUserById(message.id);
@@ -109,7 +116,7 @@ public class Game {
 
             if (!user.getAlreadyGuessed()) {
                 if (message.text.equalsIgnoreCase(wordToDraw)) {
-                    user.setScore(user.getScore() + (1 << (players.size() - getPlayersAlreadyGuessed())));
+                    user.setScore(user.getScore() + calcScore());
                     user.setAlreadyGuessed(true);
                     message.text = user.getUsername() + " guessed correctly!"; // Text is just modified to say the user guessed correctly.
                     message.correct = true;
@@ -176,6 +183,11 @@ public class Game {
             // if (player.isDrawer()) {
             //     nextTurn(); // Auto-assign new drawer
             // }
+        }
+
+        public void setGameStarted(boolean started) {
+            this.gameStarted = started;
+            System.out.println("GameStarted set to: " + started);
         }
     
         /*
@@ -266,6 +278,14 @@ public class Game {
             return false;
         }
     
+        public boolean isRoundStarted() {
+            return roundStarted;
+        }
+        
+        public void setRoundStarted(boolean roundStarted) {
+            this.roundStarted = roundStarted;
+        }
+
         /*
          * Gets a random word to use 
          */
@@ -324,7 +344,23 @@ public class Game {
         public void setTimeLeft(int time) {
             this.timeLeft = time;
         }
+
+        public void setTimer(Timer t){
+            this.roundTimer = t;
+        }
     
+        public Timer getTimer() {
+            return roundTimer;
+     
+        }
+        public boolean hasGameStarted() {
+            return this.gameStarted;
+        }
+
+        public boolean isGameEnded() {
+            return this.gameEnded;
+        }
+
         /*
          * Converts player list to JSON format for frontend.
          */
@@ -343,6 +379,16 @@ public class Game {
                 playerList.add(playerData);
             }
             return gson.toJson(playerList);
+        }
+
+        public boolean isRoundInProgress() {
+            return roundStarted
+                && !gameEnded
+                && gameStarted
+                && wordToDraw != null
+                && !wordToDraw.isEmpty()
+                && drawer != null
+                && timeLeft > 0;
         }
 
         /*
@@ -454,14 +500,5 @@ public class Game {
         public boolean getNewStroke() {
             return newStroke;
         }
-    }
-
-    public void setTimer(Timer t){
-        this.roundTimer = t;
-    }
-
-    public Timer getTimer() {
-        return roundTimer;
- 
     }
 }
