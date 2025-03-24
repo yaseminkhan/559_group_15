@@ -59,11 +59,7 @@ public class HeartBeatManager {
             socket.connect(new InetSocketAddress(serverIp, port), 100);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
-<<<<<<< Updated upstream
-            //System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
-=======
             // System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
->>>>>>> Stashed changes
             socket.close();
         } catch (SocketTimeoutException ste) {
             System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
