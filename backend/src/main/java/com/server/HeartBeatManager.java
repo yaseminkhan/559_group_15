@@ -75,6 +75,7 @@ public class HeartBeatManager {
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 System.out.println("Listening for messages on port " + port);
+
                 while (true) {
                     Socket socket = serverSocket.accept();
                     InputStream input = socket.getInputStream();
@@ -84,10 +85,15 @@ public class HeartBeatManager {
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
                         // Resolve hostname
+
                         String senderIp = socket.getInetAddress().getHostAddress();
                         String senderHost = socket.getInetAddress().getHostName();
                         String cleanHost = senderHost.split("\\.")[0]; 
                         
+                        System.out.println("Sender IP: " + senderIp);
+                        System.out.println("Sender Host: " + senderHost);
+                        System.out.println("Clean Host: " + cleanHost);
+
                         // Format in WebSocket style
                         String senderAddress = cleanHost + ":" + serverNameToPortMap.get(cleanHost);
 
@@ -148,6 +154,7 @@ public class HeartBeatManager {
 
     public boolean isServerAlive(String serverAddress) throws InterruptedException {
         if (serverAddress == null) {
+            System.out.println("Heartbeat Manager: serverAddress is NULL");
             return true;
         }
         System.out.println("Server address: " + serverAddress);
@@ -158,7 +165,7 @@ public class HeartBeatManager {
             String[] parts = serverAddress.split("://"); // Split at "://"
             String[] hostParts = parts[1].split(":"); // Split at ":"
             String serverName = hostParts[0]; // Get "primary_server"
-            System.out.println("Server name: " + serverName);
+            System.out.println("Heartbeat Manager: Leader Name: " + serverName);
 
             cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
         } else {
