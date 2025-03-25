@@ -20,5 +20,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
       KAFKA_LOG_RETENTION_HOURS: "1"
       KAFKA_LOG_CLEANUP_POLICY: "delete"
-
-    restart: unless-stopped
+    volumes:
+      - kafka_data:/bitnami/kafka
+volumes:
+  kafka_data:
