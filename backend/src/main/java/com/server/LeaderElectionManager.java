@@ -22,10 +22,10 @@ public class LeaderElectionManager {
         "primary_server", 5001
     );
     private static final Map<String, String> serverNameToAddressMap = Map.of(
-        "backup_server_1", "ws://backup_server_1:8888",
-        "backup_server_2", "ws://backup_server_2:8889",
-        "backup_server_3", "ws://backup_server_3:8890",
-        "primary_server", "ws://primary_server:8887"
+        "backup_server_1", "44.203.203.158",
+        "backup_server_2", "18.204.230.185",
+        "backup_server_3", "3.86.91.77",
+        "primary_server", "3.224.220.145"
     );
 
 
