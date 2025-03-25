@@ -22,10 +22,10 @@ public class HeartBeatManager {
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
-        "18.233.245.244:6001", 6001,
+        "18.233.245.244", 6001,
         "backup_server_2", 7001,
         "backup_server_3", 4001,
-        "3.224.220.145:5001", 5001
+        "3.224.220.145", 5001
     );
 
     public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
