@@ -1,6 +1,14 @@
+networks:
+  my_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 services:
-
   kafka:
+    networks:
+        my_network:
+          ipv4_address: 172.20.0.9
     image: apache/kafka:latest # Official Confluent Kafka image
     container_name: kafka
     ports:
@@ -24,6 +32,9 @@ services:
     #   - ./log4j.properties:/opt/kafka/config/log4j.properties  # Mount custom log4j.properties
   
   primary_server:
+    networks:
+      my_network:
+        ipv4_address: 172.20.0.10
     image: server
     container_name: primary_server
     hostname: primary_server
@@ -43,6 +54,9 @@ services:
       - connection_coordinator
   
   backup_server_1:
+    networks:
+      my_network:
+        ipv4_address: 172.20.0.11
     build:
       context: ./backend
     image: server
@@ -62,6 +76,9 @@ services:
       - connection_coordinator
 
   backup_server_2:
+    networks:
+        my_network:
+          ipv4_address: 172.20.0.12
     build:
       context: ./backend
     image: server
@@ -81,6 +98,9 @@ services:
       - connection_coordinator
   
   backup_server_3:
+    networks:
+      my_network:
+        ipv4_address: 172.20.0.13
     build:
       context: ./backend
     image: server
@@ -100,6 +120,9 @@ services:
       - connection_coordinator
 
   connection_coordinator:
+      networks:
+          my_network:
+            ipv4_address: 172.20.0.8
       build:
         context: ./backend
       image: connection_coordinator
@@ -147,3 +170,5 @@ services:
     depends_on:
       - primary_server
       - connection_coordinator
+
+  
