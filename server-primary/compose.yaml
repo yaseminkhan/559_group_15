@@ -1,7 +1,7 @@
 services:
   primary_server:
     build:
-      context: ./backend
+      context: ../backend
     image: server
     container_name: primary_server
     ports:
