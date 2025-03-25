@@ -40,6 +40,7 @@ public class ReplicationManager {
     private KafkaConsumer<String, String> kafkaConsumer;
     private final Object gameStateLock = new Object();
     private Thread consumerThread;
+    private String kafkaAddress = "52.205.162.73:9092";
 
     public ReplicationManager(WebServer webServer, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers,
                              ConcurrentHashMap<String, Game> activeGames,
@@ -69,7 +70,7 @@ public class ReplicationManager {
             System.out.println("Kafka producer is already initialized");
         }
         Properties producerProps = new Properties();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaAddress);
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         kafkaProducer = new KafkaProducer<>(producerProps);
@@ -82,7 +83,7 @@ public class ReplicationManager {
             return;
         }
         Properties consumerProps = new Properties();
-        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaAddress);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); // Unique Group for each server
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
