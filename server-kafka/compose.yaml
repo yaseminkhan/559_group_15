@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   kafka:
-    image: apache/kafka:latest
+    image: bitnami/kafka:latest
     container_name: kafka
     ports:
       - "9092:9092" 

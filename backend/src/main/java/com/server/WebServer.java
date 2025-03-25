@@ -37,7 +37,7 @@ public class WebServer extends WebSocketServer {
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
         "44.203.203.158:6001", 1,
         "18.204.230.185:7001", 2,
-        "3.86.91.77:4001", 3,
+        "3.86.91.77:4001", 3, //
         "3.224.220.145:5001", 4
     );
     private String heartBeatAddress;
