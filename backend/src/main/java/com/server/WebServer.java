@@ -36,7 +36,7 @@ public class WebServer extends WebSocketServer {
     private boolean isPrimary; //Flag to indicate if this server is the primary server
 
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
-        "44.203.203.158:6001", 1,
+        "18.233.245.244:6001", 1,
         "18.204.230.185:7001", 2,
         "3.86.91.77:4001", 3, 
         "3.224.220.145:5001", 4
@@ -411,6 +411,7 @@ public class WebServer extends WebSocketServer {
             System.exit(1);
         }
         // Construct a unique server address
+
         String serverAddress = "ws://" + serverName + ":" + port;
         serverIdToAddressMap.put(serverId, currentServer);
         serverAddressToIdMap.put(currentServer, serverId);
