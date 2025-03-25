@@ -11,7 +11,7 @@ services:
       - "5003:5003"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: 52.205.162.73:9092
-      CURRENT_SERVER: 3.224.220.145:5001
+      CURRENT_SERVER: 3.224.220.145
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer"
       -Dexec.args="8887 5001 44.203.203.158:6001, 18.204.230.185:7001, 3.86.91.77:4001 true 44.206.0.115:9999"

@@ -34,16 +34,17 @@ public class WebServer extends WebSocketServer {
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
+
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
         "44.203.203.158:6001", 1,
         "18.204.230.185:7001", 2,
-        "3.86.91.77:4001", 3, //
+        "3.86.91.77:4001", 3, 
         "3.224.220.145:5001", 4
     );
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://3.224.220.145:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://3.224.220.145:9999";
     private WebSocketClient coordinatorConnection;
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
     public static final Map<String, Integer> serverAddressToIdMap = new HashMap<>();
@@ -402,7 +403,7 @@ public class WebServer extends WebSocketServer {
         String serverName = System.getenv("CURRENT_SERVER"); // This gets the Docker container name
         // Define a mapping from hostnames to integer server IDs
         
-        String currentServer = serverName;// + ":" + heartbeatPort;
+        String currentServer = serverName + ":" + heartbeatPort;
         System.out.println("Current Server: " + currentServer);
         int serverId = serverNameToIdMap.getOrDefault(currentServer, -1); // Assign ID or default (-1 if unknown)
         if (serverId == -1) {
