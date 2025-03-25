@@ -3,7 +3,7 @@ services:
     image: bitnami/kafka:latest
     container_name: kafka
     restart: unless-stopped
-    network_mode: host # 👈 Critical for exposing port to EC2 public IP
+    network_mode: host
     environment:
       KAFKA_KRAFT_MODE: "true"
       KAFKA_CFG_NODE_ID: "1"
@@ -11,13 +11,13 @@ services:
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
       KAFKA_CFG_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://52.205.162.73:9092"
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@52.205.162.73:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://52.205.162.73:9092"   # <== still public for external clients
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@172.31.83.225:9093"         # <== FIX: use private IP here
       ALLOW_PLAINTEXT_LISTENER: "yes"
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_CFG_LOG_RETENTION_HOURS: "1"
       KAFKA_CFG_LOG_CLEANUP_POLICY: "delete"
-      KAFKA_HEAP_OPTS: "-Xmx512m -Xms256m"
+      KAFKA_HEAP_OPTS: "-Xmx256m -Xms128m"
     volumes:
       - kafka_data:/bitnami/kafka
 
