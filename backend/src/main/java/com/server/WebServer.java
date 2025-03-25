@@ -403,7 +403,7 @@ public class WebServer extends WebSocketServer {
         String serverName = System.getenv("CURRENT_SERVER"); // This gets the Docker container name
         // Define a mapping from hostnames to integer server IDs
         
-        String currentServer = serverName + ":" + heartbeatPort;
+        String currentServer = serverName;// + ":" + heartbeatPort;
         System.out.println("Current Server: " + currentServer);
         int serverId = serverNameToIdMap.getOrDefault(currentServer, -1); // Assign ID or default (-1 if unknown)
         if (serverId == -1) {
