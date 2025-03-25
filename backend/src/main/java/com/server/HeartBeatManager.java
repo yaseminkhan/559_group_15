@@ -85,14 +85,14 @@ public class HeartBeatManager {
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
                         // Resolve hostname
-
+                       
                         String senderIp = socket.getInetAddress().getHostAddress();
                         String senderHost = socket.getInetAddress().getHostName();
-                        String cleanHost = senderHost.split("\\.")[0]; 
+                        String cleanHost = senderHost;
+                        //String cleanHost = senderHost.split("\\.")[0]; 
                         
                         System.out.println("Sender IP: " + senderIp);
                         System.out.println("Sender Host: " + senderHost);
-                        System.out.println("Clean Host: " + cleanHost);
 
                         // Format in WebSocket style
                         String senderAddress = cleanHost + ":" + serverNameToPortMap.get(cleanHost);
