@@ -9,7 +9,7 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 public class ConnectionCoordinator extends WebSocketServer {
-    private String currentPrimaryUrl = "ws://primary_server:8887"; // EC2
+    private String currentPrimaryUrl = "ws://3.224.220.145:8887"; // EC2
     private WebSocket backendConnection;
 
     public ConnectionCoordinator(InetSocketAddress address) {

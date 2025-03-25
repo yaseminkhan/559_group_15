@@ -38,14 +38,13 @@ public class WebServer extends WebSocketServer {
         "44.203.203.158:6001", 1,
         "18.204.230.185:7001", 2,
         "3.86.91.77:4001", 3,
-        "44.203.49.143:5001", 4
+        "3.224.220.145:5001", 4
     );
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://44.206.0.115:9999"; //proxy to frontend 
+    private final String coordinatorAddress = "ws://3.224.220.145:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
-
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
     public static final Map<String, Integer> serverAddressToIdMap = new HashMap<>();
 
