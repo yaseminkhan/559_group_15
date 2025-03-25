@@ -10,7 +10,7 @@ services:
       - "5002:5002"
       - "5003:5003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: 18.207.202.107:9092
+      KAFKA_BOOTSTRAP_SERVERS: 52.205.162.73:9092
       CURRENT_SERVER: 3.224.220.145:5001
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer"
