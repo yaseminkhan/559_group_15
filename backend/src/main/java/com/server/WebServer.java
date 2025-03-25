@@ -396,10 +396,14 @@ public class WebServer extends WebSocketServer {
         List<String> allServers = new ArrayList<>(Arrays.asList(args[2].split(","))); //Other server
         boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
         
-        String serverName = System.getenv("HOSTNAME"); // This gets the Docker container name
+
+        /**
+         * Not using docker container name anymore, rely on env variables
+         */
+        String serverName = System.getenv("CURRENT_SERVER"); // This gets the Docker container name
         // Define a mapping from hostnames to integer server IDs
         
-        String currentServer = serverName;// + ":" + heartbeatPort;
+        String currentServer = serverName + ":" + heartbeatPort;
         System.out.println("Current Server: " + currentServer);
         int serverId = serverNameToIdMap.getOrDefault(currentServer, -1); // Assign ID or default (-1 if unknown)
         if (serverId == -1) {
