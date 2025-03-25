@@ -165,9 +165,7 @@ public class HeartBeatManager {
             // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;
         }
-        // String cleanHost = "primary_server:7001";
-        // System.out.println("Clean host: " + cleanHost);
-        // System.out.println("Stored keys in lastHeartbeats: " + lastHeartbeats.keySet());
+        
         long currentTime = System.currentTimeMillis();
 
         Long lastHeartbeat = lastHeartbeats.get(cleanHost);
@@ -177,18 +175,13 @@ public class HeartBeatManager {
         }
 
         long diff = currentTime - lastHeartbeat;
-        System.out.println("Current time: " + currentTime);
-        System.out.println("Last heartbeat: " + lastHeartbeat);
-        System.out.println("Time diff: " + diff);
 
         boolean alive = diff < HEARTBEAT_TIMEOUT;
         System.out.println("Alive: " + alive + " HEARTBEAT timeout: " + HEARTBEAT_TIMEOUT);
         if (!alive) {
             System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
             lastHeartbeats.remove(cleanHost);
-            System.out.println("Remove old primary server:  " + serverAddress);
             allServers.remove(cleanHost);
-            System.out.println("Updated HB allServers: " + cleanHost);
         }
 
         System.out.println("Checking if " + cleanHost + " is alive: " + alive);
@@ -201,9 +194,6 @@ public class HeartBeatManager {
         // System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
-        // Debugging: Print all stored heartbeats
-        // System.out.println("Current heartbeat map: " + lastHeartbeats);
-        //System.out.println("Current heartbeat map: " + lastHeartbeats);
     }
 
     public Long getLastHeartbeat(String serverAddress) {
@@ -211,7 +201,7 @@ public class HeartBeatManager {
     }
 
     public void sendMessage(String serverAddressRecieve, String message) {
-        System.out.println("Server Address in sendMessage: " + serverAddressRecieve);
+        // System.out.println("Server Address in sendMessage: " + serverAddressRecieve);
         String[] parts = serverAddressRecieve.split(":"); // Split by ":"
         String server = parts[0]; 
         int port = Integer.parseInt(parts[1]);
@@ -219,7 +209,7 @@ public class HeartBeatManager {
         try (Socket socket = new Socket(server, port);
             OutputStream output = socket.getOutputStream()) {
             output.write(message.getBytes());
-            System.out.println("Sent message to " + server + " on port: " + port + " Message: " + message);
+            // System.out.println("Sent message to " + server + " on port: " + port + " Message: " + message);
         } catch (IOException ioe) {
             System.err.println("Failed to send message to " + server + ": " + ioe.getMessage());
         } catch (Exception e) {

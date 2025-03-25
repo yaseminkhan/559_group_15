@@ -14,13 +14,6 @@ public class ConnectionCoordinator extends WebSocketServer {
 
     public ConnectionCoordinator(InetSocketAddress address) {
         super(address);
-
-        // new Timer().scheduleAtFixedRate(new TimerTask() {
-        //     @Override
-        //     public void run() {
-        //         System.out.println("[Coordinator] I am alive at " + getAddress());
-        //     }
-        // }, 0, 1000); // Run every 1 second
     }
 
     @Override

@@ -2,10 +2,12 @@ package com.server;
 
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 public class LeaderElectionManager {
     private final String serverAddress;
     private final List<String> allServersElection;
+    private final List<String> removeServers;
     private final HeartBeatManager heartBeatManager;
     private final String heartBeatAddress;
     private boolean isLeader;
@@ -14,6 +16,7 @@ public class LeaderElectionManager {
     private boolean running; // Indicates if the election process is running
     private long electionId = 0;
     private final WebServer webServer;
+    private boolean higherId;
     private final int timeout = 1000; // Timeout for waiting for responses
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
         "backup_server_1", 6001,
@@ -39,6 +42,7 @@ public class LeaderElectionManager {
         this.webServer = webServer;
         this.heartBeatAddress = heartBeatAddress;
         this.wasBullied = false;
+        this.removeServers = new ArrayList<>();
     }
 
 
@@ -75,7 +79,6 @@ public class LeaderElectionManager {
                     if (server.equals(heartBeatAddress)) {
                         continue; // Skip self
                     }
-                    System.out.println("Found the current leader to be null, sending the get leader message to: " + server);
                     heartBeatManager.sendMessage(server, "GET_LEADER");
                 }
             }
@@ -87,12 +90,9 @@ public class LeaderElectionManager {
     }
 
     public void initiateElection() throws InterruptedException {
-        boolean higherId = false;
+        this.higherId = false;
         electionId = System.currentTimeMillis();  // Generate a unique election ID
         System.out.println("Initiate Election called with ID: " + electionId);
-
-        System.out.println("allServersElection:  " + allServersElection);
-        System.out.println("Remove old primary heartbeat port:  " + this.currentLeader);
 
         String cleanHost;
         if (serverAddress.contains("://")) {
@@ -100,8 +100,6 @@ public class LeaderElectionManager {
             String[] parts = this.currentLeader.split("://"); // Split at "://"
             String[] hostParts = parts[1].split(":"); // Split at ":"
             String serverName = hostParts[0]; // Get "primary_server"
-            System.out.println("Server name to be removed 1: " + serverName);
-
             cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
         } else {
             // Case 2: "primary_server:5001" (already in correct format)
@@ -109,8 +107,6 @@ public class LeaderElectionManager {
         }
 
         allServersElection.remove(cleanHost);
-        System.out.println("Updated LE allServersElection:  " + allServersElection);
-        
         this.running = true;
 
         // Send an election message to servers with higher ids
@@ -124,10 +120,12 @@ public class LeaderElectionManager {
 
             // If this server has a lower ID than current server, it sends an election message to higher-id servers
             if (otherServerId > getServerId(heartBeatAddress)) {
-                higherId = true;
+                // higherId = true;
                 sendElectionMessage(server, electionId);
             }
         }
+
+        allServersElection.removeAll(removeServers);
 
         // Wait for responses (simulate timeout)
         long startTime = System.currentTimeMillis();
@@ -140,7 +138,7 @@ public class LeaderElectionManager {
         }
 
         // If no response received (no higher priority server), declare self as leader
-        if (this.running && !higherId) {
+        if (this.running && !this.higherId) {
             System.out.println("No response received. Declaring self as leader...");
             declareSelfAsLeader();
         } else {
@@ -150,8 +148,10 @@ public class LeaderElectionManager {
 
     private void sendElectionMessage(String server, long receivedElectionId) throws InterruptedException {
         if (heartBeatManager.isServerAlive(server)) {
+            this.higherId = true;
             heartBeatManager.sendMessage(server, "ELECTION:" + receivedElectionId);
         } else {
+            removeServers.add(server);
             System.out.println("Server " + server + " is not alive, skipping election message.");
         }
     }
@@ -196,10 +196,7 @@ public class LeaderElectionManager {
     }
 
     public void handleLeaderMessage(String leaderAddress) {
-        System.out.println("old leader: "+ this.currentLeader);
         this.currentLeader = leaderAddress;
-        System.out.println("new leader: "+ this.currentLeader);
-        // this.isLeader = false;
         this.running = false; // Stop the election
         System.out.println("Leader elected: " + leaderAddress);
 
@@ -224,7 +221,6 @@ public class LeaderElectionManager {
             if ((this.wasBullied && (senderId > getServerId(this.currentLeader)) || !this.wasBullied)) {
                 String[] hostParts = senderAddress.split(":"); // Split at ":"
                 String serverName = hostParts[0]; // Get "primary_server"
-                System.out.println("Server name: " + serverName);
     
                 String serverAddress = serverNameToAddressMap.get(serverName);
                 this.currentLeader = serverAddress;
@@ -238,7 +234,6 @@ public class LeaderElectionManager {
 
     private void declareSelfAsLeader() {
         this.isLeader = true;
-        System.out.println("leader change 3");
         this.currentLeader = serverAddress;
         this.running = false;
         System.out.println("I am the new leader: " + serverAddress);
