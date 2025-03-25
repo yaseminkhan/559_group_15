@@ -2,6 +2,7 @@ services:
   kafka:
     image: bitnami/kafka:latest
     container_name: kafka
+    network_mode: host
     ports:
       - "9092:9092"    # Public listener
       - "9093:9093"    # Controller listener
