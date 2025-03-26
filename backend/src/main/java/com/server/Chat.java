@@ -23,6 +23,16 @@ public class Chat implements Comparable<Chat> {
         this(sender, id, text, false, timestamp, sequenceNo);
     }
 
+    public int getSequenceNumber() {
+        return sequenceNo;
+    }
+
+    public void setSequenceNumber(int value) {
+        if (value < 0)
+            throw new IllegalArgumentException("Can't assign a negative value to sequence numbers.");
+        sequenceNo = value;
+    }
+
     public int compareTo(Chat message) {
         return Integer.compare(sequenceNo, message.sequenceNo);
     }
