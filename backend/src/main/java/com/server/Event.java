@@ -25,4 +25,8 @@ public class Event implements Sequential {
     public void setSequenceNumber(int val) {
         sequenceNo = val;
     }
+
+    public int compareTo(Sequential s) {
+        return Integer.compare(sequenceNo, s.getSequenceNumber());
+    }
 }

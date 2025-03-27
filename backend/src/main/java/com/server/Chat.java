@@ -1,6 +1,6 @@
 package com.server;
 
-public class Chat implements Comparable<Chat>, Sequential {
+public class Chat implements Sequential {
     // Will change to private.
 
     public String sender;
@@ -33,8 +33,8 @@ public class Chat implements Comparable<Chat>, Sequential {
         sequenceNo = value;
     }
 
-    public int compareTo(Chat message) {
-        return Integer.compare(sequenceNo, message.sequenceNo);
+    public int compareTo(Sequential message) {
+        return Integer.compare(sequenceNo, message.getSequenceNumber());
     }
 
     @Override

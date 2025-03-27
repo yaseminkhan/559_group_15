@@ -482,6 +482,11 @@ public class Game {
             this.color = color;
             this.width = width;
             this.newStroke = newStroke;
+            this.sequenceNo = 0;
+        }
+
+        public int compareTo(Sequential s) {
+            return Integer.compare(sequenceNo, s.getSequenceNumber());
         }
 
         public int getSequenceNumber() {
