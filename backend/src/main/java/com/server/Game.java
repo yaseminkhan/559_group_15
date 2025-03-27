@@ -466,12 +466,13 @@ public class Game {
     }
 
     // Class for CanvasUpdate
-    public static class CanvasUpdate {
+    public static class CanvasUpdate implements Event {
         private double x;
         private double y;
         private String color;
         private double width;
         private boolean newStroke;
+        private int sequenceNo;
 
         public CanvasUpdate(double x, double y, String color, double width, boolean newStroke) {
             this.x = x;
@@ -479,6 +480,10 @@ public class Game {
             this.color = color;
             this.width = width;
             this.newStroke = newStroke;
+        }
+
+        public int getSequenceNumber() {
+            return sequenceNo;
         }
 
         public double getX() {
