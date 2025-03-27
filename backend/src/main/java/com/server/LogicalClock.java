@@ -29,7 +29,7 @@ public class LogicalClock {
                 m.setSequenceNumber(time);
                 break;
             case "receive":
-                m.setSequenceNumber(Math.max(time, m.getSequenceNumber()) + 1);
+                time = Math.max(time, m.getSequenceNumber());
                 tick();
                 break;
             default:
