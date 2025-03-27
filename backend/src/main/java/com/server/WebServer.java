@@ -32,7 +32,7 @@ public class WebServer extends WebSocketServer {
     private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
 
     private LogicalClock clock;
-    private List<Sequential> events;
+    private List<Event> events;
 
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
@@ -58,6 +58,7 @@ public class WebServer extends WebSocketServer {
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
         this.clock = new LogicalClock();
+        this.events = new ArrayList<>();
 
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
                 heartBeatAddress, this); //Initialize the HeartbeatManager
@@ -249,6 +250,43 @@ public class WebServer extends WebSocketServer {
         }
     }
 
+    private void recallEvents(int start, int end) {
+        var gson = new Gson();
+        System.out.println("========== PRINTING EVENTS ==========");
+        events
+                .subList(0, events.size())
+                .forEach((x) -> System.out.println(gson.toJson(x)));
+        System.out.println("=========== DONE PRINTING ===========");
+    }
+
+    private void recallEvents() {
+        recallEvents(0, events.size());
+    }
+
+    private void updateClock(String eventType, Sequential message, boolean print) {
+        if (print) {
+            System.out.println("Logical Clock Time: " + clock.getTime());
+            System.out.println(eventType + " " + new Gson().toJson(message));
+        }
+
+        var event = new Event(eventType, message);
+        /* Update the logical clock, and insert the event
+           in the logical order it happened. */
+        {
+            clock.update(event);
+            events.add(event);
+            events.sort(Event::compareTo);
+        }
+
+        if (print) {
+            System.out.println("Logical Clock Time: " + clock.getTime());
+        }
+    }
+
+    private void updateClock(String eventType, Sequential message) {
+        updateClock(eventType, message, false);
+    }
+
     @Override
     public void onMessage(WebSocket conn, String message) {
         //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
@@ -307,23 +345,45 @@ public class WebServer extends WebSocketServer {
             String[] parts = message.split(" ", 3);
             String gameCode = parts[1];
             String chatData = parts[2];
+
+            var game = activeGames.get(gameCode);
+            if (game == null) {
+                System.err.println("ERROR: Game not found.");
+                return;
+            }
+            var update = new Gson().fromJson(chatData, Chat.class);
+            updateClock("receive", update, true);
             handleChat(conn, gameCode, chatData);
+
+            // Debugging ONLY.
+            // recallEvents();
         } else if (message.startsWith("/canvas-update ")) {
             //System.out.println("Canvas Update From: " + conn.getRemoteSocketAddress() + ": " + message);
             // /canvas-update <gameCode> <json>
             String[] parts = message.split(" ", 3);
+
             if (parts.length < 3) {
                 conn.send("ERROR: Invalid canvas update format.");
                 return;
             }
+
             String gameCode = parts[1];
             String json = parts[2];
+
+            if (activeGames.get(gameCode) == null) {
+                System.err.println("ERROR: Game not found."); // Code repetition.
+                return;
+            }
+
+            var update = new Gson().fromJson(json, Game.CanvasUpdate.class);
+            updateClock("receive", update, true);
+
             handleCanvasUpdate(conn, gameCode, json);
 
         } else if (message.startsWith("/clear-canvas")) {
             String gameCode = message.split(" ")[1];
             Game game = activeGames.get(gameCode);
-            if (game != null) {
+            if (activeGames.get(gameCode) != null) {
                 game.clearCanvasHistory();
                 broadcastToGame(game, "CANVAS_CLEAR");
             }
