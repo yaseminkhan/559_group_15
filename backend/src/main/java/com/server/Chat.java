@@ -1,6 +1,6 @@
 package com.server;
 
-public class Chat implements Comparable<Chat>, Event {
+public class Chat implements Comparable<Chat>, Sequential {
     // Will change to private.
 
     public String sender;

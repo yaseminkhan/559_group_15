@@ -1,5 +1,28 @@
 package com.server;
 
-public interface Event {
-    public int getSequenceNumber();
+public class Event implements Sequential {
+    private String type;
+    private Sequential message;
+    private int sequenceNo;
+
+    public Event(String type, Sequential message) {
+        this.type = type;
+        this.message = message;
+    }
+
+    public Sequential getMessage() {
+        return message;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public int getSequenceNumber() {
+        return sequenceNo;
+    }
+
+    public void setSequenceNumber(int val) {
+        sequenceNo = val;
+    }
 }
