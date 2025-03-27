@@ -1,12 +1,14 @@
-networks:
-  my_overlay:
-    driver: overlay
+volumes:
+  kafka_data:
+  tailscale-var-lib:
 
 services:
   kafka:
     image: apache/kafka:latest
     networks:
-      - my_overlay
+      - my_network
+    volumes:
+      - kafka_data:/bitnami/kafka
     ports:
       - "9092:9092"
     environment:
@@ -14,7 +16,7 @@ services:
       KAFKA_NODE_ID: "1"
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
-      KAFKA_LISTENERS: "PLAINTEXT://kafka:9092,CONTROLLER://kafka:19092"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:19092"
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
@@ -25,12 +27,30 @@ services:
       KAFKA_LOG_CLEANUP_POLICY: "delete"
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints:
+          - node.labels.role == main_services
+
+  connection_coordinator:
+    image: connection_coordinator
+    build:
+      context: ./backend
+    hostname: connection_coordinator
+    ports:
+      - "9999:9999"
+    command: >
+      mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
+    networks:
+      - my_network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == main_services
 
   primary_server:
     image: server
-    networks:
-      - my_overlay
+    build:
+      context: ./backend
+    hostname: primary_server
     ports:
       - "8887:8887"
       - "5001:5001"
@@ -40,14 +60,18 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8887 5001 backup_server_1:6001,backup_server_2:7001,backup_server_3:4001 true"
+    networks:
+      - my_network
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints:
+          - node.labels.role == primary
 
   backup_server_1:
     image: server
-    networks:
-      - my_overlay
+    build:
+      context: ./backend
+    hostname: backup_server_1
     ports:
       - "8888:8888"
       - "6001:6001"
@@ -57,11 +81,18 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8888 6001 primary_server:5001,backup_server_2:7001,backup_server_3:4001 false"
+    networks:
+      - my_network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backup
 
   backup_server_2:
     image: server
-    networks:
-      - my_overlay
+    build:
+      context: ./backend
+    hostname: backup_server_2
     ports:
       - "8889:8889"
       - "7001:7001"
@@ -71,11 +102,18 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8889 7001 primary_server:5001,backup_server_1:6001,backup_server_3:4001 false"
+    networks:
+      - my_network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backup
 
   backup_server_3:
     image: server
-    networks:
-      - my_overlay
+    build:
+      context: ./backend
+    hostname: backup_server_3
     ports:
       - "8890:8890"
       - "4001:4001"
@@ -85,21 +123,14 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 primary_server:5001,backup_server_1:6001,backup_server_2:7001 false"
-
-  connection_coordinator:
-    image: connection_coordinator
     networks:
-      - my_overlay
-    ports:
-      - "9999:9999"
-    command: >
-      mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
-
-  client:
-    image: client
-    networks:
-      - my_overlay
-    ports:
-      - "3000:3000"
+      - my_network
     deploy:
-      replicas: 4
+      placement:
+        constraints:
+          - node.labels.role == backup
+
+networks:
+  my_network:
+    driver: overlay
+    attachable: true
