@@ -57,6 +57,7 @@ public class HeartBeatManager {
     public void sendHeartbeat(String serverIp, int port) {
         //System.out.println("Attempting to connect to serverip: " + serverIp + ", port: " + port);
         try {
+            System .out.println("SEND HEARBEAT: " + serverIp + " on port: " + port);
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(serverIp, port), 100);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
