@@ -156,8 +156,8 @@ public class HeartBeatManager {
             String[] hostParts = parts[1].split(":"); // Split at ":"
             String serverName = hostParts[0]; // Get "primary_server"
             System.out.println("Server name: " + serverName);
-
-            cleanHost = serverAddress;
+            cleanHost = parts[0];
+            System.out.println("cleanHost: " + cleanHost);
         } else {
             // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;
