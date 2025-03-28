@@ -57,12 +57,12 @@ public class HeartBeatManager {
     public void sendHeartbeat(String serverIp, int port) {
         //System.out.println("Attempting to connect to serverip: " + serverIp + ", port: " + port);
         try {
-            System .out.println("SEND HEARBEAT: " + serverIp + " on port: " + port);
+            //System .out.println("SEND HEARBEAT: " + serverIp + " on port: " + port);
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(serverIp, port), 500);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
-            System.out.println("HEARTBEAT SENT: " + serverIp + " on port: " + port);
+            //System.out.println("HEARTBEAT SENT: " + serverIp + " on port: " + port);
             socket.close();
         } catch (SocketTimeoutException ste) {
             System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 5 seconds.");
@@ -89,32 +89,19 @@ public class HeartBeatManager {
                         //System.out.println("MESSAGE RECEIVED : " + message);
     
                         // Resolve hostname
-                        String senderHost = socket.getInetAddress().getHostName();
-                        //System.out.println("Sender Host : " + senderHost);
-                        String noPrefix = senderHost.replaceFirst("^inkblink_", "");
-                        String cleanHost = noPrefix.replaceFirst("\\..*$", "");
-    
-                        // Look up the mapped port from our serverNameToPortMap
-                        Integer mappedPort = serverNameToPortMap.get(cleanHost);
-    
-                        if (mappedPort == null) {
-                            //System.out.println("No mapped port for '" + cleanHost 
-                            //    + "'; skipping updateHeartbeat and handleIncomingMessage.");
+                        String senderAddress = socket.getInetAddress().getHostAddress();
+                        System.out.println("Sender Address : " + senderAddress);
+
+                        // HEARTBEAT or other messages
+                        if ("HEARTBEAT".equals(message)) {
+                            updateHeartbeat(senderAddress);
+                            System.out.println("Heartbeat received from: " + senderAddress);
                         } else {
-                            String senderAddress = cleanHost + ":" + mappedPort;
-                            //System.out.println("Sender Address : " + senderAddress);
-    
-                            // HEARTBEAT or other messages
-                            if ("HEARTBEAT".equals(message)) {
-                                updateHeartbeat(senderAddress);
-                                System.out.println("Heartbeat received from: " + senderAddress);
-                            } else {
-                                try {
-                                    handleIncomingMessage(senderAddress, message);
-                                    System.out.println("message: " + message);
-                                } catch (InterruptedException ex) {
-                                    System.err.println("Error with handling incoming message from: " + senderAddress);
-                                }
+                            try {
+                                handleIncomingMessage(senderAddress, message);
+                                System.out.println("message: " + message);
+                            } catch (InterruptedException ex) {
+                                System.err.println("Error with handling incoming message from: " + senderAddress);
                             }
                         }
                     }
