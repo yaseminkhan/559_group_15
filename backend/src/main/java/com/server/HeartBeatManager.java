@@ -97,7 +97,7 @@ public class HeartBeatManager {
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
                             String[] parts = message.split(":");
-                            String senderTailscaleIp = parts.length > 1 ? parts[1] : socket.getInetAddress().getHostAddress();
+                            String senderTailscaleIp = parts[1];
                             updateHeartbeat(senderTailscaleIp);
                             System.out.println("Heartbeat received from: " + senderTailscaleIp);
                         } else {
