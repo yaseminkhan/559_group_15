@@ -108,7 +108,7 @@ public class WebServer extends WebSocketServer {
             public void run() {
                 replicationManager.sendFullGameState();
             }
-        }, 0, 10000); // Send full game every 10 seconds
+        }, 0, 5000); // Send full game every 5 seconds
     }
 
     public void demoteToBackup() {
