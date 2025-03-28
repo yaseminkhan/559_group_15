@@ -23,12 +23,6 @@ public class HeartBeatManager {
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
     String myTailscaleIp = System.getenv("TAILSCALE_IP");
-    private static final Map<String, Integer> serverNameToPortMap = Map.of(
-        System.getenv("BACKUP_SERVER_1_IP"), 6001,
-        System.getenv("BACKUP_SERVER_2_IP"), 7001,
-        System.getenv("BACKUP_SERVER_3_IP"), 4001,
-        System.getenv("PRIMARY_SERVER"), 5001
-    );
 
     public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
         this.serverAddress = serverAddress;
