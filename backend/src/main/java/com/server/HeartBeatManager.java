@@ -163,7 +163,7 @@ public class HeartBeatManager {
             String serverName = hostParts[0]; // Get "primary_server"
             System.out.println("Server name: " + serverName);
 
-            cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
+            cleanHost = serverAddress;
         } else {
             // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;
