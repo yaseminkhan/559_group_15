@@ -36,8 +36,8 @@ public class WebServer extends WebSocketServer {
     private boolean isPrimary; //Flag to indicate if this server is the primary server
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
         System.getenv("BACKUP_SERVER_1_IP") + ":6001", 1,
-        System.getenv("BACKUP_SERVER_2_IP") + "7001", 2,
-        System.getenv("BACKUP_SERVER_3_IP") + "4001", 3,
+        System.getenv("BACKUP_SERVER_2_IP") + ":7001", 2,
+        System.getenv("BACKUP_SERVER_3_IP") + ":4001", 3,
         System.getenv("PRIMARY_SERVER_IP") + ":5001", 4
     );
     private String heartBeatAddress;
@@ -402,6 +402,8 @@ public class WebServer extends WebSocketServer {
         
         String currentServer = serverName + ":" + heartbeatPort;
         System.out.println("Current Server: " + currentServer);
+        System.out.println("Server Name to ID Map: " + serverNameToIdMap);
+        System.out.println("Looking for current server: " + currentServer);
         int serverId = serverNameToIdMap.getOrDefault(currentServer, -1); // Assign ID or default (-1 if unknown)
         if (serverId == -1) {
             System.err.println("Unknown hostname: " + serverName);
