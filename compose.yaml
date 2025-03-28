@@ -88,7 +88,7 @@ services:
       - "6002:6002"
       - "6003:6003"
     environment:
-      TAILSCALE_IP: ${BAKUP_SERVER_1_IP}
+      TAILSCALE_IP: ${BACKUP_SERVER_1_IP}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
       COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
     command: >
@@ -111,7 +111,7 @@ services:
       - "7002:7002"
       - "7003:7003"
     environment:
-      TAILSCALE_IP: ${BAKUP_SERVER_2_IP}
+      TAILSCALE_IP: ${BACKUP_SERVER_2_IP}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
       COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
     command: >
@@ -134,7 +134,7 @@ services:
       - "4002:4002"
       - "4003:4003"
     environment:
-      TAILSCALE_IP: ${BAKUP_SERVER_3_IP}
+      TAILSCALE_IP: ${BACKUP_SERVER_3_IP}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
       COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
     command: >
