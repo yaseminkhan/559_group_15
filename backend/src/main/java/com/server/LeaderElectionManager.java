@@ -100,7 +100,7 @@ public class LeaderElectionManager {
             String[] parts = this.currentLeader.split("://"); // Split at "://"
             String[] hostParts = parts[1].split(":"); // Split at ":"
             String serverName = hostParts[0]; // Get "primary_server"
-            cleanHost = serverName + ":" + serverNameToPortMap.get(serverName);
+            cleanHost = parts[1];
         } else {
             // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;

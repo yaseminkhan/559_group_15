@@ -203,7 +203,7 @@ public class HeartBeatManager {
         String[] parts = serverAddressRecieve.split(":"); // Split by ":"
         String server = parts[0]; 
         int port = Integer.parseInt(parts[1]);
-        System.out.println("Server: " + server + "port: " + port);
+        //System.out.println("Server: " + server + "port: " + port);
         try (Socket socket = new Socket(server, port);
             OutputStream output = socket.getOutputStream()) {
             output.write(message.getBytes());
