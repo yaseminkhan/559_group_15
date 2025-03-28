@@ -22,6 +22,7 @@ public class HeartBeatManager {
     public static final int HEARTBEAT_TIMEOUT = 1000; //Set server time out as 1 second
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
+    String myTailscaleIp = System.getenv("TAILSCALE_IP");
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
         "backup_server_1", 6001,
         "backup_server_2", 7001,
@@ -61,7 +62,8 @@ public class HeartBeatManager {
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(serverIp, port), 500);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
-            output.write("HEARTBEAT".getBytes()); //Send the heartbeat message
+            String message = "HEARTBEAT:" + myTailscaleIp; // Adding tailscale IP to the heartbeat message
+            output.write(message.getBytes()); //Send the heartbeat message
             //System.out.println("HEARTBEAT SENT: " + serverIp + " on port: " + port);
             socket.close();
         } catch (SocketTimeoutException ste) {
@@ -93,9 +95,11 @@ public class HeartBeatManager {
                         System.out.println("Sender Address : " + senderAddress);
 
                         // HEARTBEAT or other messages
-                        if ("HEARTBEAT".equals(message)) {
-                            updateHeartbeat(senderAddress);
-                            System.out.println("Heartbeat received from: " + senderAddress);
+                        if (message.startsWith("HEARTBEAT")) {
+                            String[] parts = message.split(":");
+                            String senderTailscaleIp = parts.length > 1 ? parts[1] : socket.getInetAddress().getHostAddress();
+                            updateHeartbeat(senderTailscaleIp);
+                            System.out.println("Heartbeat received from: " + senderTailscaleIp);
                         } else {
                             try {
                                 handleIncomingMessage(senderAddress, message);
