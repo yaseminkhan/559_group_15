@@ -397,7 +397,7 @@ public class WebServer extends WebSocketServer {
         List<String> allServers = new ArrayList<>(Arrays.asList(args[2].split(","))); //Other server
         boolean isPrimary = Boolean.parseBoolean(args[3]); //Obtain boolean for which is primary
         
-        String serverName = System.getenv("HOSTNAME"); // This gets the Docker container name
+        String serverName = System.getenv("TAILSCALE_IP"); // This gets the Docker container name
         // Define a mapping from hostnames to integer server IDs
         
         String currentServer = serverName + ":" + heartbeatPort;
