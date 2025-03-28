@@ -17,7 +17,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
   const lastPos = useRef({ x: null, y: null });
 
-  const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
+  const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {}; // Get WebSocket context
   const gameCode = localStorage.getItem("gameCode");
 
   // Buffer to store points
@@ -63,7 +63,8 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     ctx.beginPath();
     ctx.moveTo(offsetX, offsetY);
 
-    if (socket && gameCode) {
+    // if (socket && gameCode) {
+    if (gameCode) {
       const pointData = {
         x: offsetX,
         y: offsetY,
@@ -71,12 +72,14 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         width: ctx.lineWidth,
         newStroke: true,
       };
-      socket.send(`/canvas-update ${gameCode} ${JSON.stringify(pointData)}`);
+      queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
+      // socket.send(`/canvas-update ${gameCode} ${JSON.stringify(pointData)}`);
     }
   };
 
   const draw = (event) => {
-    if (!drawing || !isDrawer || !isConnected) return;
+    // if (!drawing || !isDrawer || !isConnected) return;
+    if (!drawing || !isDrawer) return;
 
     const ctx = contextRef.current;
     const {offsetX, offsetY} = event.nativeEvent;
@@ -97,8 +100,9 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         width: ctx.lineWidth,
         newStroke: false,
       };
-      if (!isConnected) return;
-      socket.send(`/canvas-update ${gameCode} ${JSON.stringify(pointData)}`);
+      // if (!isConnected) return;
+      queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
+      // socket.send(`/canvas-update ${gameCode} ${JSON.stringify(pointData)}`);
     }
 
     // Update locally

@@ -16,7 +16,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const gameCode = localStorage.getItem("gameCode");
-  const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
+  const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {}; // Get WebSocket context
   const username = useRef("");
   const userId = localStorage.getItem("userId");
   const alias = "You";
@@ -49,7 +49,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
               msg.text = msg.text.replace(username.current, alias); // Show up as "You" guessed correctly.
           }
         });
-        
+
         setMessages(messages);
       }
     };
@@ -85,9 +85,11 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         const messageToSend = constructChatMessage(alias, newMessage, userId);
 
         // Send the message only if the WebSocket is open
-        if (!socket || !isConnected) return;
+        // if (!socket || !isConnected) return;
 
-        socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
+        // Since we're queueing messages, we don't care if the websocket is open or not.
+        queueOrSendEvent(`/chat ${gameCode}`, messageToSend);
+        // socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
         console.log("Sent message:", newMessage);
         setNewMessage("");
       }
