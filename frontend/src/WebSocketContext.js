@@ -10,10 +10,11 @@ export const WebSocketProvider = ({ children }) => {
     const lamportClock = useRef(0);
     const queue = useRef([]);
 
-    const getLamportTimestamp = () => ++lamportClock.current;
+    const getLamportTimestamp = () => ++lamportClock.current; // increment on send 
 
     const updateLamportClock = (receivedTimestamp) => lamportClock.current = Math.max(lamportClock.current, receivedTimestamp) + 1;
 
+    // every message sent through here gets a timestamp and is buffered if the socket disconnects 
     const queueOrSendEvent = (prefix, eventData) => {
         const sequenceNo = getLamportTimestamp();
         const event = { ...eventData, sequenceNo };
@@ -43,16 +44,15 @@ export const WebSocketProvider = ({ children }) => {
         }
     }
 
+    // Sends current stored messages (clear buffer when server reconnects)
     const flushQueue = () => {
-        // [...queue.current]
-        //     .sort((a, b) => a.sequenceNo - b.sequenceNo)
-        //     .forEach(e => socket.send(JSON.stringify(e)));
         if (queue.current === undefined || queue.current.length === 0) return;  // Array is empty or undefined.
 
         const arr = [...queue.current]
-            .map(s => split(s, " ", 1))
-            .sort(([p1, a], [p2, b]) => a.sequenceNo - b.sequenceNo)
-            .map(([prefix, message]) => prefix + " " + JSON.stringify(message));
+            .map(s => split(s, " ", 1)) 
+            .map(([prefix, msgStr]) => [prefix, JSON.parse(msgStr)])
+            .sort(([, a], [, b]) => a.sequenceNo - b.sequenceNo)
+            .map(([prefix, msg]) => prefix + " " + JSON.stringify(msg));
 
         console.log(
             "===============PRINTING QUEUE================",
@@ -65,7 +65,8 @@ export const WebSocketProvider = ({ children }) => {
             console.error("SOCKET IS NULL.");
         }
 
-        arr.forEach(socket.send);
+        // arr.forEach(socket.send);
+        arr.forEach(msg => socket.send(msg));
 
         queue.current = [];
     }
