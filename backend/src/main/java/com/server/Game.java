@@ -446,7 +446,7 @@ public class Game {
         this.wordToDraw = word;
     }
 
-    public Object getChatMessages() {
+    public List<Chat> getChatMessages() {
         return chatMessages;
     }
 

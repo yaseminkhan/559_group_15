@@ -20,6 +20,14 @@ public class Chat {
         this(sender, id, text, false, timestamp);
     }
 
+    public String getId() {
+        return this.id;
+    }
+
+    public double getTimestamp() {
+        return timestamp;
+    }
+
     @Override
     public String toString() {
         return "Chat(sender=%s, id=%s, text=%s, correct=%s, timestamp=%f)".formatted(sender, id, text, correct, timestamp);

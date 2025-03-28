@@ -34,6 +34,8 @@ public class ReplicationManager {
     private final ConcurrentHashMap<String, Game> activeGames;
     private final ConcurrentHashMap<String, User> connectedUsersById;
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers;
+    private final ConcurrentHashMap<String, List<Chat>> chatUpdate;
+    private final ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate;
     private OutputStream backupIncrOutput;
     private OutputStream backupFullGameOutput;
     private KafkaProducer<String, String> kafkaProducer;
@@ -44,7 +46,9 @@ public class ReplicationManager {
     public ReplicationManager(WebServer webServer, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers,
                              ConcurrentHashMap<String, Game> activeGames,
                              ConcurrentHashMap<WebSocket, User> connectedUsers,
-                             ConcurrentHashMap<String, User> temporarilyDisconnectedUsers) {
+                             ConcurrentHashMap<String, User> temporarilyDisconnectedUsers,
+                             ConcurrentHashMap<String, List<Chat>> chatUpdate,
+                             ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate) {
         this.webServer = webServer;
         this.isPrimary = isPrimary;
         this.serverAddress = serverAddress;
@@ -53,6 +57,8 @@ public class ReplicationManager {
         this.activeGames = activeGames;
         this.connectedUsersById = new ConcurrentHashMap<>(); //Wrapper map since ReplicationManager does not have a websocket
         this.temporarilyDisconnectedUsers = temporarilyDisconnectedUsers;
+        this.chatUpdate = chatUpdate;
+        this.gameCanvasUpdate = gameCanvasUpdate;
 
         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
             this.connectedUsersById.put(entry.getValue().getId(), entry.getValue());
@@ -154,20 +160,51 @@ public class ReplicationManager {
         }
     }
 
-    // Send incremental updates to backups (primary server only)
-    public void sendIncrementalUpdate(String message) {
+    // // Send incremental updates to backups (primary server only)
+    // public void sendIncrementalUpdate(String message) {
+    //     if (isPrimary && kafkaProducer != null) {
+    //         ProducerRecord<String, String> record = new ProducerRecord<>("incremental-updates", message);
+    //         kafkaProducer.send(record, (metadata, exception) -> {
+    //             if (exception != null) {
+    //                 System.err.println("Failed to send incremental update to Kafka:" + exception.getMessage());
+    //             }
+    //             else {
+    //                 System.out.println("Incremental update sent to Kafka: " + metadata);
+    //             }
+    //         });
+    //     }
+    // }
+
+    public void sendIncrementalUpdate(String gameCode) {
         if (isPrimary && kafkaProducer != null) {
+            Game game = activeGames.get(gameCode);
+            if (game == null) {
+                System.out.println("ERROR: Game not found for incremental update: " + gameCode);
+                return;
+            }
+
+            // Create a map containing both canvas updates and chat updates
+            Map<String, Object> updateData = new HashMap<>();
+            updateData.put("gameCode", gameCode);
+            updateData.put("canvasUpdates", gameCanvasUpdate.get(gameCode)); 
+            updateData.put("chatUpdates", chatUpdate.get(gameCode)); 
+
+            // Serialize to JSON
+            Gson gson = new Gson();
+            String message = gson.toJson(updateData);
+
+            // Send to Kafka
             ProducerRecord<String, String> record = new ProducerRecord<>("incremental-updates", message);
             kafkaProducer.send(record, (metadata, exception) -> {
                 if (exception != null) {
-                    System.err.println("Failed to send incremental update to Kafka:" + exception.getMessage());
-                }
-                else {
-                    System.out.println("Incremental update sent to Kafka: " + metadata);
+                    System.err.println("Failed to send incremental update: " + exception.getMessage());
+                } else {
+                    System.out.println("Incremental update sent for game: " + gameCode);
                 }
             });
         }
     }
+
 
 
     // Send full game state to backups (primary server only)
@@ -225,104 +262,166 @@ public class ReplicationManager {
         return gson.toJson(gameState);
     }
 
-    // Process incremental updates (secondary servers only)
-    private void processIncrementalUpdate(String message) {
-        synchronized (gameStateLock) {
-            System.out.println("Processing incremental update: " + message);
+    // // Process incremental updates (secondary servers only)
+    // private void processIncrementalUpdate(String message) {
+    //     synchronized (gameStateLock) {
+    //         System.out.println("Processing incremental update: " + message);
         
-            // Simulate a WebSocket connection for the secondary server
-            // Since secondary servers don't have real WebSocket connections for replicated messages,
-            // we use a dummy WebSocket object.
-            WebSocket dummyConn = new DummyWebSocket();
+    //         // Simulate a WebSocket connection for the secondary server
+    //         // Since secondary servers don't have real WebSocket connections for replicated messages,
+    //         // we use a dummy WebSocket object.
+    //         WebSocket dummyConn = new DummyWebSocket();
         
-            // Handle the message in the same way as the primary server
-            if (message.startsWith("/reconnect ")) {
-                String userId = message.substring(11).trim();
-                webServer.handleReconnect(dummyConn, userId);
-            } else if (message.startsWith("/setname ")) {
-                webServer.handleSetUsername(dummyConn, message.substring(9).trim());
-            } else if (message.equals("/creategame")) {
-                webServer.handleCreateGame(dummyConn);
-            } else if (message.startsWith("/getgame ")) {
-                String gameCode = message.substring(9).trim();
-                webServer.handleGetGame(dummyConn, gameCode);
-            } else if (message.startsWith("/join-game ")) {
-                String gameCode = message.substring(11).trim();
-                webServer.handleJoinGame(dummyConn, gameCode);
-            } else if (message.startsWith("/word-selection ")) {
-                String gameCode = message.substring(15).trim();
-                webServer.handleGetWords(dummyConn, gameCode);
-            } else if (message.startsWith("/startgame ")) {
-                String[] parts = message.split(" ");
-                String gameCode = parts[1];
-                String userId = parts[2];
-                webServer.handleStartGame(dummyConn, gameCode, userId);
-            } else if (message.startsWith("/select-word ")) {
-                String[] parts = message.split(" ");
-                if (parts.length < 3) {
-                    System.err.println("ERROR: Invalid word selection format.");
-                    return;
-                }
-                String gameCode = parts[1];
-                String selectedWord = parts[2];
-                webServer.handleWordSelection(dummyConn, gameCode, selectedWord);
-            } else if (message.startsWith("/round-over ")) {
-                String gameCode = message.substring(12).trim();
-                Game game = activeGames.get(gameCode);
-                if (game != null) {
-                    webServer.startNewRound(game);
-                }
-            } else if (message.startsWith("/endgame ")) {
-                String gameCode = message.split(" ")[1];
-                webServer.handleEndGame(dummyConn, gameCode);
-            } else if (message.startsWith("/chat-history ")) {
-                String[] parts = message.split(" ", 2);
-                String gameCode = parts[1];
-                webServer.handleChatRequest(dummyConn, gameCode);
-            } else if (message.startsWith("/chat ")) {
-                String[] parts = message.split(" ", 3);
-                String gameCode = parts[1];
-                String chatData = parts[2];
-                webServer.handleChat(dummyConn, gameCode, chatData);
-            } else if (message.startsWith("/canvas-update ")) {
-                String[] parts = message.split(" ", 3);
-                if (parts.length < 3) {
-                    System.err.println("ERROR: Invalid canvas update format.");
-                    return;
-                }
-                String gameCode = parts[1];
-                String json = parts[2];
-                webServer.handleCanvasUpdate(dummyConn, gameCode, json);
-            } else if (message.startsWith("/clear-canvas")) {
-                String gameCode = message.split(" ")[1];
-                Game game = activeGames.get(gameCode);
-                if (game != null) {
-                    game.clearCanvasHistory();
-                    webServer.broadcastToGame(game, "CANVAS_CLEAR");
-                }
-            } else if (message.startsWith("/getcanvas")) {
-                String[] parts = message.split(" ");
-                if (parts.length < 2) {
-                    System.err.println("ERROR: Invalid canvas history request format.");
-                    return;
-                }
-                String gameCode = parts[1];
-                int lastIndex = Integer.parseInt(parts[2]);
-                webServer.handleGetCanvasHistory(dummyConn, gameCode, lastIndex);
-            } else if (message.startsWith("/game-ended")){
-                String gameCode = message.substring(12).trim();
-                Game game = activeGames.get(gameCode);
-                if (game != null) {
-                    activeGames.remove(gameCode);
-                    resetKafkaConsumerOffsets(gameCode);
-                    System.out.println("Game " + gameCode + " has been removed from backup server.");
-                    game.cancelTimer();
-                }
-            } else {
-                System.err.println("Unknown command in incremental update: " + message);
+    //         // Handle the message in the same way as the primary server
+    //         if (message.startsWith("/reconnect ")) {
+    //             String userId = message.substring(11).trim();
+    //             webServer.handleReconnect(dummyConn, userId);
+    //         } else if (message.startsWith("/setname ")) {
+    //             webServer.handleSetUsername(dummyConn, message.substring(9).trim());
+    //         } else if (message.equals("/creategame")) {
+    //             webServer.handleCreateGame(dummyConn);
+    //         } else if (message.startsWith("/getgame ")) {
+    //             String gameCode = message.substring(9).trim();
+    //             webServer.handleGetGame(dummyConn, gameCode);
+    //         } else if (message.startsWith("/join-game ")) {
+    //             String gameCode = message.substring(11).trim();
+    //             webServer.handleJoinGame(dummyConn, gameCode);
+    //         } else if (message.startsWith("/word-selection ")) {
+    //             String gameCode = message.substring(15).trim();
+    //             webServer.handleGetWords(dummyConn, gameCode);
+    //         } else if (message.startsWith("/startgame ")) {
+    //             String[] parts = message.split(" ");
+    //             String gameCode = parts[1];
+    //             String userId = parts[2];
+    //             webServer.handleStartGame(dummyConn, gameCode, userId);
+    //         } else if (message.startsWith("/select-word ")) {
+    //             String[] parts = message.split(" ");
+    //             if (parts.length < 3) {
+    //                 System.err.println("ERROR: Invalid word selection format.");
+    //                 return;
+    //             }
+    //             String gameCode = parts[1];
+    //             String selectedWord = parts[2];
+    //             webServer.handleWordSelection(dummyConn, gameCode, selectedWord);
+    //         } else if (message.startsWith("/round-over ")) {
+    //             String gameCode = message.substring(12).trim();
+    //             Game game = activeGames.get(gameCode);
+    //             if (game != null) {
+    //                 webServer.startNewRound(game);
+    //             }
+    //         } else if (message.startsWith("/endgame ")) {
+    //             String gameCode = message.split(" ")[1];
+    //             webServer.handleEndGame(dummyConn, gameCode);
+    //         } else if (message.startsWith("/chat-history ")) {
+    //             String[] parts = message.split(" ", 2);
+    //             String gameCode = parts[1];
+    //             webServer.handleChatRequest(dummyConn, gameCode);
+    //         } else if (message.startsWith("/chat ")) {
+    //             String[] parts = message.split(" ", 3);
+    //             String gameCode = parts[1];
+    //             String chatData = parts[2];
+    //             webServer.handleChat(dummyConn, gameCode, chatData);
+    //         } else if (message.startsWith("/canvas-update ")) {
+    //             String[] parts = message.split(" ", 3);
+    //             if (parts.length < 3) {
+    //                 System.err.println("ERROR: Invalid canvas update format.");
+    //                 return;
+    //             }
+    //             String gameCode = parts[1];
+    //             String json = parts[2];
+    //             webServer.handleCanvasUpdate(dummyConn, gameCode, json);
+    //         } else if (message.startsWith("/clear-canvas")) {
+    //             String gameCode = message.split(" ")[1];
+    //             Game game = activeGames.get(gameCode);
+    //             if (game != null) {
+    //                 game.clearCanvasHistory();
+    //                 webServer.broadcastToGame(game, "CANVAS_CLEAR");
+    //             }
+    //         } else if (message.startsWith("/getcanvas")) {
+    //             String[] parts = message.split(" ");
+    //             if (parts.length < 2) {
+    //                 System.err.println("ERROR: Invalid canvas history request format.");
+    //                 return;
+    //             }
+    //             String gameCode = parts[1];
+    //             int lastIndex = Integer.parseInt(parts[2]);
+    //             webServer.handleGetCanvasHistory(dummyConn, gameCode, lastIndex);
+    //         } else if (message.startsWith("/game-ended")){
+    //             String gameCode = message.substring(12).trim();
+    //             Game game = activeGames.get(gameCode);
+    //             if (game != null) {
+    //                 activeGames.remove(gameCode);
+    //                 resetKafkaConsumerOffsets(gameCode);
+    //                 System.out.println("Game " + gameCode + " has been removed from backup server.");
+    //                 game.cancelTimer();
+    //             }
+    //         } else {
+    //             System.err.println("Unknown command in incremental update: " + message);
+    //         }
+    //     }
+    // }
+
+    private void processIncrementalUpdate(String json) {
+        try {
+            Gson gson = new Gson();
+            Type type = new TypeToken<Map<String, Object>>(){}.getType();
+            Map<String, Object> updateData = gson.fromJson(json, type);
+
+            String gameCode = (String) updateData.get("gameCode");
+            if (gameCode == null) {
+                System.out.println("ERROR: Invalid incremental update, missing gameCode");
+                return;
             }
+
+            Game game = activeGames.get(gameCode);
+            if (game == null) {
+                System.out.println("ERROR: Game not found for incremental update: " + gameCode);
+                return;
+            }
+
+            // Deserialize canvas updates
+            List<Game.CanvasUpdate> canvasUpdates = gson.fromJson(
+                gson.toJson(updateData.get("canvasUpdates")),
+                new TypeToken<List<Game.CanvasUpdate>>() {}.getType()
+            );
+
+            // Deserialize chat updates
+            List<Chat> chatUpdates = gson.fromJson(
+                gson.toJson(updateData.get("chatUpdates")),
+                new TypeToken<List<Chat>>() {}.getType()
+            );
+
+            // Apply updates to game
+            for (Game.CanvasUpdate update : canvasUpdates) {
+                game.addCanvasUpdate(update);
+            }
+
+            // Apply chat updates to game, but check for duplicates based on userId and timestamp
+            for (Chat update : chatUpdates) {
+                boolean messageExists = false;
+
+                // Check if a message from the same user with the same timestamp already exists
+                for (Chat existingChat : game.getChatMessages()) {  
+                    if (existingChat.getId().equals(update.getId()) &&
+                        existingChat.getTimestamp() == (update.getTimestamp())) {
+                        messageExists = true;
+                        break;
+                    }
+                }
+
+                if (!messageExists) {
+                    game.addMessage(update);
+                } else {
+                    System.out.println("Duplicate message ignored: User ID = " + update.getId() + ", Timestamp = " + update.getTimestamp());
+                }
+            }
+
+            System.out.println("Incremental update applied to game: " + gameCode);
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to process incremental update: " + e.getMessage());
         }
     }
+
 
     // Update the game state (secondary servers only)
     private void updateGameState(String gameStateJson) {
