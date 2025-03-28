@@ -1,3 +1,5 @@
+version: "3.9"
+
 volumes:
   kafka_data:
   tailscale-var-lib:
@@ -22,10 +24,10 @@ services:
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
       KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:19092"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,CONTROLLER://kafka:19092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://${KAFKA_IP}:9092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:19092"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@${KAFKA_IP}:19092"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
       KAFKA_LOG_RETENTION_HOURS: "1"
@@ -47,8 +49,6 @@ services:
     networks:
       - my_network
     deploy:
-      mode: replicated
-      replicas: 1
       placement:
         constraints:
           - node.labels.role == main_services
@@ -64,15 +64,16 @@ services:
       - "5002:5002"
       - "5003:5003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
+      COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8887 5001 backup_server_1:6001,backup_server_2:7001,backup_server_3:4001 true"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8887 5001 ${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001 true"
     networks:
       - my_network
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == primary
 
   backup_server_1:
     image: server
@@ -85,9 +86,10 @@ services:
       - "6002:6002"
       - "6003:6003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
+      COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8888 6001 primary_server:5001,backup_server_2:7001,backup_server_3:4001 false"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8888 6001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001 false"
     networks:
       - my_network
     deploy:
@@ -106,9 +108,10 @@ services:
       - "7002:7002"
       - "7003:7003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
+      COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8889 7001 primary_server:5001,backup_server_1:6001,backup_server_3:4001 false"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8889 7001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_3_IP}:4001 false"
     networks:
       - my_network
     deploy:
@@ -127,9 +130,10 @@ services:
       - "4002:4002"
       - "4003:4003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
+      COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 primary_server:5001,backup_server_1:6001,backup_server_2:7001 false"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_2_IP}:7001 false"
     networks:
       - my_network
     deploy:

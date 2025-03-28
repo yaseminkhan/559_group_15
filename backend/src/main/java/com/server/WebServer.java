@@ -43,7 +43,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private String coordinatorAddress = "ws://connection_coordinator:9999"; //proxy to frontend 
+    private String coordinatorAddress = "ws://100.79.134.37:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
