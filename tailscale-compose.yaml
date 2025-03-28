@@ -7,7 +7,7 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     environment:
-      - TS_AUTHKEY=*****;
+      - TS_AUTHKEY=tskey-api-kDsTGjLZav11CNTRL-518WQ8jYvzHHKCpZvRGw1J3CcF8eiuJq7;
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_EXTRA_ARGS=--hostname=${HOSTNAME:-proxy-node}
     volumes:

@@ -2,6 +2,11 @@ volumes:
   kafka_data:
   tailscale-var-lib:
 
+networks:
+  my_network:
+    driver: overlay
+    attachable: true
+
 services:
   kafka:
     image: apache/kafka:latest
@@ -17,7 +22,7 @@ services:
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
       KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:19092"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://100.79.134.37:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,CONTROLLER://kafka:19092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:19092"
@@ -26,7 +31,6 @@ services:
       KAFKA_LOG_RETENTION_HOURS: "1"
       KAFKA_LOG_CLEANUP_POLICY: "delete"
     deploy:
-      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == main_services
@@ -43,7 +47,8 @@ services:
     networks:
       - my_network
     deploy:
-      endpoint_mode: dnsrr
+      mode: replicated
+      replicas: 1
       placement:
         constraints:
           - node.labels.role == main_services
@@ -59,16 +64,15 @@ services:
       - "5002:5002"
       - "5003:5003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8887 5001 backup_server_1:6001,backup_server_2:7001,backup_server_3:4001 true"
     networks:
       - my_network
     deploy:
-      endpoint_mode: dnsrr
       placement:
         constraints:
-          - node.labels.role == backup
+          - node.labels.role == main_services
 
   backup_server_1:
     image: server
@@ -81,16 +85,15 @@ services:
       - "6002:6002"
       - "6003:6003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8888 6001 primary_server:5001,backup_server_2:7001,backup_server_3:4001 false"
     networks:
       - my_network
     deploy:
-      endpoint_mode: dnsrr
       placement:
         constraints:
-          - node.labels.role == backup
+          - node.labels.role == main_services
 
   backup_server_2:
     image: server
@@ -103,16 +106,15 @@ services:
       - "7002:7002"
       - "7003:7003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8889 7001 primary_server:5001,backup_server_1:6001,backup_server_3:4001 false"
     networks:
       - my_network
     deploy:
-      endpoint_mode: dnsrr
       placement:
         constraints:
-          - node.labels.role == backup
+          - node.labels.role == main_services
 
   backup_server_3:
     image: server
@@ -125,18 +127,29 @@ services:
       - "4002:4002"
       - "4003:4003"
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 primary_server:5001,backup_server_1:6001,backup_server_2:7001 false"
     networks:
       - my_network
     deploy:
-      endpoint_mode: dnsrr
       placement:
         constraints:
-          - node.labels.role == backup
+          - node.labels.role == main_services
 
-networks:
-  my_network:
-    driver: overlay
-    attachable: true
+  client_1:
+    image: client
+    build:
+      context: ./frontend
+    hostname: client_1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - primary_server
+      - connection_coordinator
+    networks:
+      - my_network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == main_services

@@ -43,7 +43,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private final String coordinatorAddress = "ws://connection_coordinator:9999"; //proxy to frontend 
+    private String coordinatorAddress = "ws://connection_coordinator:9999"; //proxy to frontend 
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -499,6 +499,7 @@ public class WebServer extends WebSocketServer {
                     if (coordinatorConnection == null || coordinatorConnection.isClosed()) {
                         System.out.println("Attempting to connect to coordinator...");
     
+                        System.out.println("Attempting WebSocket to: " + coordinatorAddress);
                         coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
                             @Override
                             public void onOpen(ServerHandshake handshake) {

@@ -9,7 +9,7 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 public class ConnectionCoordinator extends WebSocketServer {
-    private String currentPrimaryUrl = "ws://primary_server:8887"; // EC2
+    private String currentPrimaryUrl = "ws://primary_server:8887";
     private WebSocket backendConnection;
 
     public ConnectionCoordinator(InetSocketAddress address) {
@@ -70,7 +70,7 @@ public class ConnectionCoordinator extends WebSocketServer {
     }
 
     public static void main(String[] args) {
-        ConnectionCoordinator coordinator = new ConnectionCoordinator(new InetSocketAddress("0.0.0.0", 9999));
+        ConnectionCoordinator coordinator = new ConnectionCoordinator(new InetSocketAddress(9999));
         coordinator.start();
         System.out.println("Coordinator running on port 9999");
     }

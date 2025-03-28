@@ -3,6 +3,7 @@ package com.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -45,6 +46,7 @@ public class HeartBeatManager {
         for (String server : allHBServers) {
             String[] serverInfo = server.split(":");
             int otherServerHBPort = Integer.parseInt(serverInfo[1]);
+            //System.out.println("sending heartbeat to server: " + serverInfo[0] + " on port: " + otherServerHBPort);
             sendHeartbeat(serverInfo[0], otherServerHBPort);
             
         }
@@ -62,10 +64,10 @@ public class HeartBeatManager {
             // System.out.println("Heartbeat sent to server: " + serverIp + ": " + port);
             socket.close();
         } catch (SocketTimeoutException ste) {
-            //System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
+            System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 1 second.");
         }
          catch (IOException ioe) {
-            //System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
+            System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
         }
         
     }
@@ -80,29 +82,38 @@ public class HeartBeatManager {
                     InputStream input = socket.getInputStream();
                     byte[] buffer = new byte[1024];
                     int bytesRead = input.read(buffer);
-
+    
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
+                        //System.out.println("MESSAGE RECEIVED : " + message);
+    
                         // Resolve hostname
-                        String senderIp = socket.getInetAddress().getHostAddress();
                         String senderHost = socket.getInetAddress().getHostName();
-                        String cleanHost = senderHost.split("\\.")[0]; 
-                        
-                        // Format in WebSocket style
-                        String senderAddress = cleanHost + ":" + serverNameToPortMap.get(cleanHost);
-
-                        // Format in WebSocket style
-                        //System.out.println("Sender Address for heartbeat listener: " + senderAddress);
-                        
-                        if (message.equals("HEARTBEAT")) {
-                            updateHeartbeat(senderAddress);
-                            // System.out.println("Heartbeat received from: " + senderAddress);
+                        //System.out.println("Sender Host : " + senderHost);
+                        String noPrefix = senderHost.replaceFirst("^inkblink_", "");
+                        String cleanHost = noPrefix.replaceFirst("\\..*$", "");
+    
+                        // Look up the mapped port from our serverNameToPortMap
+                        Integer mappedPort = serverNameToPortMap.get(cleanHost);
+    
+                        if (mappedPort == null) {
+                            //System.out.println("No mapped port for '" + cleanHost 
+                            //    + "'; skipping updateHeartbeat and handleIncomingMessage.");
                         } else {
-                            try {
-                                handleIncomingMessage(senderAddress, message);
-                                System.out.println("message:" + message);
-                            } catch (InterruptedException ex) {
-                                System.err.println("Error wiht handling incoming message from :" + senderAddress);
+                            String senderAddress = cleanHost + ":" + mappedPort;
+                            //System.out.println("Sender Address : " + senderAddress);
+    
+                            // HEARTBEAT or other messages
+                            if ("HEARTBEAT".equals(message)) {
+                                updateHeartbeat(senderAddress);
+                                System.out.println("Heartbeat received from: " + senderAddress);
+                            } else {
+                                try {
+                                    handleIncomingMessage(senderAddress, message);
+                                    System.out.println("message: " + message);
+                                } catch (InterruptedException ex) {
+                                    System.err.println("Error with handling incoming message from: " + senderAddress);
+                                }
                             }
                         }
                     }
@@ -113,7 +124,7 @@ public class HeartBeatManager {
             }
         }).start();
     }
-
+    
     public LeaderElectionManager getLeaderElectionManager() {
         return this.leaderElectionManager;
     }
@@ -191,7 +202,8 @@ public class HeartBeatManager {
     // Update heartbeat when received
     public void updateHeartbeat(String serverAddress) {
         long time = System.currentTimeMillis();
-        // System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
+
+        System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
     }
