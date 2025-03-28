@@ -35,10 +35,10 @@ public class WebServer extends WebSocketServer {
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
     private static final Map<String, Integer> serverNameToIdMap = Map.of(
-        System.getenv("BACKUP_SERVER_1") + ":6001", 1,
-        System.getenv("BACKUP_SERVER_2") + "7001", 2,
-        System.getenv("BACKUP_SERVER_3") + "4001", 3,
-        System.getenv("PRIMARY_SERVER") + ":5001", 4
+        System.getenv("BACKUP_SERVER_1_IP") + ":6001", 1,
+        System.getenv("BACKUP_SERVER_2_IP") + "7001", 2,
+        System.getenv("BACKUP_SERVER_3_IP") + "4001", 3,
+        System.getenv("PRIMARY_SERVER_IP") + ":5001", 4
     );
     private String heartBeatAddress;
     private final String myServerAddress;
