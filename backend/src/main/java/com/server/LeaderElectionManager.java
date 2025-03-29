@@ -154,7 +154,7 @@ public class LeaderElectionManager {
     private void sendElectionMessage(String server, long receivedElectionId) throws InterruptedException {
         if (heartBeatManager.isServerAlive(server)) {
             this.higherId = true;
-            heartBeatManager.sendMessage(server, "ELECTION:" + receivedElectionId);
+            heartBeatManager.sendMessage(server, myTailscaleIp + ":ELECTION:" + receivedElectionId);
         } else {
             removeServers.add(server);
             System.out.println("Server " + server + " is not alive, skipping election message.");
@@ -162,7 +162,7 @@ public class LeaderElectionManager {
     }
 
     private void sendLeaderMessage(String server) {
-        heartBeatManager.sendMessage(server, "LEADER:" + this.serverAddress);
+        heartBeatManager.sendMessage(server, myTailscaleIp + ":LEADER:" + this.serverAddress);
     }
 
     public void handleGetLeaderMessage(String senderServerAddress) {
@@ -196,7 +196,7 @@ public class LeaderElectionManager {
 
     private void sendBullyMessage(String server, long receivedElectionId) throws InterruptedException {
         if (heartBeatManager.isServerAlive(server)) {
-            heartBeatManager.sendMessage(server, "BULLY:" + receivedElectionId);
+            heartBeatManager.sendMessage(server, myTailscaleIp + ":BULLY:" + receivedElectionId);
         }
     }
 
