@@ -27,6 +27,8 @@ export const WebSocketProvider = ({ children }) => {
 
     // String.split, but like better.
     const split = (str, delim, maxSplit) => {
+        if (!str.includes(delim))
+            throw new Error("Delimiter is not in string.");
         if (maxSplit === 0) return str;
         const i = str.indexOf(delim);
         const [left, right] = [str.slice(0, i), str.slice(i+1)];
@@ -48,11 +50,21 @@ export const WebSocketProvider = ({ children }) => {
     const flushQueue = () => {
         if (queue.current === undefined || queue.current.length === 0) return;  // Array is empty or undefined.
 
+        // let arr = [...queue.current];
+        // let newArr = []    
+
+        // arr = arr.map(s => split(s, " ", 1));
+        // arr = arr.map(([prefix, msgStr]) => [prefix, JSON.parse(msgStr)]);
+        // arr = arr.sort(([, a], [, b]) => a.sequenceNo - b.sequenceNo);
+        // arr = arr.map(([prefix, msg]) => prefix + " " + JSON.stringify(msg));
+
         const arr = [...queue.current]
-            .map(s => split(s, " ", 1)) 
-            .map(([prefix, msgStr]) => [prefix, JSON.parse(msgStr)])
-            .sort(([, a], [, b]) => a.sequenceNo - b.sequenceNo)
-            .map(([prefix, msg]) => prefix + " " + JSON.stringify(msg));
+            .map(s => split(s, " ", 2)) 
+            .map(([prefix, gameCode, msgStr]) => [prefix, gameCode, JSON.parse(msgStr)])
+            .sort(([,, a], [,, b]) => a.sequenceNo - b.sequenceNo)
+            .map(([prefix, gameCode, msg]) => prefix + " " + gameCode + " " + JSON.stringify(msg));
+
+        // ["a", "b", "c"].reduce((a, b) => a + " " + b)
 
         console.log(
             "===============PRINTING QUEUE================",
