@@ -76,8 +76,8 @@ public class HeartBeatManager {
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 System.out.println("Listening for messages on port " + port);
                 while (true) {
-                    System.out.println("LOOPLOOP");
                     Socket socket = serverSocket.accept();
+                    System.out.println("Accepted socket from: " + socket.getRemoteSocketAddress());
                     InputStream input = socket.getInputStream();
                     byte[] buffer = new byte[1024];
                     int bytesRead = input.read(buffer);
