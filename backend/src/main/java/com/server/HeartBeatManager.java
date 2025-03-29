@@ -230,15 +230,19 @@ public class HeartBeatManager {
 
     public void handleIncomingMessage(String senderAddress, String message) throws InterruptedException {
         if (message.startsWith("ELECTION")) {
+            System.out.println("HANDLING ELECTION!!!!");
             long electionId = Long.parseLong(message.split(":", 2)[1]);
             leaderElectionManager.handleElectionMessage(senderAddress, electionId);
         } else if (message.startsWith("BULLY")) {
+            System.out.println("HANDLING BULLY!!!!");
             long electionId = Long.parseLong(message.split(":", 2)[1]);
             leaderElectionManager.handleBullyMessage(senderAddress, electionId);
         } else if (message.startsWith("LEADER")) {
+            System.out.println("HANDLING LEADER!!!!");
             String newLeader = message.split(":", 2)[1];
             leaderElectionManager.handleLeaderMessage(newLeader);
         } else if (message.startsWith("GET_LEADER")) {
+            System.out.println("HANDLING GET LEADER!!!!");
             leaderElectionManager.handleGetLeaderMessage(senderAddress);
         }
 
