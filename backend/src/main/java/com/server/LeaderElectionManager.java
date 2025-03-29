@@ -19,21 +19,7 @@ public class LeaderElectionManager {
     private boolean higherId;
     private final int timeout = 1000; // Timeout for waiting for responses
     String myTailscaleIp = System.getenv("TAILSCALE_IP");
-    private static final Map<String, Integer> serverNameToPortMap = Map.of(
-        "backup_server_1", 6001,
-        "backup_server_2", 7001,
-        "backup_server_3", 4001,
-        "primary_server", 5001
-    );
-    private static final Map<String, String> serverNameToAddressMap = Map.of(
-        "backup_server_1", "ws://backup_server_1:8888",
-        "backup_server_2", "ws://backup_server_2:8889",
-        "backup_server_3", "ws://backup_server_3:8890",
-        "primary_server", "ws://primary_server:8887"
-    );
 
-
-    
     public LeaderElectionManager(String serverAddress, List<String> allServersElection, String heartBeatAddress, HeartBeatManager heartBeatManager, WebServer webServer) {
         this.serverAddress = serverAddress;
         this.allServersElection = allServersElection;
@@ -100,22 +86,18 @@ public class LeaderElectionManager {
         System.out.println("Initiate Election called with ID: " + electionId);
 
         String cleanHost;
+        String[] parts = serverAddress.split("://"); 
+        cleanHost = parts[1];
+
+        /*
         if (serverAddress.contains("://")) {
-            /// FIX HEREEEEEEE
-            /// 
-            // Case 1: "ws://primary_server:8887"
             System.out.println("initiateElection : " + serverAddress);
-            String[] parts = this.currentLeader.split("://"); // Split at "://"
-            //String[] hostParts = parts[1].split(":"); // Split at ":"
-            //String serverName = hostParts[0]; // Get "primary_server"
-            //cleanHost = parts[1];
-            System.out.println("CLEANHOST_SERVERADDR : " + parts[1]);
             cleanHost = parts[1];
         } else {
-            // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;
         }
-
+        */
+        
         allServersElection.remove(cleanHost);
         this.running = true;
 
