@@ -157,8 +157,7 @@ public class HeartBeatManager {
             return true;
         }
         System.out.println("Server address: " + serverAddress);
-        String cleanHost;
-
+        /*
         if (serverAddress.contains("://")) {
             // Case 1: "ws://primary_server:8887"
             String[] parts = serverAddress.split("://"); // Split at "://"
@@ -171,12 +170,13 @@ public class HeartBeatManager {
             // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;
         }
-        
+        */
+
         long currentTime = System.currentTimeMillis();
 
-        Long lastHeartbeat = lastHeartbeats.get(cleanHost);
+        Long lastHeartbeat = lastHeartbeats.get(serverAddress);
         if (lastHeartbeat == null) {
-            System.out.println("No heartbeat found for " + cleanHost);
+            System.out.println("No heartbeat found for " + serverAddress);
             return true;
         }
 
