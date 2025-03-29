@@ -19,7 +19,7 @@ public class HeartBeatManager {
     private final List<String> allServers; //List of all server addresses
     private List<String> allHBServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
-    public static final int HEARTBEAT_TIMEOUT = 1500; //Set server time out as 1 second
+    public static final int HEARTBEAT_TIMEOUT = 2000; //Set server time out as 2 seconds
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
     String myTailscaleIp = System.getenv("TAILSCALE_IP");
@@ -94,11 +94,12 @@ public class HeartBeatManager {
                             String[] parts = message.split(":");
                             String senderTailscaleIp = parts[1];
                             updateHeartbeat(senderTailscaleIp);
-                            System.out.println("Heartbeat received from: " + senderTailscaleIp);
+                            System.out.println("Message: " + message);
+                            //System.out.println("Heartbeat received from: " + senderTailscaleIp);
                         } else {
                             try {
                                 handleIncomingMessage(senderAddress, message);
-                                System.out.println("message: " + message);
+                                System.out.println("Message: " + message);
                             } catch (InterruptedException ex) {
                                 System.err.println("Error with handling incoming message from: " + senderAddress);
                             }
@@ -126,7 +127,7 @@ public class HeartBeatManager {
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(200); //Send heartbeat every 1 second
+                    Thread.sleep(500); //Send heartbeat every 1 second
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
