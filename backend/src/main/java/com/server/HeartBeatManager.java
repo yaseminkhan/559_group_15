@@ -86,19 +86,18 @@ public class HeartBeatManager {
     
                         // Resolve hostname
                         String senderAddress = socket.getInetAddress().getHostAddress();
-                        //System.out.println("Sender Address : " + senderAddress);
+                        System.out.println("Sender Address : " + senderAddress);
 
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
                             String[] parts = message.split(":");
                             String senderTailscaleIp = parts[1];
                             updateHeartbeat(senderTailscaleIp);
-                            System.out.println("Message : " + message);
                             System.out.println("Heartbeat received from: " + senderTailscaleIp);
                         } else {
                             try {
                                 handleIncomingMessage(senderAddress, message);
-                                System.out.println("Message: " + message);
+                                System.out.println("message: " + message);
                             } catch (InterruptedException ex) {
                                 System.err.println("Error with handling incoming message from: " + senderAddress);
                             }
@@ -190,7 +189,7 @@ public class HeartBeatManager {
     public void updateHeartbeat(String serverAddress) {
         long time = System.currentTimeMillis();
 
-        //System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
+        System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
     }
