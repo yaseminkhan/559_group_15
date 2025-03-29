@@ -19,7 +19,7 @@ public class HeartBeatManager {
     private final List<String> allServers; //List of all server addresses
     private List<String> allHBServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
-    public static final int HEARTBEAT_TIMEOUT = 1000; //Set server time out as 1 second
+    public static final int HEARTBEAT_TIMEOUT = 1500; //Set server time out as 1 second
     private final ConcurrentHashMap<String, Long> lastHeartbeats = new ConcurrentHashMap<>();
     private final LeaderElectionManager leaderElectionManager;
     String myTailscaleIp = System.getenv("TAILSCALE_IP");
@@ -54,6 +54,7 @@ public class HeartBeatManager {
         try {
             //System .out.println("SEND HEARBEAT: " + serverIp + " on port: " + port);
             Socket socket = new Socket();
+            socket.setReuseAddress(true); // Allow address reuse
             socket.connect(new InetSocketAddress(serverIp, port), 500);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             String message = "HEARTBEAT:" + myTailscaleIp; // Adding tailscale IP to the heartbeat message
