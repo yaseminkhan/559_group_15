@@ -57,7 +57,9 @@ public class HeartBeatManager {
             socket.setReuseAddress(true); // Allow address reuse
             socket.connect(new InetSocketAddress(serverIp, port), 500);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
-            String message = serverAddress + ":HEARTBEAT"; // Adding tailscale IP to the heartbeat message
+
+            String[] srcAddress = serverAddress.split("://");
+            String message = srcAddress[1] + ":HEARTBEAT"; // Adding tailscale IP to the heartbeat message
             output.write(message.getBytes()); //Send the heartbeat message
             //System.out.println("HEARTBEAT SENT");
             socket.close();
@@ -87,13 +89,13 @@ public class HeartBeatManager {
                         // Resolve Sender Address
                         String[] parts = message.split(":");
                         // Message format : <sender_ip>:<command>:<message>
-                        String senderAddress = parts[0];
+                        String senderAddress = parts[0] + ":" + parts[1];
                         // remove address from message
-                        if (parts.length < 3) {
-                            message = parts[1];
+                        if (parts.length < 4) {
+                            message = parts[2];
                             //System.out.println("Cut Message: " + message);
-                        } else if (parts.length == 3) {
-                            message = parts[1] + ":" + parts[2];
+                        } else if (parts.length == 4) {
+                            message = parts[2] + ":" + parts[3];
                             //System.out.println("Cut Message: " + message);
                         }
                         // HEARTBEAT or other messages
