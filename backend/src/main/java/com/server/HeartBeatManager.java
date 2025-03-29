@@ -92,7 +92,14 @@ public class HeartBeatManager {
                         System.out.println("Sender Address : " + senderAddress);
 
                         // remove address from message
-                        message = parts[1] + ":" + parts[2];
+                        // if parts[2] doesn't exist then message is just parts[1]
+                        if (parts.length < 2) {
+                            message = parts[1];
+                            System.out.println("Cut Message: " + message);
+                        } else if (parts.length == 2) {
+                            message = parts[1] + ":" + parts[2];
+                            System.out.println("Cut Message: " + message);
+                        }
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
                             //String[] parts = message.split(":");
