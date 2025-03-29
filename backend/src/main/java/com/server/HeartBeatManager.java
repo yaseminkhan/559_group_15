@@ -235,8 +235,8 @@ public class HeartBeatManager {
             leaderElectionManager.handleBullyMessage(senderAddress, electionId);
         } else if (message.startsWith("LEADER")) {
             System.out.println("HANDLING LEADER!!!!");
-            String newLeader = message.split(":")[1];
-            leaderElectionManager.handleLeaderMessage(newLeader);
+            //String newLeader = message.split(":")[1];
+            leaderElectionManager.handleLeaderMessage(senderAddress);
         } else if (message.startsWith("GET_LEADER")) {
             System.out.println("HANDLING GET LEADER!!!!");
             leaderElectionManager.handleGetLeaderMessage(senderAddress);
