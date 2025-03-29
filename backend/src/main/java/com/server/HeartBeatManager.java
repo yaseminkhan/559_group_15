@@ -96,12 +96,11 @@ public class HeartBeatManager {
                             //System.out.println("Cut Message: " + message);
                         } else if (parts.length == 4) {
                             message = parts[2] + ":" + parts[3];
-                            //System.out.println("Cut Message: " + message);
+                            System.out.println("Cut Message: " + message);
                         }
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
                             updateHeartbeat(senderAddress);
-                            System.out.println("Heartbeat List: "  + lastHeartbeats);
                         } else {
                             try {
                                 // Change senderAddress to hostaddressIP
