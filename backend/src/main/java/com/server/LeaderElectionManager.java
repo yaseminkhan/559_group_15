@@ -82,7 +82,7 @@ public class LeaderElectionManager {
                     }
 
                     // Send message "GET_LEADER" + serverTailIp"
-                    String message = "GET_LEADER";// + myTailscaleIp;
+                    String message = myTailscaleIp + ":GET_LEADER";// + myTailscaleIp;
 
                     heartBeatManager.sendMessage(server, message);
                 }
