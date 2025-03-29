@@ -186,11 +186,11 @@ public class HeartBeatManager {
         System.out.println("Alive: " + alive + " HEARTBEAT timeout: " + HEARTBEAT_TIMEOUT);
         if (!alive) {
             System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
-            lastHeartbeats.remove(cleanHost);
-            allServers.remove(cleanHost);
+            lastHeartbeats.remove(serverAddress);
+            allServers.remove(serverAddress);
         }
 
-        System.out.println("Checking if " + cleanHost + " is alive: " + alive);
+        System.out.println("Checking if " + serverAddress + " is alive: " + alive);
         return alive;
     }
 
