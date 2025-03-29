@@ -434,14 +434,6 @@ public class WebServer extends WebSocketServer {
         System.out.println("allServers: " + allServers);
         System.out.println("All Servers for leader election: " + allServersElection);
 
-        // remove ports from allServerElection
-        for (int i = 0; i < allServersElection.size(); i++) {
-            String server = allServersElection.get(i);
-            if (server.contains(":")) {
-                allServersElection.set(i, server.split(":")[0]);
-            }
-        }
-        
         //Create and start WebSocket server
         WebServer server = new WebServer(new InetSocketAddress("0.0.0.0", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
         server.start();

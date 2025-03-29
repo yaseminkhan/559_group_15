@@ -94,8 +94,8 @@ public class LeaderElectionManager {
         System.out.println("Initiate Election called with ID: " + electionId);
 
         String cleanHost;
-        String[] parts = serverAddress.split("://"); 
-        cleanHost = parts[1];
+        //String[] parts = serverAddress.split("://"); 
+        cleanHost = heartBeatAddress;
 
         /*
         if (serverAddress.contains("://")) {
