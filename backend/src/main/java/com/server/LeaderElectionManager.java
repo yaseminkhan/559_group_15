@@ -18,6 +18,7 @@ public class LeaderElectionManager {
     private final WebServer webServer;
     private boolean higherId;
     private final int timeout = 1000; // Timeout for waiting for responses
+    String myTailscaleIp = System.getenv("TAILSCALE_IP");
     private static final Map<String, Integer> serverNameToPortMap = Map.of(
         "backup_server_1", 6001,
         "backup_server_2", 7001,
@@ -79,7 +80,11 @@ public class LeaderElectionManager {
                     if (server.equals(heartBeatAddress)) {
                         continue; // Skip self
                     }
-                    heartBeatManager.sendMessage(server, "GET_LEADER");
+
+                    // Send message "GET_LEADER" + serverTailIp"
+                    String message = "GET_LEADER";// + myTailscaleIp;
+
+                    heartBeatManager.sendMessage(server, message);
                 }
             }
             if (!heartBeatManager.isServerAlive(this.currentLeader) && !isLeader) { 

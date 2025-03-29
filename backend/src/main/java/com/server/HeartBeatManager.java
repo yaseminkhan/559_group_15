@@ -127,7 +127,7 @@ public class HeartBeatManager {
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(500); //Send heartbeat every 1 second
+                    Thread.sleep(500); //Send heartbeat every 500ms
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
@@ -191,7 +191,7 @@ public class HeartBeatManager {
     public void updateHeartbeat(String serverAddress) {
         long time = System.currentTimeMillis();
 
-        System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
+        //System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
     }
