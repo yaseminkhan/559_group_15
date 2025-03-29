@@ -162,7 +162,7 @@ public class LeaderElectionManager {
     }
 
     private void sendLeaderMessage(String server) {
-        heartBeatManager.sendMessage(server, myTailscaleIp + ":LEADER:" + this.serverAddress);
+        heartBeatManager.sendMessage(server, myTailscaleIp + ":LEADER");
     }
 
     public void handleGetLeaderMessage(String senderServerAddress) {
