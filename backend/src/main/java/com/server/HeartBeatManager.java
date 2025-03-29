@@ -94,9 +94,9 @@ public class HeartBeatManager {
                         if (parts.length < 4) {
                             message = parts[2];
                             //System.out.println("Cut Message: " + message);
-                        } else if (parts.length == 4) {
-                            message = parts[2] + ":" + parts[3];
-                            System.out.println("Cut Message: " + message);
+                        } else if (parts.length == 5) {
+                            message = parts[2] + ":" + parts[3] + ":" + parts[4];
+                            //System.out.println("Cut Message: " + message);
                         }
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
