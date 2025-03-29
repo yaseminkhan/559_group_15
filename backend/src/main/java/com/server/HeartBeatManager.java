@@ -198,7 +198,7 @@ public class HeartBeatManager {
     public void updateHeartbeat(String serverAddress) {
         long time = System.currentTimeMillis();
 
-        //System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
+        System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
     }
