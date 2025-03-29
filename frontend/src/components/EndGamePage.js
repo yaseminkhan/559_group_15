@@ -6,7 +6,7 @@ import "../styles/WelcomePage.css";
 
 const EndGamePage = () => {
     const navigate = useNavigate();
-    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
+    const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {}; // Get WebSocket context
     const [players, setPlayers] = useState([]);
     const location = useLocation();
     const gameCode = location.state?.gameCode || localStorage.getItem("gameCode");
