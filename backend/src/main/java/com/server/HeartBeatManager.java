@@ -110,7 +110,7 @@ public class HeartBeatManager {
                         } else {
                             try {
                                 // Change senderAddress to hostaddressIP
-                                //senderAddress = socket.getInetAddress().getHostAddress();
+                                senderAddress = socket.getInetAddress().getHostAddress();
                                 handleIncomingMessage(senderAddress, message);
                                 System.out.println("Message: " + message);
                             } catch (InterruptedException ex) {

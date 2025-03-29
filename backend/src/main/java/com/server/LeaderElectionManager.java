@@ -101,11 +101,15 @@ public class LeaderElectionManager {
 
         String cleanHost;
         if (serverAddress.contains("://")) {
+            /// FIX HEREEEEEEE
+            /// 
             // Case 1: "ws://primary_server:8887"
-            String[] parts = this.currentLeader.split("://"); // Split at "://"
-            String[] hostParts = parts[1].split(":"); // Split at ":"
-            String serverName = hostParts[0]; // Get "primary_server"
-            cleanHost = parts[1];
+            System.out.println("initiateElection : " + serverAddress);
+            //String[] parts = this.currentLeader.split("://"); // Split at "://"
+            //String[] hostParts = parts[1].split(":"); // Split at ":"
+            //String serverName = hostParts[0]; // Get "primary_server"
+            //cleanHost = parts[1];
+            cleanHost = serverAddress;
         } else {
             // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;
