@@ -72,8 +72,9 @@ services:
       BACKUP_SERVER_2_IP: ${BACKUP_SERVER_2_IP}
       BACKUP_SERVER_3_IP: ${BACKUP_SERVER_3_IP}
       PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
+      COORDINATOR_IP: ${COORDINATOR_IP}
     command: >
-      sh -c "/wait-for-backups.sh" && mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8887 5001 ${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001 true"
+      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8887 5001 ${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001 true'"
     networks:
       - my_network
     deploy:
