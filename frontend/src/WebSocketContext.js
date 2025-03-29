@@ -49,13 +49,6 @@ export const WebSocketProvider = ({ children }) => {
     // Sends current stored messages (clear buffer when server reconnects)
     const flushQueue = (ws) => {
         if (queue.current === undefined || queue.current.length === 0) return;  // Array is empty or undefined.
-        // let arr = [...queue.current];
-        // let newArr = []    
-
-        // arr = arr.map(s => split(s, " ", 1));
-        // arr = arr.map(([prefix, msgStr]) => [prefix, JSON.parse(msgStr)]);
-        // arr = arr.sort(([, a], [, b]) => a.sequenceNo - b.sequenceNo);
-        // arr = arr.map(([prefix, msg]) => prefix + " " + JSON.stringify(msg));
 
         const arr = [...queue.current]
             .map(s => split(s, " ", 2)) 
@@ -63,25 +56,16 @@ export const WebSocketProvider = ({ children }) => {
             .sort(([,, a], [,, b]) => a.sequenceNo - b.sequenceNo)
             .map(([prefix, gameCode, msg]) => prefix + " " + gameCode + " " + JSON.stringify(msg));
 
-        // ["a", "b", "c"].reduce((a, b) => a + " " + b)
-
         console.log(
             "===============PRINTING QUEUE================",
             arr,
             "=============================================",
         )
 
-        // // Debugging.
-        // if (!socket) {
-        //     console.error("SOCKET IS NULL.");
-        // }
-
-        // arr.forEach(socket.send);
         arr.forEach(msg => ws.send(msg));
-
-        console.log("DONE FLUSHING QUEUE.")
-
         queue.current = [];
+        
+        console.log("DONE FLUSHING QUEUE.")
     }
 
     // Connect to backend server
