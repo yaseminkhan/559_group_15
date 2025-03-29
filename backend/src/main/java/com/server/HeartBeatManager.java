@@ -24,6 +24,14 @@ public class HeartBeatManager {
     private final LeaderElectionManager leaderElectionManager;
     String myTailscaleIp = System.getenv("TAILSCALE_IP");
 
+    private static final Map<String, String> properMap = Map.of(
+        "8887", "5001", // primary
+        "8888", "6001", // backup 1
+        "8889", "7001", // backup 2
+        "8890", "4001"  // backup 3
+    );
+
+
     public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
         this.serverAddress = serverAddress;
         this.heartbeatPort = heartbeatPort;
@@ -198,6 +206,8 @@ public class HeartBeatManager {
     public void updateHeartbeat(String serverAddress) {
         long time = System.currentTimeMillis();
 
+        String[] parts = serverAddress.split(":"); // Split by ":"
+        serverAddress = parts[0] + properMap.get(parts[1]); // Get the server address and port
         System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
