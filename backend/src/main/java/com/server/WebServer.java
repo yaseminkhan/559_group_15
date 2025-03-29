@@ -588,7 +588,10 @@ public class WebServer extends WebSocketServer {
 
         // Update chatUpdate
         System.out.println("Chat update map updated");
-        chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(chat);
+        synchronized (chatUpdate) {
+            chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(chat);
+        }
+        // chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(chat);
 
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
@@ -943,7 +946,9 @@ public class WebServer extends WebSocketServer {
             
             // Update gameCanvasUpdate
             System.out.println("Canvas update map updated.");
-            gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
+            synchronized (gameCanvasUpdate) {
+                gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
+            }
 
         } catch (Exception e) {
             System.out.println("ERROR: Invalid canvas update format.");

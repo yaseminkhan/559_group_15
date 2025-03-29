@@ -3,6 +3,7 @@ package com.server;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -186,8 +187,22 @@ public class ReplicationManager {
             // Create a map containing both canvas updates and chat updates
             Map<String, Object> updateData = new HashMap<>();
             updateData.put("gameCode", gameCode);
-            updateData.put("canvasUpdates", gameCanvasUpdate.get(gameCode)); 
-            updateData.put("chatUpdates", chatUpdate.get(gameCode)); 
+            
+            synchronized (gameCanvasUpdate) {
+                gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>());
+                // Lock the entire map while accessing the gameCode's chat list
+                synchronized (gameCanvasUpdate.get(gameCode)) {
+                    updateData.put("canvasUpdates", gameCanvasUpdate.get(gameCode)); 
+                }
+            }
+
+            synchronized (chatUpdate) {
+                chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>());
+                // Lock the entire map while accessing the gameCode's chat list
+                synchronized (chatUpdate.get(gameCode)) {
+                    updateData.put("chatUpdates", chatUpdate.get(gameCode));
+                }
+            }
 
             // Serialize to JSON
             Gson gson = new Gson();
@@ -197,7 +212,7 @@ public class ReplicationManager {
             ProducerRecord<String, String> record = new ProducerRecord<>("incremental-updates", message);
             kafkaProducer.send(record, (metadata, exception) -> {
                 if (exception != null) {
-                    System.err.println("Failed to send incremental update: " + exception.getMessage());
+                    System.err.println("No updates to send");
                 } else {
                     System.out.println("Incremental update sent for game: " + gameCode);
                 }
@@ -418,7 +433,7 @@ public class ReplicationManager {
 
             System.out.println("Incremental update applied to game: " + gameCode);
         } catch (Exception e) {
-            System.err.println("ERROR: Failed to process incremental update: " + e.getMessage());
+            System.err.println("No incremental updates to apply");
         }
     }
 
