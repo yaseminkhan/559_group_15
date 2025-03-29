@@ -19,7 +19,7 @@ export const WebSocketProvider = ({ children }) => {
         const sequenceNo = getLamportTimestamp();
         const event = { ...eventData, sequenceNo };
         const message = prefix + " " + JSON.stringify(event);
-        if (isConnected && socket?.readyState === WebSocket.OPEN) 
+        if (isConnected && socket) 
             socket.send(message);
         else
             queue.current.push(message);
@@ -94,14 +94,13 @@ export const WebSocketProvider = ({ children }) => {
             console.log(`Connected to backend: ${serverAddress}`);
             setIsConnected(true);
             setSocket(ws);
-            flushQueue(ws);
             
             const storedUserId = localStorage.getItem("userId");
             if (storedUserId) {
                 console.log(`Reconnecting as user: ${storedUserId}`);
                 ws.send(`/reconnect ${storedUserId}`);
             }
-
+            flushQueue(ws);
         };
 
         ws.onmessage = handleIncomingMessage;
