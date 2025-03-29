@@ -57,7 +57,7 @@ public class HeartBeatManager {
             socket.setReuseAddress(true); // Allow address reuse
             socket.connect(new InetSocketAddress(serverIp, port), 500);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
-            String message = "HEARTBEAT:" + myTailscaleIp; // Adding tailscale IP to the heartbeat message
+            String message = myTailscaleIp + ":HEARTBEAT"; // Adding tailscale IP to the heartbeat message
             output.write(message.getBytes()); //Send the heartbeat message
             //System.out.println("HEARTBEAT SENT: " + serverIp + " on port: " + port);
             socket.close();
@@ -83,19 +83,23 @@ public class HeartBeatManager {
     
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
-                        //System.out.println("MESSAGE RECEIVED : " + message);
+                        System.out.println("MESSAGE RECEIVED : " + message);
     
-                        // Resolve hostname
-                        String senderAddress = socket.getInetAddress().getHostAddress();
+                        // Resolve Sender Address
+                        String[] parts = message.split(":");
+                        // Message format : <sender_ip>:<command>:<message>
+                        String senderAddress = parts[0];
                         System.out.println("Sender Address : " + senderAddress);
 
+                        // remove address from message
+                        message = parts[1] + ":" + parts[2];
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
-                            String[] parts = message.split(":");
-                            String senderTailscaleIp = parts[1];
-                            updateHeartbeat(senderTailscaleIp);
-                            System.out.println("Message: " + message);
-                            //System.out.println("Heartbeat received from: " + senderTailscaleIp);
+                            //String[] parts = message.split(":");
+                            //String senderTailscaleIp = parts[1];
+                            updateHeartbeat(senderAddress);
+                            //System.out.println("Message: " + message);
+                            System.out.println("Heartbeat received from: " + senderAddress);
                         } else {
                             try {
                                 handleIncomingMessage(senderAddress, message);
