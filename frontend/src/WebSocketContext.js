@@ -47,9 +47,8 @@ export const WebSocketProvider = ({ children }) => {
     }
 
     // Sends current stored messages (clear buffer when server reconnects)
-    const flushQueue = () => {
+    const flushQueue = (ws) => {
         if (queue.current === undefined || queue.current.length === 0) return;  // Array is empty or undefined.
-
         // let arr = [...queue.current];
         // let newArr = []    
 
@@ -72,13 +71,15 @@ export const WebSocketProvider = ({ children }) => {
             "=============================================",
         )
 
-        // Debugging.
-        if (!socket) {
-            console.error("SOCKET IS NULL.");
-        }
+        // // Debugging.
+        // if (!socket) {
+        //     console.error("SOCKET IS NULL.");
+        // }
 
         // arr.forEach(socket.send);
-        arr.forEach(msg => socket.send(msg));
+        arr.forEach(msg => ws.send(msg));
+
+        console.log("DONE FLUSHING QUEUE.")
 
         queue.current = [];
     }
@@ -93,7 +94,7 @@ export const WebSocketProvider = ({ children }) => {
             console.log(`Connected to backend: ${serverAddress}`);
             setIsConnected(true);
             setSocket(ws);
-            flushQueue();
+            flushQueue(ws);
             
             const storedUserId = localStorage.getItem("userId");
             if (storedUserId) {
