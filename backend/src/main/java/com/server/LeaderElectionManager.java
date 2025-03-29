@@ -73,8 +73,8 @@ public class LeaderElectionManager {
         System.out.println("\nisLeader value: " + isLeader + "\n");
         if (!isLeader) {
             System.out.flush();
-
             System.out.println("Current leader: " + this.currentLeader);
+            System.out.println("All servers in election: " + allServersElection);
             if(this.currentLeader == null) {
                 for (String server : allServersElection) {
                     if (server.equals(heartBeatAddress)) {
