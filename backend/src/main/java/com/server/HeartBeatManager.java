@@ -84,33 +84,26 @@ public class HeartBeatManager {
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
                         System.out.println("MESSAGE RECEIVED : " + message);
-    
                         // Resolve Sender Address
                         String[] parts = message.split(":");
                         // Message format : <sender_ip>:<command>:<message>
                         String senderAddress = parts[0];
-                        //System.out.println("Sender Address : " + senderAddress);
-
                         // remove address from message
-                        // if parts[2] doesn't exist then message is just parts[1]
                         if (parts.length < 3) {
                             message = parts[1];
-                            System.out.println("Cut Message: " + message);
+                            //System.out.println("Cut Message: " + message);
                         } else if (parts.length == 3) {
                             message = parts[1] + ":" + parts[2];
-                            System.out.println("Cut Message: " + message);
+                            //System.out.println("Cut Message: " + message);
                         }
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
-                            //String[] parts = message.split(":");
-                            //String senderTailscaleIp = parts[1];
                             updateHeartbeat(senderAddress);
-                            //System.out.println("Message: " + message);
                             System.out.println("Heartbeat received from: " + senderAddress);
                         } else {
                             try {
                                 // Change senderAddress to hostaddressIP
-                                senderAddress = socket.getInetAddress().getHostAddress();
+                                //senderAddress = socket.getInetAddress().getHostAddress();
                                 handleIncomingMessage(senderAddress, message);
                                 System.out.println("Message: " + message);
                             } catch (InterruptedException ex) {
