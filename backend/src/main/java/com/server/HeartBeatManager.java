@@ -92,9 +92,9 @@ public class HeartBeatManager {
                         if (message.startsWith("HEARTBEAT")) {
                             String[] parts = message.split(":");
                             String senderTailscaleIp = parts[1];
-                            updateHeartbeat(senderTaile : " + message);
-                            System.out.println("HearscaleIp);
-                            System.out.println("Messagtbeat received from: " + senderTailscaleIp);
+                            updateHeartbeat(senderTailscaleIp);
+                            System.out.println("Message : " + message);
+                            System.out.println("Heartbeat received from: " + senderTailscaleIp);
                         } else {
                             try {
                                 handleIncomingMessage(senderAddress, message);
