@@ -101,7 +101,7 @@ public class HeartBeatManager {
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
                             updateHeartbeat(senderAddress);
-                            //System.out.println("Heartbeat received from: " + senderAddress);
+                            System.out.println("Heartbeat List: "  + lastHeartbeats);
                         } else {
                             try {
                                 // Change senderAddress to hostaddressIP
