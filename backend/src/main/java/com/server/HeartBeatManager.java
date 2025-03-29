@@ -57,7 +57,7 @@ public class HeartBeatManager {
             socket.setReuseAddress(true); // Allow address reuse
             socket.connect(new InetSocketAddress(serverIp, port), 500);
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
-            String message = myTailscaleIp + ":HEARTBEAT"; // Adding tailscale IP to the heartbeat message
+            String message = serverAddress + ":HEARTBEAT"; // Adding tailscale IP to the heartbeat message
             output.write(message.getBytes()); //Send the heartbeat message
             //System.out.println("HEARTBEAT SENT");
             socket.close();
