@@ -105,11 +105,12 @@ public class LeaderElectionManager {
             /// 
             // Case 1: "ws://primary_server:8887"
             System.out.println("initiateElection : " + serverAddress);
-            //String[] parts = this.currentLeader.split("://"); // Split at "://"
+            String[] parts = this.currentLeader.split("://"); // Split at "://"
             //String[] hostParts = parts[1].split(":"); // Split at ":"
             //String serverName = hostParts[0]; // Get "primary_server"
             //cleanHost = parts[1];
-            cleanHost = serverAddress;
+            System.out.println("CLEANHOST_SERVERADDR : " + parts[1]);
+            cleanHost = parts[1];
         } else {
             // Case 2: "primary_server:5001" (already in correct format)
             cleanHost = serverAddress;
