@@ -59,7 +59,7 @@ public class HeartBeatManager {
             OutputStream output = socket.getOutputStream(); //Create output stream to send data
             String message = myTailscaleIp + ":HEARTBEAT"; // Adding tailscale IP to the heartbeat message
             output.write(message.getBytes()); //Send the heartbeat message
-            //System.out.println("HEARTBEAT SENT: " + serverIp + " on port: " + port);
+            System.out.println("HEARTBEAT SENT");
             socket.close();
         } catch (SocketTimeoutException ste) {
             System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 5 seconds.");
