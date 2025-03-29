@@ -20,6 +20,14 @@ public class LeaderElectionManager {
     private final int timeout = 1000; // Timeout for waiting for responses
     String myTailscaleIp = System.getenv("TAILSCALE_IP");
 
+    private static final Map<String, String> serverNameToAddressMap = Map.of(
+        "backup_server_1", "ws://backup_server_1:8888",
+        "backup_server_2", "ws://backup_server_2:8889",
+        "backup_server_3", "ws://backup_server_3:8890",
+        "primary_server", "ws://primary_server:8887"
+    );
+
+
     public LeaderElectionManager(String serverAddress, List<String> allServersElection, String heartBeatAddress, HeartBeatManager heartBeatManager, WebServer webServer) {
         this.serverAddress = serverAddress;
         this.allServersElection = allServersElection;
@@ -97,7 +105,6 @@ public class LeaderElectionManager {
             cleanHost = serverAddress;
         }
         */
-        
         allServersElection.remove(cleanHost);
         this.running = true;
 
