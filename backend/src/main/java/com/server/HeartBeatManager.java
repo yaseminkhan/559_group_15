@@ -89,11 +89,11 @@ public class HeartBeatManager {
                         String[] parts = message.split(":");
                         // Message format : <sender_ip>:<command>:<message>
                         String senderAddress = parts[0];
-                        System.out.println("Sender Address : " + senderAddress);
+                        //System.out.println("Sender Address : " + senderAddress);
 
                         // remove address from message
                         // if parts[2] doesn't exist then message is just parts[1]
-                        if (parts.length < 2) {
+                        if (parts.length < 3) {
                             message = parts[1];
                             System.out.println("Cut Message: " + message);
                         } else if (parts.length == 3) {
