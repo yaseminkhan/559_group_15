@@ -77,6 +77,13 @@ public class ReplicationManager {
         System.out.println("Kafka producer initialized for primary server.");
     }
 
+    private Game deepCopyGame(Game game) {
+        Gson gson = new GsonBuilder()
+            .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
+            .create();
+        return gson.fromJson(gson.toJson(game), Game.class);
+    }
+
     private void initializeKafkaConsumer() {
         if (kafkaConsumer != null) {
             System.out.println("Kafka consumer is already initialized.");
@@ -214,7 +221,15 @@ public class ReplicationManager {
     private String serializeGameState() {
         Gson gson = new Gson();
         Map<String, Object> gameState = new HashMap<>();
-        gameState.put("activeGames", activeGames);
+
+        // Create a deep copy of the active games to avoid ConcurrentModificationException
+        Map<String, Game> snapshot = new HashMap<>();
+        synchronized (activeGames) {
+            for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+                snapshot.put(entry.getKey(), deepCopyGame(entry.getValue()));
+            }
+        }
+        gameState.put("activeGames", snapshot);
 
         //Create a map of users by their IDs
         Map<String,User> usersById = new HashMap<>();

@@ -25,11 +25,9 @@ public class Game {
     private String wordToDraw;
     private boolean gameStarted;
     private boolean gameEnded;
-    private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
     private transient Timer roundTimer; // Transient so Gson ignores it wben seri
-    //private List<CanvasUpdate> canvasHistory;
     private boolean roundStarted;
 
     private final List<EventWrapper> eventHistory = Collections.synchronizedList(new ArrayList<>());
@@ -43,13 +41,11 @@ public class Game {
         this.confirmedEndGame = new HashSet<>();
         this.gameStarted = false;
         this.gameEnded = false;
-        this.chatMessages = new ArrayList<>();
         this.drawer = null;
         this.drawerIndex = -1;
         this.wordToDraw = Words.getRandomWord();
         this.timeLeft = 60;
         this.round = 1;
-        //this.canvasHistory = new ArrayList<>();
         this.roundStarted = false;
 
     }
@@ -60,6 +56,8 @@ public class Game {
             type = "CHAT";
         } else if (event instanceof CanvasUpdate) {
             type = "CANVAS";
+        } else if (event instanceof CanvasClear) {
+            type = "CLEAR";
         } else {
             throw new IllegalArgumentException("Unknown event type: " + event.getClass());
         }
@@ -76,12 +74,24 @@ public class Game {
     }
     
     public List<CanvasUpdate> getCanvasEvents() {
-        return eventHistory.stream()
-                .filter(e -> "CANVAS".equals(e.type))
-                .map(e -> (CanvasUpdate) e.data)
-                .toList();
-    }
+        int lastClearIndex = -1;
     
+        synchronized (eventHistory) {
+            for (int i = eventHistory.size() - 1; i >= 0; i--) {
+                EventWrapper e = eventHistory.get(i);
+                if ("CLEAR".equals(e.type)) {
+                    lastClearIndex = i;
+                    break;
+                }
+            }
+    
+            return eventHistory.subList(lastClearIndex + 1, eventHistory.size()).stream()
+                    .filter(e -> "CANVAS".equals(e.type))
+                    .map(e -> (CanvasUpdate) e.data)
+                    .toList();
+        }
+    }
+
     public void clearEvents() {
         synchronized (eventHistory) {
             eventHistory.clear();
@@ -92,10 +102,8 @@ public class Game {
         this.gameCode = null;
         players.clear();
         confirmedEndGame.clear();
-        chatMessages.clear();
         this.drawer = null;
         this.wordToDraw = null;
-        // canvasHistory.clear();
         clearEvents(); // clear all events for next game
         for (var player : players) {
             player.setGameCode(null);
@@ -124,8 +132,6 @@ public class Game {
     }
 
     public void resetForRound() {
-        chatMessages.clear();
-        // clearCanvasHistory();
         clearEvents(); // clear events for next round 
         for (var player : players)
             player.setAlreadyGuessed(false);
@@ -160,7 +166,7 @@ public class Game {
                 message.text = user.getUsername() + " guessed correctly!"; // Text is just modified to say the user guessed correctly.
                 message.correct = true;
             }
-            chatMessages.add(message); // Messages are only added when someone hasn't yet guessed correctly.
+            addEvent(message);
         }
 
         // System.out.println("----------------SCORE BOARD-------------------");
@@ -219,9 +225,6 @@ public class Game {
      */
     public void removePlayer(User player) {
         players.remove(player);
-        // if (player.isDrawer()) {
-        //     nextTurn(); // Auto-assign new drawer
-        // }
     }
 
     public void setGameStarted(boolean started) {
@@ -250,7 +253,7 @@ public class Game {
     }
 
     /* 
-     * Assigns new drawer - will need to change to a different algorithm later 
+     * Assigns new drawer
      */
     public void assignNextDrawer() {
         if (players.isEmpty()) {
@@ -487,10 +490,6 @@ public class Game {
         this.wordToDraw = word;
     }
 
-    public Object getChatMessages() {
-        return chatMessages;
-    }
-
     /*
     * Canvas History Functions
     */
@@ -498,14 +497,6 @@ public class Game {
         //canvasHistory.add(update);
         addEvent(update);
     }
-
-    // public List<CanvasUpdate> getCanvasHistory() {
-    //     return new ArrayList<>(canvasHistory);
-    // }
-
-    // public void clearCanvasHistory() {
-    //     canvasHistory.clear();
-    // }
 
     // Class for CanvasUpdate
     public static class CanvasUpdate extends Event {

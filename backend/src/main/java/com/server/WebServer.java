@@ -336,7 +336,7 @@ public class WebServer extends WebSocketServer {
             Game game = activeGames.get(gameCode);
             if (activeGames.get(gameCode) != null) {
                 // game.clearCanvasHistory();
-                game.clearEvents();
+                game.addEvent(new CanvasClear());
                 broadcastToGame(game, "CANVAS_CLEAR");
             }
         } else if (message.startsWith("/getcanvas")) {
@@ -563,7 +563,8 @@ public class WebServer extends WebSocketServer {
     public void handleChatRequest(WebSocket conn, String gameCode) {
         var game = activeGames.get(gameCode);
         var gson = new Gson();
-        var chat = game.getChatMessages();
+        // var chat = game.getChatMessages();
+        var chat = game.getChatEvents();
         // System.out.println(chat);
         conn.send("HISTORY: " + gson.toJson(chat));
     }
