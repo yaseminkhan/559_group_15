@@ -25,14 +25,10 @@ public class Game {
     private String wordToDraw;
     private boolean gameStarted;
     private boolean gameEnded;
-    // private List<Chat> chatMessages;
     private int drawerIndex;
     private int timeLeft;
     private transient Timer roundTimer; // Transient so Gson ignores it wben seri
-    // private List<CanvasUpdate> canvasHistory;
     private boolean roundStarted;
-    private List<Event> events;
-    private int lastCanvasTime;
 
     private final List<EventWrapper> eventHistory = Collections.synchronizedList(new ArrayList<>());
 
@@ -45,15 +41,12 @@ public class Game {
         this.confirmedEndGame = new HashSet<>();
         this.gameStarted = false;
         this.gameEnded = false;
-        // this.chatMessages = new ArrayList<>();
         this.drawer = null;
         this.drawerIndex = -1;
         this.wordToDraw = Words.getRandomWord();
         this.timeLeft = 60;
         this.round = 1;
         this.roundStarted = false;
-        events = new ArrayList<>();
-        lastCanvasTime = -1;
 
     }
 
@@ -161,29 +154,6 @@ public class Game {
                 + timeLeft; // Timing bonus.
     }
 
-    public synchronized void addEvent(Event e) {
-        if (events.size() == 0) {
-            events.add(e);
-            return;
-        }
-
-        var lastEvent = events.getLast();
-
-        var conflictingEvents = new ArrayList<Event>();
-
-        conflictingEvents.add(e);
-        conflictingEvents.add(lastEvent);
-        conflictingEvents.sort(Event::compareTo);
-
-        var x = conflictingEvents.getFirst();
-        var y = conflictingEvents.getLast();
-        if (x.getSequenceNumber() == y.getSequenceNumber()) {
-            y.setSequenceNumber(y.getSequenceNumber() + 1);
-        }
-
-        events.addAll(conflictingEvents);
-    }
-
     public Chat addMessage(Chat message) {
         var user = getUserById(message.id);
 
@@ -197,7 +167,6 @@ public class Game {
                 message.correct = true;
             }
             addEvent(message);
-            // chatMessages.add(message); // Messages are only added when someone hasn't yet guessed correctly.
         }
 
         // System.out.println("----------------SCORE BOARD-------------------");
@@ -528,42 +497,6 @@ public class Game {
         //canvasHistory.add(update);
         addEvent(update);
     }
-  
-    public Object getChatMessages() {
-        return events.stream()
-                .filter((e) -> {
-                    switch (e) {
-                        case Chat c -> {
-                            return true;
-                        }
-                        default -> {
-                            return false;
-                        }
-                    }
-                }).toList();
-    }
-
-    public List<Event> getCanvasHistory() {
-        return events
-                .stream()
-                .dropWhile((e) -> e.getSequenceNumber() <= lastCanvasTime)
-                .filter((e) -> {
-                    switch (e) {
-                        case CanvasUpdate c -> {
-                            return true;
-                        }
-                        default -> {
-                            return false;
-                        }
-                    }
-                }).toList();
-    }
-
-    public void clearCanvasHistory() {
-        if (events.size() == 0)
-            return;
-        lastCanvasTime = events.getLast().getSequenceNumber();
-    }
 
     // Class for CanvasUpdate
     public static class CanvasUpdate extends Event {
@@ -575,25 +508,12 @@ public class Game {
 
         public CanvasUpdate() {} // Required for deserialization
 
-        public CanvasUpdate(double x, double y, String color, double width, int sequenceNo, boolean newStroke) {
+        public CanvasUpdate(double x, double y, String color, double width, boolean newStroke) {
             this.x = x;
             this.y = y;
             this.color = color;
             this.width = width;
             this.newStroke = newStroke;
-            this.sequenceNo = sequenceNo;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public int getSequenceNumber() {
-            return sequenceNo;
-        }
-
-        public void setSequenceNumber(int val) {
-            sequenceNo = val;
         }
 
         public double getX() {
