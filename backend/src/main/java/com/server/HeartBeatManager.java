@@ -207,7 +207,7 @@ public class HeartBeatManager {
         long time = System.currentTimeMillis();
 
         String[] parts = serverAddress.split(":"); // Split by ":"
-        serverAddress = parts[0] + properMap.get(parts[1]); // Get the server address and port
+        serverAddress = parts[0] + ":" + properMap.get(parts[1]); // Get the server address and port
         System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
