@@ -34,6 +34,18 @@ export const WebSocketProvider = ({ children }) => {
         }
     };
 
+    // String.split, but like better.
+    const split = (str, delim, maxSplit) => {
+        if (!str.includes(delim))
+            throw new Error("Delimiter is not in string.");
+        if (maxSplit === 0) return str;
+        const i = str.indexOf(delim);
+        const [left, right] = [str.slice(0, i), str.slice(i+1)];
+        return (maxSplit === 1)
+                    ? [left, right]
+                    : [left, ...split(right, delim, maxSplit-1)];
+    }
+    
     const flushQueue = (ws) => {
         if (!queue.current || queue.current.length === 0) return;
 
@@ -65,7 +77,14 @@ export const WebSocketProvider = ({ children }) => {
             flushQueue(ws);
         };
 
-        ws.onmessage = handleIncomingMessage;
+        ws.onmessage = (event) => {
+            const message = event.data;
+            if (message.startsWith("USER_ID:")) {
+                const userId = message.split(":")[1];
+                console.log(`Received user ID: ${userId}`);
+                localStorage.setItem("userId", userId);
+            }
+        }
 
         ws.onerror = (error) => {
             console.error("Game WebSocket error:", error);

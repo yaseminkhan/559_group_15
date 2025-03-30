@@ -19,6 +19,28 @@ public class Chat extends Event {
     public Chat(String sender, String id, String text, double timestamp) {
         this(sender, id, text, false, timestamp);
     }
+  
+    public Chat(String sender, String id, String text, double timestamp, int sequenceNo) {
+        this(sender, id, text, false, timestamp, sequenceNo);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public int getSequenceNumber() {
+        return sequenceNo;
+    }
+
+    public void setSequenceNumber(int value) {
+        if (value < 0)
+            throw new IllegalArgumentException("Can't assign a negative value to sequence numbers.");
+        sequenceNo = value;
+    }
+
+    public int compareTo(Sequential message) {
+        return Integer.compare(sequenceNo, message.getSequenceNumber());
+    }
 
     @Override
     public String toString() {

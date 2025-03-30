@@ -28,3 +28,4 @@ public abstract class Event implements Comparable<Event> {
         return Integer.compare(this.sequenceNo, e.sequenceNo);
     }
 }
+

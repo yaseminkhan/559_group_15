@@ -30,8 +30,7 @@ public class WebServer extends WebSocketServer {
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
     private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
-
-
+  
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
     private boolean isPrimary; //Flag to indicate if this server is the primary server
@@ -55,6 +54,8 @@ public class WebServer extends WebSocketServer {
         this.myServerAddress = serverAddress;
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
+        // this.clock = new LogicalClock();
+        // this.events = new ArrayList<>();
 
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
                 heartBeatAddress, this); //Initialize the HeartbeatManager
@@ -937,7 +938,7 @@ public class WebServer extends WebSocketServer {
         try {
             Gson gson = new Gson();
             Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
-            game.addCanvasUpdate(update);
+            game.addEvent(update);
         } catch (Exception e) {
             System.out.println("ERROR: Invalid canvas update format.");
         }
@@ -960,7 +961,7 @@ public class WebServer extends WebSocketServer {
             lastIndex = entireList.size();
         }
 
-        List<Game.CanvasUpdate> newStrokes = entireList.subList(lastIndex, entireList.size());
+        List<Event> newStrokes = entireList.subList(lastIndex, entireList.size());
         Gson gson = new Gson();
         String newStrokesJson = gson.toJson(newStrokes);
         int newLastIndex = lastIndex + newStrokes.size();
