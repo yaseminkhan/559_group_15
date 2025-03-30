@@ -1,21 +1,16 @@
 package com.server;
 
-public class Event implements Sequential {
-    private String type;
-    private Sequential message;
-    private int sequenceNo;
+public abstract class Event implements Comparable<Event> {
 
-    public Event(String type, Sequential message) {
-        this.type = type;
-        this.message = message;
+    protected int sequenceNo = -1;  // default unused
+    protected String id = "";       // default unused
+
+    public String getId() {
+        return id;
     }
 
-    public Sequential getMessage() {
-        return message;
-    }
-
-    public String getType() {
-        return type;
+    public void setId(String val) {
+        id = val;
     }
 
     public int getSequenceNumber() {
@@ -26,7 +21,8 @@ public class Event implements Sequential {
         sequenceNo = val;
     }
 
-    public int compareTo(Sequential s) {
-        return Integer.compare(sequenceNo, s.getSequenceNumber());
+    @Override
+    public int compareTo(Event e) {
+        return Integer.compare(this.sequenceNo, e.sequenceNo);
     }
 }

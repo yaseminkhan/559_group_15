@@ -297,7 +297,8 @@ public class ReplicationManager {
                 String gameCode = message.split(" ")[1];
                 Game game = activeGames.get(gameCode);
                 if (game != null) {
-                    game.clearCanvasHistory();
+                    // game.clearCanvasHistory();
+                    game.clearEvents();
                     webServer.broadcastToGame(game, "CANVAS_CLEAR");
                 }
             } else if (message.startsWith("/getcanvas")) {

@@ -1,6 +1,7 @@
 package com.server;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,8 +29,10 @@ public class Game {
     private int drawerIndex;
     private int timeLeft;
     private transient Timer roundTimer; // Transient so Gson ignores it wben seri
-    private List<CanvasUpdate> canvasHistory;
+    //private List<CanvasUpdate> canvasHistory;
     private boolean roundStarted;
+
+    private final List<Event> eventHistory = Collections.synchronizedList(new ArrayList<>());
 
     /*
      * constructor creates new instance of a game
@@ -46,9 +49,33 @@ public class Game {
         this.wordToDraw = Words.getRandomWord();
         this.timeLeft = 60;
         this.round = 1;
-        this.canvasHistory = new ArrayList<>();
+        //this.canvasHistory = new ArrayList<>();
         this.roundStarted = false;
 
+    }
+
+    public synchronized void addEvent(Event event) {
+        eventHistory.add(event);
+    }
+
+    public List<Chat> getChatEvents() {
+        return eventHistory.stream()
+                .filter(e -> e instanceof Chat)
+                .map(e -> (Chat) e)
+                .toList();
+    }
+    
+    public List<CanvasUpdate> getCanvasEvents() {
+        return eventHistory.stream()
+                .filter(e -> e instanceof CanvasUpdate)
+                .map(e -> (CanvasUpdate) e)
+                .toList();
+    }
+
+    public void clearEvents() {
+        synchronized (eventHistory) {
+            eventHistory.clear();
+        }
     }
 
     public void clearGame() {
@@ -58,7 +85,8 @@ public class Game {
         chatMessages.clear();
         this.drawer = null;
         this.wordToDraw = null;
-        canvasHistory.clear();
+        // canvasHistory.clear();
+        clearEvents(); // clear all events for next game
         for (var player : players) {
             player.setGameCode(null);
             player.setWasDrawer(false);
@@ -87,7 +115,8 @@ public class Game {
 
     public void resetForRound() {
         chatMessages.clear();
-        clearCanvasHistory();
+        // clearCanvasHistory();
+        clearEvents(); // clear events for next round 
         for (var player : players)
             player.setAlreadyGuessed(false);
         cancelTimer();
@@ -456,25 +485,25 @@ public class Game {
     * Canvas History Functions
     */
     public void addCanvasUpdate(CanvasUpdate update) {
-        canvasHistory.add(update);
+        //canvasHistory.add(update);
+        addEvent(update);
     }
 
-    public List<CanvasUpdate> getCanvasHistory() {
-        return new ArrayList<>(canvasHistory);
-    }
+    // public List<CanvasUpdate> getCanvasHistory() {
+    //     return new ArrayList<>(canvasHistory);
+    // }
 
-    public void clearCanvasHistory() {
-        canvasHistory.clear();
-    }
+    // public void clearCanvasHistory() {
+    //     canvasHistory.clear();
+    // }
 
     // Class for CanvasUpdate
-    public static class CanvasUpdate implements Sequential {
+    public static class CanvasUpdate extends Event {
         private double x;
         private double y;
         private String color;
         private double width;
         private boolean newStroke;
-        private int sequenceNo;
 
         public CanvasUpdate(double x, double y, String color, double width, boolean newStroke) {
             this.x = x;
@@ -482,19 +511,6 @@ public class Game {
             this.color = color;
             this.width = width;
             this.newStroke = newStroke;
-            this.sequenceNo = 0;
-        }
-
-        public int compareTo(Sequential s) {
-            return Integer.compare(sequenceNo, s.getSequenceNumber());
-        }
-
-        public int getSequenceNumber() {
-            return sequenceNo;
-        }
-
-        public void setSequenceNumber(int val) {
-            sequenceNo = val;
         }
 
         public double getX() {
