@@ -508,6 +508,8 @@ public class Game {
     }
 
     public void clearCanvasHistory() {
+        if (events.size() == 0)
+            return;
         lastCanvasTime = events.getLast().getSequenceNumber();
     }
 
