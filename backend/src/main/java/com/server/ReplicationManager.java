@@ -22,6 +22,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.java_websocket.WebSocket;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 public class ReplicationManager {
@@ -329,7 +330,10 @@ public class ReplicationManager {
     private void updateGameState(String gameStateJson) {
         synchronized (gameStateLock) {
             System.out.println("Raw gameStateJson: " + gameStateJson); // Debug log
-            Gson gson = new Gson();
+            // Gson gson = new Gson();
+            Gson gson = new GsonBuilder()
+                .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
+                .create();
             Type type = new TypeToken<Map<String, Object>>() {}.getType();
 
             // Deserialize the JSON string into a map

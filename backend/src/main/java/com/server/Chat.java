@@ -6,6 +6,8 @@ public class Chat extends Event {
     public boolean correct = false;
     public double timestamp;
 
+    public Chat() {}
+
     public Chat(String sender, String id, String text, boolean correct, double timestamp) {
         this.sender = sender;
         this.id = id;

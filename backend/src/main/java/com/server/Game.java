@@ -32,7 +32,7 @@ public class Game {
     //private List<CanvasUpdate> canvasHistory;
     private boolean roundStarted;
 
-    private final List<Event> eventHistory = Collections.synchronizedList(new ArrayList<>());
+    private final List<EventWrapper> eventHistory = Collections.synchronizedList(new ArrayList<>());
 
     /*
      * constructor creates new instance of a game
@@ -55,23 +55,33 @@ public class Game {
     }
 
     public synchronized void addEvent(Event event) {
-        eventHistory.add(event);
+        String type;
+        if (event instanceof Chat) {
+            type = "CHAT";
+        } else if (event instanceof CanvasUpdate) {
+            type = "CANVAS";
+        } else {
+            throw new IllegalArgumentException("Unknown event type: " + event.getClass());
+        }
+    
+        EventWrapper wrapper = new EventWrapper(type, event);
+        eventHistory.add(wrapper);
     }
 
     public List<Chat> getChatEvents() {
         return eventHistory.stream()
-                .filter(e -> e instanceof Chat)
-                .map(e -> (Chat) e)
+                .filter(e -> "CHAT".equals(e.type))
+                .map(e -> (Chat) e.data)
                 .toList();
     }
     
     public List<CanvasUpdate> getCanvasEvents() {
         return eventHistory.stream()
-                .filter(e -> e instanceof CanvasUpdate)
-                .map(e -> (CanvasUpdate) e)
+                .filter(e -> "CANVAS".equals(e.type))
+                .map(e -> (CanvasUpdate) e.data)
                 .toList();
     }
-
+    
     public void clearEvents() {
         synchronized (eventHistory) {
             eventHistory.clear();
@@ -504,6 +514,8 @@ public class Game {
         private String color;
         private double width;
         private boolean newStroke;
+
+        public CanvasUpdate() {} // Required for deserialization
 
         public CanvasUpdate(double x, double y, String color, double width, boolean newStroke) {
             this.x = x;

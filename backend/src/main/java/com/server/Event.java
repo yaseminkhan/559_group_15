@@ -5,6 +5,8 @@ public abstract class Event implements Comparable<Event> {
     protected int sequenceNo = -1;  // default unused
     protected String id = "";       // default unused
 
+    public Event() {}
+
     public String getId() {
         return id;
     }
