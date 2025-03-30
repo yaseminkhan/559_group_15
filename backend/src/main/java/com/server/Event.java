@@ -2,8 +2,8 @@ package com.server;
 
 public abstract class Event implements Comparable<Event> {
 
-    protected int sequenceNo = -1;  // default unused
-    protected String id = "";       // default unused
+    protected int sequenceNo;  
+    protected String id;      
 
     public Event() {}
 

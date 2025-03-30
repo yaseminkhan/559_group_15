@@ -31,6 +31,7 @@ public class Game {
     private boolean roundStarted;
 
     private final List<EventWrapper> eventHistory = Collections.synchronizedList(new ArrayList<>());
+    private final LogicalClock logicalClock = new LogicalClock();
 
     /*
      * constructor creates new instance of a game
@@ -64,6 +65,10 @@ public class Game {
     
         EventWrapper wrapper = new EventWrapper(type, event);
         eventHistory.add(wrapper);
+    }
+
+    public LogicalClock getLogicalClock() {
+        return logicalClock;
     }
 
     public List<Chat> getChatEvents() {

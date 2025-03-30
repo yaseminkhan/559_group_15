@@ -1,5 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
+let logicalClock = 0;
+
+export const tickClock = () => ++logicalClock;
+
+export const updateClock = (remoteTime) => {
+    logicalClock = Math.max(logicalClock, remoteTime);
+    return ++logicalClock;
+};
+
+export const getClock = () => logicalClock;
+
 const WebSocketContext = createContext(null);
 
 export const WebSocketProvider = ({ children }) => {
@@ -11,7 +22,13 @@ export const WebSocketProvider = ({ children }) => {
     const wasClosedRef = useRef(false);
 
     const queueOrSendEvent = (prefix, eventData) => {
-        const message = prefix + " " + JSON.stringify(eventData);
+        const messageWithTimestamp = {
+            ...eventData,
+            sequenceNumber: tickClock(),
+            senderId: localStorage.getItem("userId")
+        };
+
+        const message = prefix + " " + JSON.stringify(messageWithTimestamp);
 
         const ready = socket && socket.readyState === WebSocket.OPEN;
         const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;

@@ -180,17 +180,6 @@ public class WebServer extends WebSocketServer {
             // Move user to temporarily disconnected list
             temporarilyDisconnectedUsers.put(removedUser.getId(), removedUser);
 
-            // Print users for debugging
-            // System.out.println("Current connected users:");
-            // for (User user : connectedUsers.values()) {
-            //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-            // }
-
-            // System.out.println("Temporarily disconnected users:");
-            // for (User user : temporarilyDisconnectedUsers.values()) {
-            //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-            // }
-
             // Get the game the user was in
             String gameCode = removedUser.getGameCode();
             if (gameCode != null) {
@@ -312,8 +301,6 @@ public class WebServer extends WebSocketServer {
             }
             handleChat(conn, gameCode, chatData);
         } else if (message.startsWith("/canvas-update ")) {
-            //System.out.println("Canvas Update From: " + conn.getRemoteSocketAddress() + ": " + message);
-            // /canvas-update <gameCode> <json>
             String[] parts = message.split(" ", 3);
 
             if (parts.length < 3) {
@@ -581,8 +568,15 @@ public class WebServer extends WebSocketServer {
             return;
         }
         //DEBUGGING END
-        chat.sender = user.getUsername();
-        chat = game.addMessage(chat); // Make sure to clear data after /new-round.
+
+        // Lamport timestamp logic here:
+        int updatedTime = game.getLogicalClock().getAndUpdate(chat.getSequenceNumber());
+        chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
+
+        System.out.println("[LAMPORT][CHAT] Frontend timestamp: " + chat.getSequenceNumber() +
+                   ", Updated backend clock: " + updatedTime);
+
+        chat = game.addMessage(chat); 
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 
@@ -691,16 +685,12 @@ public class WebServer extends WebSocketServer {
         // Cancel the existing timer if it exists
         game.cancelTimer();
 
-        //game.setTimeLeft(60); // Reset timer for new round
-
         if (game.getTimeLeft() <= 0 || game.getTimeLeft() > 60) {
             game.setTimeLeft(60); // Only reset if invalid or uninitialized
         }
 
         // game.clearCanvasHistory();
         game.clearEvents();
-
-        // game.setTimeLeft(5); // short timer for testing
 
         // Ensure only one timer runs per game
         Timer roundTimer = new Timer();
@@ -937,6 +927,10 @@ public class WebServer extends WebSocketServer {
         try {
             Gson gson = new Gson();
             Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
+
+            int newSeq = game.getLogicalClock().getAndUpdate(update.getSequenceNumber());
+            update.setSequenceNumber(newSeq);
+
             game.addCanvasUpdate(update);
         } catch (Exception e) {
             System.out.println("ERROR: Invalid canvas update format.");
