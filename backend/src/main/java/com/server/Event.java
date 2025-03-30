@@ -1,32 +1,16 @@
 package com.server;
 
-public class Event implements Sequential {
-    private String type;
-    private Sequential message;
-    private int sequenceNo;
+public abstract class Event implements Comparable<Event> {
 
-    public Event(String type, Sequential message) {
-        this.type = type;
-        this.message = message;
+    public abstract String getId();
+    public abstract int getSequenceNumber();
+    public abstract void setSequenceNumber(int val);
+    
+    public int compareTo(Event e) {
+        if (e.getSequenceNumber() == getSequenceNumber()) {
+            return getId().compareTo(e.getId());
+        }
+        return Integer.compare(getSequenceNumber(), e.getSequenceNumber());
     }
 
-    public Sequential getMessage() {
-        return message;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public int getSequenceNumber() {
-        return sequenceNo;
-    }
-
-    public void setSequenceNumber(int val) {
-        sequenceNo = val;
-    }
-
-    public int compareTo(Sequential s) {
-        return Integer.compare(sequenceNo, s.getSequenceNumber());
-    }
 }

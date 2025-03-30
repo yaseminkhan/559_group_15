@@ -21,20 +21,20 @@ public class LogicalClock {
         ++time;
     }
 
-    public synchronized void update(Event e) {
-        var m = e.getMessage();
-        switch (e.getType()) {
-            case "send":
-                tick();
-                m.setSequenceNumber(time);
-                break;
-            case "receive":
-                time = Math.max(time, m.getSequenceNumber());
-                tick();
-                break;
-            default:
-                tick();
-        }
-        e.setSequenceNumber(time);
-    }
+    // public synchronized void update(Event e) {
+    //     var m = e.getMessage();
+    //     switch (e.getType()) {
+    //         case "send":
+    //             tick();
+    //             m.setSequenceNumber(time);
+    //             break;
+    //         case "receive":
+    //             time = Math.max(time, m.getSequenceNumber());
+    //             tick();
+    //             break;
+    //         default:
+    //             tick();
+    //     }
+    //     e.setSequenceNumber(time);
+    // }
 }

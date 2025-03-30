@@ -1,6 +1,6 @@
 package com.server;
 
-public class Chat implements Sequential {
+public class Chat extends Event {
     // Will change to private.
 
     public String sender;
@@ -21,6 +21,10 @@ public class Chat implements Sequential {
 
     public Chat(String sender, String id, String text, double timestamp, int sequenceNo) {
         this(sender, id, text, false, timestamp, sequenceNo);
+    }
+
+    public String getId() {
+        return id;
     }
 
     public int getSequenceNumber() {
