@@ -54,7 +54,7 @@ export const WebSocketProvider = ({ children }) => {
     // Connect to coordinator
     useEffect(() => {
         const connectCoordinator = () => {
-            const coordinator = new WebSocket("ws://connection_coordinator:9999");
+            const coordinator = new WebSocket("ws://100.79.134.37:9999");
 
             coordinator.onopen = () => {
                 console.log("Connected to coordinator.");
@@ -66,7 +66,7 @@ export const WebSocketProvider = ({ children }) => {
                 if (message.startsWith("NEW_LEADER:")) {
                     const newAddress = message.split("NEW_LEADER:")[1].trim();
                     const port = newAddress.split(":").pop();
-                    const newLeaderAddress = `ws://localhost:${port}`;
+                    const newLeaderAddress = `ws://${newAddress}:${port}`;
 
                     console.log("Received new leader update:", newLeaderAddress);
 
