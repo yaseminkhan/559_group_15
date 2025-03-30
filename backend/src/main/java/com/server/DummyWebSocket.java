@@ -2,7 +2,6 @@ package com.server;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.drafts.Draft;
-import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.protocols.IProtocol;
 
 import java.net.InetSocketAddress;

@@ -22,6 +22,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.java_websocket.WebSocket;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 public class ReplicationManager {
@@ -74,6 +75,13 @@ public class ReplicationManager {
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         kafkaProducer = new KafkaProducer<>(producerProps);
         System.out.println("Kafka producer initialized for primary server.");
+    }
+
+    private Game deepCopyGame(Game game) {
+        Gson gson = new GsonBuilder()
+            .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
+            .create();
+        return gson.fromJson(gson.toJson(game), Game.class);
     }
 
     private void initializeKafkaConsumer() {
@@ -213,7 +221,15 @@ public class ReplicationManager {
     private String serializeGameState() {
         Gson gson = new Gson();
         Map<String, Object> gameState = new HashMap<>();
-        gameState.put("activeGames", activeGames);
+
+        // Create a deep copy of the active games to avoid ConcurrentModificationException
+        Map<String, Game> snapshot = new HashMap<>();
+        synchronized (activeGames) {
+            for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+                snapshot.put(entry.getKey(), deepCopyGame(entry.getValue()));
+            }
+        }
+        gameState.put("activeGames", snapshot);
 
         //Create a map of users by their IDs
         Map<String,User> usersById = new HashMap<>();
@@ -297,7 +313,8 @@ public class ReplicationManager {
                 String gameCode = message.split(" ")[1];
                 Game game = activeGames.get(gameCode);
                 if (game != null) {
-                    game.clearCanvasHistory();
+                    // game.clearCanvasHistory();
+                    game.clearEvents();
                     webServer.broadcastToGame(game, "CANVAS_CLEAR");
                 }
             } else if (message.startsWith("/getcanvas")) {
@@ -328,7 +345,10 @@ public class ReplicationManager {
     private void updateGameState(String gameStateJson) {
         synchronized (gameStateLock) {
             System.out.println("Raw gameStateJson: " + gameStateJson); // Debug log
-            Gson gson = new Gson();
+            // Gson gson = new Gson();
+            Gson gson = new GsonBuilder()
+                .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
+                .create();
             Type type = new TypeToken<Map<String, Object>>() {}.getType();
 
             // Deserialize the JSON string into a map
