@@ -20,6 +20,7 @@ export const WebSocketProvider = ({ children }) => {
             setSocket(ws);
 
             const storedUserId = localStorage.getItem("userId");
+            console.log(storedUserId)
             if (storedUserId) {
                 console.log(`Reconnecting as user: ${storedUserId}`);
                 ws.send(`/reconnect ${storedUserId}`);
@@ -64,10 +65,8 @@ export const WebSocketProvider = ({ children }) => {
             coordinator.onmessage = (event) => {
                 const message = event.data;
                 if (message.startsWith("NEW_LEADER:")) {
-                    const newAddress = message.split("NEW_LEADER:")[1].trim();
-                    const port = newAddress.split(":").pop();
-                    const newLeaderAddress = `ws://${newAddress}:${port}`;
-
+                    const newAddress = message.split("NEW_LEADER:")[1];
+                    const newLeaderAddress = `${newAddress}`;
                     console.log("Received new leader update:", newLeaderAddress);
 
                     // Trigger socket reconnection

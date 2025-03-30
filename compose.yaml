@@ -45,6 +45,8 @@ services:
     hostname: connection_coordinator
     ports:
       - "9999:9999"
+    environment:
+      PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
     command: >
       mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
     networks:
