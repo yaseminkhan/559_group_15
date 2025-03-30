@@ -31,8 +31,8 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
     private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
 
-    private LogicalClock clock;
-    private List<Event> events;
+    // private LogicalClock clock;
+    // private List<Event> events;
 
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
@@ -57,8 +57,8 @@ public class WebServer extends WebSocketServer {
         this.myServerAddress = serverAddress;
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
-        this.clock = new LogicalClock();
-        this.events = new ArrayList<>();
+        // this.clock = new LogicalClock();
+        // this.events = new ArrayList<>();
 
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
                 heartBeatAddress, this); //Initialize the HeartbeatManager
@@ -250,42 +250,42 @@ public class WebServer extends WebSocketServer {
         }
     }
 
-    private void recallEvents(int start, int end) {
-        var gson = new Gson();
-        System.out.println("========== PRINTING EVENTS ==========");
-        events
-                .subList(0, events.size())
-                .forEach((x) -> System.out.println(gson.toJson(x)));
-        System.out.println("=========== DONE PRINTING ===========");
-    }
+    // private void recallEvents(int start, int end) {
+    //     var gson = new Gson();
+    //     System.out.println("========== PRINTING EVENTS ==========");
+    //     events
+    //             .subList(0, events.size())
+    //             .forEach((x) -> System.out.println(gson.toJson(x)));
+    //     System.out.println("=========== DONE PRINTING ===========");
+    // }
 
-    private void recallEvents() {
-        recallEvents(0, events.size());
-    }
+    // private void recallEvents() {
+    //     recallEvents(0, events.size());
+    // }
 
-    private void updateClock(String eventType, Sequential message, boolean print) {
-        if (print) {
-            System.out.println("Logical Clock Time: " + clock.getTime());
-            System.out.println(eventType + " " + new Gson().toJson(message));
-        }
+    // private void updateClock(String eventType, Sequential message, boolean print) {
+    //     if (print) {
+    //         System.out.println("Logical Clock Time: " + clock.getTime());
+    //         System.out.println(eventType + " " + new Gson().toJson(message));
+    //     }
 
-        var event = new Event(eventType, message);
-        /* Update the logical clock, and insert the event
-           in the logical order it happened. */
-        {
-            clock.update(event);
-            events.add(event);
-            events.sort(Event::compareTo);
-        }
+    //     var event = new Event(eventType, message);
+    //     /* Update the logical clock, and insert the event
+    //        in the logical order it happened. */
+    //     {
+    //         clock.update(event);
+    //         events.add(event);
+    //         events.sort(Event::compareTo);
+    //     }
 
-        if (print) {
-            System.out.println("Logical Clock Time: " + clock.getTime());
-        }
-    }
+    //     if (print) {
+    //         System.out.println("Logical Clock Time: " + clock.getTime());
+    //     }
+    // }
 
-    private void updateClock(String eventType, Sequential message) {
-        updateClock(eventType, message, false);
-    }
+    // private void updateClock(String eventType, Sequential message) {
+    //     updateClock(eventType, message, false);
+    // }
 
     @Override
     public void onMessage(WebSocket conn, String message) {
@@ -351,8 +351,8 @@ public class WebServer extends WebSocketServer {
                 System.err.println("ERROR: Game not found.");
                 return;
             }
-            var update = new Gson().fromJson(chatData, Chat.class);
-            updateClock("receive", update, true);
+            //var update = new Gson().fromJson(chatData, Chat.class);
+            //updateClock("receive", update, true);
             handleChat(conn, gameCode, chatData);
 
             // Debugging ONLY.
@@ -376,7 +376,7 @@ public class WebServer extends WebSocketServer {
             }
 
             var update = new Gson().fromJson(json, Game.CanvasUpdate.class);
-            updateClock("receive", update, true);
+            //updateClock("receive", update, true);
 
             handleCanvasUpdate(conn, gameCode, json);
 

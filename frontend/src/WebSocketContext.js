@@ -7,35 +7,23 @@ export const WebSocketProvider = ({ children }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [serverAddress, setServerAddress] = useState(null);
     const coordinatorRef = useRef(null);
-    const lamportClock = useRef(0);
     const queue = useRef([]);
+    const wasClosedRef = useRef(false);
 
-    const getLamportTimestamp = () => ++lamportClock.current; // increment on send 
-
-    const updateLamportClock = (receivedTimestamp) => lamportClock.current = Math.max(lamportClock.current, receivedTimestamp) + 1;
-
-    // every message sent through here gets a timestamp and is buffered if the socket disconnects 
     const queueOrSendEvent = (prefix, eventData) => {
-        const sequenceNo = getLamportTimestamp();
-        const event = { ...eventData, sequenceNo };
-        const message = prefix + " " + JSON.stringify(event);
-        if (isConnected && socket) 
-            socket.send(message);
-        else
-            queue.current.push(message);
-    };
+        const message = prefix + " " + JSON.stringify(eventData);
 
-    // String.split, but like better.
-    const split = (str, delim, maxSplit) => {
-        if (!str.includes(delim))
-            throw new Error("Delimiter is not in string.");
-        if (maxSplit === 0) return str;
-        const i = str.indexOf(delim);
-        const [left, right] = [str.slice(0, i), str.slice(i+1)];
-        return (maxSplit === 1)
-                    ? [left, right]
-                    : [left, ...split(right, delim, maxSplit-1)];
-    }
+        const ready = socket && socket.readyState === WebSocket.OPEN;
+        const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;
+
+        if (!closedOrClosing && ready) {
+            console.log("[Sent immediately]:", message);
+            socket.send(message);
+        } else {
+            console.log("[Queued]:", message);
+            queue.current.push(message);
+        }
+    };
 
     const handleIncomingMessage = (event) => {
         const message = event.data;
@@ -44,31 +32,20 @@ export const WebSocketProvider = ({ children }) => {
             console.log(`Received user ID: ${userId}`);
             localStorage.setItem("userId", userId);
         }
-    }
+    };
 
-    // Sends current stored messages (clear buffer when server reconnects)
     const flushQueue = (ws) => {
-        if (queue.current === undefined || queue.current.length === 0) return;  // Array is empty or undefined.
+        if (!queue.current || queue.current.length === 0) return;
 
-        const arr = [...queue.current]
-            .map(s => split(s, " ", 2)) 
-            .map(([prefix, gameCode, msgStr]) => [prefix, gameCode, JSON.parse(msgStr)])
-            .sort(([,, a], [,, b]) => a.sequenceNo - b.sequenceNo)
-            .map(([prefix, gameCode, msg]) => prefix + " " + gameCode + " " + JSON.stringify(msg));
-
-        console.log(
-            "===============PRINTING QUEUE================",
-            arr,
-            "=============================================",
-        )
-
-        arr.forEach(msg => ws.send(msg));
+        console.log("=============== FLUSHING QUEUE ===============");
+        queue.current.forEach((msg) => {
+            console.log("[Sending from queue]:", msg);
+            ws.send(msg);
+        });
+        console.log("===============================================");
         queue.current = [];
-        
-        console.log("DONE FLUSHING QUEUE.")
-    }
+    };
 
-    // Connect to backend server
     useEffect(() => {
         if (!serverAddress) return;
 
@@ -78,7 +55,8 @@ export const WebSocketProvider = ({ children }) => {
             console.log(`Connected to backend: ${serverAddress}`);
             setIsConnected(true);
             setSocket(ws);
-            
+            wasClosedRef.current = false;
+
             const storedUserId = localStorage.getItem("userId");
             if (storedUserId) {
                 console.log(`Reconnecting as user: ${storedUserId}`);
@@ -97,15 +75,15 @@ export const WebSocketProvider = ({ children }) => {
             console.warn("Game WebSocket closed.");
             setIsConnected(false);
             setSocket(null);
+            wasClosedRef.current = true;
         };
 
         return () => {
-            console.log("🔌 Cleaning up old socket connection.");
+            console.log("Cleaning up old socket connection.");
             ws.close();
         };
     }, [serverAddress]);
 
-    // Connect to coordinator
     useEffect(() => {
         const connectCoordinator = () => {
             const coordinator = new WebSocket("ws://localhost:9999");
@@ -121,10 +99,7 @@ export const WebSocketProvider = ({ children }) => {
                     const newAddress = message.split("NEW_LEADER:")[1].trim();
                     const port = newAddress.split(":").pop();
                     const newLeaderAddress = `ws://localhost:${port}`;
-
                     console.log("Received new leader update:", newLeaderAddress);
-
-                    // Trigger socket reconnection
                     setServerAddress(newLeaderAddress);
                 }
             };
@@ -145,7 +120,7 @@ export const WebSocketProvider = ({ children }) => {
     }, []);
 
     return (
-        <WebSocketContext.Provider value={{ socket, isConnected, queueOrSendEvent }}>
+        <WebSocketContext.Provider value={{ socket, isConnected, queueOrSendEvent, wasClosedRef }}>
             {children}
         </WebSocketContext.Provider>
     );
