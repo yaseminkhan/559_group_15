@@ -37,14 +37,14 @@ export const WebSocketProvider = ({ children }) => {
                     : [left, ...split(right, delim, maxSplit-1)];
     }
 
-    const handleIncomingMessage = (event) => {
-        const message = event.data;
-        if (message.startsWith("USER_ID:")) {
-            const userId = message.split(":")[1];
-            console.log(`Received user ID: ${userId}`);
-            localStorage.setItem("userId", userId);
-        }
-    }
+    // const handleIncomingMessage = (event) => {
+    //     const message = event.data;
+    //     if (message.startsWith("USER_ID:")) {
+    //         const userId = message.split(":")[1];
+    //         console.log(`Received user ID: ${userId}`);
+    //         localStorage.setItem("userId", userId);
+    //     }
+    // }
 
     // Sends current stored messages (clear buffer when server reconnects)
     const flushQueue = (ws) => {
@@ -87,7 +87,14 @@ export const WebSocketProvider = ({ children }) => {
             flushQueue(ws);
         };
 
-        ws.onmessage = handleIncomingMessage;
+        ws.onmessage = (event) => {
+            const message = event.data;
+            if (message.startsWith("USER_ID:")) {
+                const userId = message.split(":")[1];
+                console.log(`Received user ID: ${userId}`);
+                localStorage.setItem("userId", userId);
+            }
+        }
 
         ws.onerror = (error) => {
             console.error("Game WebSocket error:", error);
