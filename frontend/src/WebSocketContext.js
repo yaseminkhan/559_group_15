@@ -37,15 +37,6 @@ export const WebSocketProvider = ({ children }) => {
                     : [left, ...split(right, delim, maxSplit-1)];
     }
 
-    // const handleIncomingMessage = (event) => {
-    //     const message = event.data;
-    //     if (message.startsWith("USER_ID:")) {
-    //         const userId = message.split(":")[1];
-    //         console.log(`Received user ID: ${userId}`);
-    //         localStorage.setItem("userId", userId);
-    //     }
-    // }
-
     // Sends current stored messages (clear buffer when server reconnects)
     const flushQueue = (ws) => {
         if (queue.current === undefined || queue.current.length === 0) return;  // Array is empty or undefined.
