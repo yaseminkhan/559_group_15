@@ -88,9 +88,10 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         // if (!socket || !isConnected) return;
 
         // Since we're queueing messages, we don't care if the websocket is open or not.
+        console.log("Sent message:", newMessage);
         queueOrSendEvent(`/chat ${gameCode}`, messageToSend);
         // socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
-        console.log("Sent message:", newMessage);
+        // console.log("Sent message:", newMessage);
         setNewMessage("");
       }
     };

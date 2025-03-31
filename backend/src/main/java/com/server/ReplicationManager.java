@@ -100,6 +100,10 @@ public class ReplicationManager {
         consumerThread = new Thread(() -> {
             try {
                 while (true) {
+                    if (isPrimary) {
+                        System.out.println("Now primary — exiting Kafka consumer thread.");
+                        break;
+                    }
                     ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
                     System.out.println("Polling from Kafka");
                     for (ConsumerRecord<String, String> record : records) {

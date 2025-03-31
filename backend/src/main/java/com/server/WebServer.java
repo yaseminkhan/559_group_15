@@ -548,11 +548,9 @@ public class WebServer extends WebSocketServer {
     // ======================================================== Game Logic Methods ========================================================
 
     public void handleChatRequest(WebSocket conn, String gameCode) {
-        var game = activeGames.get(gameCode);
-        var gson = new Gson();
-        // var chat = game.getChatMessages();
-        var chat = game.getChatEvents();
-        // System.out.println(chat);
+        Game game = activeGames.get(gameCode);
+        Gson gson = new Gson();
+        List<Chat> chat = game.getChatEvents();
         conn.send("HISTORY: " + gson.toJson(chat));
     }
 
@@ -593,6 +591,13 @@ public class WebServer extends WebSocketServer {
             // Reset all players scores to 0
             game.resetScores();
             game.setGameStarted(true);
+            System.out.println("  - wordToDraw: " + game.getWordToDraw());
+            System.out.println("  - Time Left: " + game.getTimeLeft());
+            System.out.println("  - Timer Exists: " + (game.getTimer() != null));
+            System.out.println("  - gameStarted: " + game.hasGameStarted());
+            System.out.println("  - gameEnded: " + game.isGameEnded());
+            System.out.println("  - drawer: " + (game.getDrawer() != null ? game.getDrawer().getUsername() : "null"));
+            
             // Assign a drawer 
             System.out.println("Assign next drawer called\n");
             game.assignNextDrawer();
@@ -616,7 +621,11 @@ public class WebServer extends WebSocketServer {
                 System.out.println("User " + user.getUsername() + " confirmed end game for " + gameCode);
 
                 // Check if all players have confirmed
-                if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
+                if (game.getPlayers().size() == game.sizeOfPlayersConfirmedEnd()) {
+                    // for (User player: game.getPlayers()) {
+                    //     player = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
+                    // }
+
                     game.clearGame();
                     activeGames.remove(gameCode);
                     // connectedUsers.clear(); // causing issues
@@ -688,9 +697,6 @@ public class WebServer extends WebSocketServer {
         if (game.getTimeLeft() <= 0 || game.getTimeLeft() > 60) {
             game.setTimeLeft(60); // Only reset if invalid or uninitialized
         }
-
-        // game.clearCanvasHistory();
-        game.clearEvents();
 
         // Ensure only one timer runs per game
         Timer roundTimer = new Timer();

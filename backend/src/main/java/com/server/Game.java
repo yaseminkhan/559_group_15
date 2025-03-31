@@ -30,8 +30,8 @@ public class Game {
     private transient Timer roundTimer; // Transient so Gson ignores it wben seri
     private boolean roundStarted;
 
-    private final List<EventWrapper> eventHistory = Collections.synchronizedList(new ArrayList<>());
-    private final LogicalClock logicalClock = new LogicalClock();
+    private List<EventWrapper> eventHistory;
+    private final LogicalClock logicalClock;
 
     /*
      * constructor creates new instance of a game
@@ -48,7 +48,8 @@ public class Game {
         this.timeLeft = 60;
         this.round = 1;
         this.roundStarted = false;
-
+        this.eventHistory = Collections.synchronizedList(new ArrayList<>());
+        this.logicalClock = new LogicalClock();
     }
 
     public synchronized void addEvent(Event event) {

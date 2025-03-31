@@ -64,7 +64,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       width: ctx.lineWidth,
       newStroke: true,
     };
-
+    console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
     queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
   };
 
@@ -89,7 +89,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       width: ctx.lineWidth,
       newStroke: false,
     };
-
+    console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
     queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
   };
 

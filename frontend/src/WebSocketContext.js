@@ -79,7 +79,18 @@ export const WebSocketProvider = ({ children }) => {
                 console.log(`Reconnecting as user: ${storedUserId}`);
                 ws.send(`/reconnect ${storedUserId}`);
             }
-            flushQueue(ws);
+            // flushQueue(ws);
+
+            // Wait until WebSocket is fully ready before flushing queue
+            const waitForOpen = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    console.log("WebSocket is open! Flushing queue...");
+                    flushQueue(ws);
+                    clearInterval(waitForOpen);
+                } else {
+                    console.log("Waiting for WebSocket to stabilize...");
+                }
+            }, 200); // Check every 200ms
         };
 
         ws.onmessage = handleIncomingMessage;
