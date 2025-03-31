@@ -487,16 +487,8 @@ public class Game {
     public Object getChatMessages() {
         return events.stream()
                 .map(EventWrapper::unwrap)
-                .filter((e) -> {
-                    switch (e) {
-                        case Chat c -> {
-                            return true;
-                        }
-                        default -> {
-                            return false;
-                        }
-                    }
-                }).toList();
+                .filter((e) -> e instanceof Chat)
+                .toList();
     }
 
     public List<Event> getCanvasHistory() {
@@ -504,16 +496,8 @@ public class Game {
                 .stream()
                 .dropWhile((e) -> e.getSequenceNumber() <= lastCanvasTime)
                 .map(EventWrapper::unwrap)
-                .filter((e) -> {
-                    switch (e) {
-                        case CanvasUpdate c -> {
-                            return true;
-                        }
-                        default -> {
-                            return false;
-                        }
-                    }
-                }).toList();
+                .filter((e) -> e instanceof CanvasUpdate)
+                .toList();
     }
 
     public void clearCanvasHistory() {
