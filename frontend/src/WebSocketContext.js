@@ -19,7 +19,11 @@ export const WebSocketProvider = ({ children }) => {
         const sequenceNo = getLamportTimestamp();
         const event = { ...eventData, sequenceNo };
         const message = prefix + " " + JSON.stringify(event);
-        if (isConnected && socket) 
+        
+        const ready = socket && socket.readyState === WebSocket.OPEN;
+        const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;
+
+        if (!closedOrClosing || ready) 
             socket.send(message);
         else
             queue.current.push(message);

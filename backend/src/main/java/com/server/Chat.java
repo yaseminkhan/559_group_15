@@ -2,13 +2,10 @@ package com.server;
 
 public class Chat extends Event {
     // Will change to private.
-
     public String sender;
-    public String id;
     public String text;
     public boolean correct = false;
     public double timestamp;
-    public int sequenceNo; // Sequence number for logical timestamps.
 
     public Chat(String sender, String id, String text, boolean correct, double timestamp, int sequenceNo) {
         this.sender = sender;

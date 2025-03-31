@@ -1,6 +1,7 @@
 package com.server;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +31,7 @@ public class Game {
     private transient Timer roundTimer; // Transient so Gson ignores it wben seri
     // private List<CanvasUpdate> canvasHistory;
     private boolean roundStarted;
-    private List<Event> events;
+    private List<EventWrapper> events = Collections.synchronizedList(new ArrayList<>());
     private int lastCanvasTime;
 
     /*
@@ -50,7 +51,7 @@ public class Game {
         this.round = 1;
         // this.canvasHistory = new ArrayList<>();
         this.roundStarted = false;
-        events = new ArrayList<>();
+        // events = new ArrayList<>();
         lastCanvasTime = -1;
 
     }
@@ -89,6 +90,10 @@ public class Game {
         }
     }
 
+    public void clearEvents() {
+        events.clear();
+    }
+
     public void resetForRound() {
         // chatMessages.clear();
         events.clear();
@@ -115,18 +120,20 @@ public class Game {
     }
 
     public synchronized void addEvent(Event e) {
+
+        var wrapped = new EventWrapper(e);
         if (events.size() == 0) {
-            events.add(e);
+            events.add(wrapped);
             return;
         }
 
         var lastEvent = events.getLast();
 
-        var conflictingEvents = new ArrayList<Event>();
+        var conflictingEvents = new ArrayList<EventWrapper>();
 
-        conflictingEvents.add(e);
+        conflictingEvents.add(wrapped);
         conflictingEvents.add(lastEvent);
-        conflictingEvents.sort(Event::compareTo);
+        conflictingEvents.sort(EventWrapper::compareTo);
 
         var x = conflictingEvents.getFirst();
         var y = conflictingEvents.getLast();
@@ -479,6 +486,7 @@ public class Game {
 
     public Object getChatMessages() {
         return events.stream()
+                .map(EventWrapper::unwrap)
                 .filter((e) -> {
                     switch (e) {
                         case Chat c -> {
@@ -495,6 +503,7 @@ public class Game {
         return events
                 .stream()
                 .dropWhile((e) -> e.getSequenceNumber() <= lastCanvasTime)
+                .map(EventWrapper::unwrap)
                 .filter((e) -> {
                     switch (e) {
                         case CanvasUpdate c -> {
@@ -520,8 +529,6 @@ public class Game {
         private String color;
         private double width;
         private boolean newStroke;
-        private int sequenceNo;
-        private String id;
 
         public CanvasUpdate(double x, double y, String color, double width, int sequenceNo, boolean newStroke) {
             this.x = x;
@@ -529,20 +536,7 @@ public class Game {
             this.color = color;
             this.width = width;
             this.newStroke = newStroke;
-            this.sequenceNo = 0;
-            id = "";
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public int getSequenceNumber() {
-            return sequenceNo;
-        }
-
-        public void setSequenceNumber(int val) {
-            sequenceNo = val;
+            this.sequenceNo = sequenceNo;
         }
 
         public double getX() {
