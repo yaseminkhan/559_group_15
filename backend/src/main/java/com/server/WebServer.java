@@ -319,12 +319,37 @@ public class WebServer extends WebSocketServer {
             handleCanvasUpdate(conn, gameCode, json);
 
         } else if (message.startsWith("/clear-canvas")) {
-            String gameCode = message.split(" ")[1];
-            Game game = activeGames.get(gameCode);
-            if (activeGames.get(gameCode) != null) {
-                // game.clearCanvasHistory();
-                game.addEvent(new CanvasClear());
-                broadcastToGame(game, "CANVAS_CLEAR");
+            // String gameCode = message.split(" ")[1];
+            // Game game = activeGames.get(gameCode);
+            // if (activeGames.get(gameCode) != null) {
+            //     // game.clearCanvasHistory();
+            //     game.addEvent(new CanvasClear());
+            //     broadcastToGame(game, "CANVAS_CLEAR");
+            // }
+
+            String json = message.substring("/clear-canvas ".length());
+
+            try {
+                Gson gson = new Gson();
+                CanvasClear clearEvent = gson.fromJson(json, CanvasClear.class);
+                String gameCode = clearEvent.getGameCode();
+                Game game = activeGames.get(gameCode);
+
+                if (game != null) {
+                    int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
+                    clearEvent.setSequenceNumber(updatedClock);
+
+                    System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
+                        ", Frontend TS: " + clearEvent.getSequenceNumber() +
+                        ", Backend TS: " + updatedClock);
+
+                    game.addEvent(clearEvent);
+                    broadcastToGame(game, "CANVAS_CLEAR");
+                }
+
+            } catch (Exception e) {
+                System.out.println("ERROR: Invalid clear canvas format.");
+                e.printStackTrace();
             }
         } else if (message.startsWith("/getcanvas")) {
             String[] parts = message.split(" ");
@@ -571,9 +596,10 @@ public class WebServer extends WebSocketServer {
         int updatedTime = game.getLogicalClock().getAndUpdate(chat.getSequenceNumber());
         chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
 
-        System.out.println("[LAMPORT][CHAT] Frontend timestamp: " + chat.getSequenceNumber() +
-                   ", Updated backend clock: " + updatedTime);
-
+        System.out.println("[LAMPORT][CHAT] Sender: " + chat.getId() +
+                   ", Frontend TS: " + chat.getSequenceNumber() +
+                   ", Backend TS: " + updatedTime);
+        
         chat = game.addMessage(chat); 
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
@@ -937,6 +963,10 @@ public class WebServer extends WebSocketServer {
             int newSeq = game.getLogicalClock().getAndUpdate(update.getSequenceNumber());
             update.setSequenceNumber(newSeq);
 
+            System.out.println("[LAMPORT][CANVAS] Sender: " + update.getId() +
+                   ", Frontend TS: " + update.getSequenceNumber() +
+                   ", Backend TS: " + newSeq);
+            
             game.addCanvasUpdate(update);
         } catch (Exception e) {
             System.out.println("ERROR: Invalid canvas update format.");

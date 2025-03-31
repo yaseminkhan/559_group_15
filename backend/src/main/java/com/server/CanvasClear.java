@@ -1,17 +1,15 @@
 package com.server;
 
 public class CanvasClear extends Event {
-    public long timestamp;
+    private String gameCode;
 
-    public CanvasClear() {
-        this.timestamp = System.currentTimeMillis();
+    public CanvasClear() {} // Required for Gson
+
+    public String getGameCode() {
+        return gameCode;
     }
 
-    public CanvasClear(long timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public long getTimestamp() {
-        return timestamp;
+    public void setGameCode(String gameCode) {
+        this.gameCode = gameCode;
     }
 }

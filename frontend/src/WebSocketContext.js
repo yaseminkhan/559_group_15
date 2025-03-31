@@ -25,8 +25,10 @@ export const WebSocketProvider = ({ children }) => {
         const messageWithTimestamp = {
             ...eventData,
             sequenceNumber: tickClock(),
-            senderId: localStorage.getItem("userId")
+            id: localStorage.getItem("userId")
         };
+
+        console.log("[DEBUG] Sending clear event payload:", messageWithTimestamp);
 
         const message = prefix + " " + JSON.stringify(messageWithTimestamp);
 
@@ -79,7 +81,6 @@ export const WebSocketProvider = ({ children }) => {
                 console.log(`Reconnecting as user: ${storedUserId}`);
                 ws.send(`/reconnect ${storedUserId}`);
             }
-            // flushQueue(ws);
 
             // Wait until WebSocket is fully ready before flushing queue
             const waitForOpen = setInterval(() => {

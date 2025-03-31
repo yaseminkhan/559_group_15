@@ -104,7 +104,8 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (isConnected) {
-      socket.send(`/clear-canvas ${gameCode}`);
+      // socket.send(`/clear-canvas ${gameCode}`);
+      queueOrSendEvent("/clear-canvas", { gameCode });
     }
   };
 
