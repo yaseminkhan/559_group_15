@@ -575,6 +575,7 @@ public class WebServer extends WebSocketServer {
                    ", Updated backend clock: " + updatedTime);
 
         chat = game.addMessage(chat); 
+        System.out.println("Handle Chat Request: " + game.getChatEvents());
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 
