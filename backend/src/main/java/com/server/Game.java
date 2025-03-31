@@ -172,6 +172,9 @@ public class Game {
                 message.text = user.getUsername() + " guessed correctly!"; // Text is just modified to say the user guessed correctly.
                 message.correct = true;
             }
+            message.sender = user.getUsername();
+            System.out.println("Message sender: " + message.sender);
+            System.out.println("Message: " + message);
             addEvent(message);
         }
 

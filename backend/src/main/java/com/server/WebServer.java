@@ -601,6 +601,7 @@ public class WebServer extends WebSocketServer {
                    ", Backend TS: " + updatedTime);
         
         chat = game.addMessage(chat); 
+        System.out.println("Handle Chat Request: " + game.getChatEvents());
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 

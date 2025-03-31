@@ -84,6 +84,8 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         // Construct the chat message
         const messageToSend = constructChatMessage(alias, newMessage, userId);
 
+        // **Immediately add the message to the UI**
+        setMessages((prevMessages) => [...prevMessages, messageToSend]);
         // Send the message only if the WebSocket is open
         // if (!socket || !isConnected) return;
 
