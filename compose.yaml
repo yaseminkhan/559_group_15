@@ -1,5 +1,3 @@
-version: "3.9"
-
 volumes:
   kafka_data:
   tailscale-var-lib:
@@ -47,6 +45,7 @@ services:
       - "9999:9999"
     environment:
       PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
+      COORDINATOR_IP: ${COORDINATOR_IP}
     command: >
       mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
     networks:
@@ -82,7 +81,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == primary
+          - node.labels.role == main_services
 
   backup_server_1:
     image: server
@@ -158,31 +157,6 @@ services:
       PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
     command: >
       mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_2_IP}:7001 false"
-    networks:
-      - my_network
-    deploy:
-      placement:
-        constraints:
-          - node.labels.role == main_services
-
-  client_1:
-    image: client
-    build:
-      context: ./frontend
-    hostname: client_1
-    ports:
-      - "3000:3000"
-    environment:
-      TAILSCALE_IP: ${BACKUP_SERVER_3_IP}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_IP}:9092
-      COORDINATOR_WS: ws://${COORDINATOR_IP}:9999
-      BACKUP_SERVER_1_IP: ${BACKUP_SERVER_1_IP}
-      BACKUP_SERVER_2_IP: ${BACKUP_SERVER_2_IP}
-      BACKUP_SERVER_3_IP: ${BACKUP_SERVER_3_IP}
-      PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
-    depends_on:
-      - primary_server
-      - connection_coordinator
     networks:
       - my_network
     deploy:

@@ -55,7 +55,7 @@ export const WebSocketProvider = ({ children }) => {
     // Connect to coordinator
     useEffect(() => {
         const connectCoordinator = () => {
-            const coordinator = new WebSocket("ws://100.79.134.37:9999");
+            const coordinator = new WebSocket("ws://100.83.215.115:9999");
 
             coordinator.onopen = () => {
                 console.log("Connected to coordinator.");

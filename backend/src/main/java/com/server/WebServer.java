@@ -37,7 +37,7 @@ public class WebServer extends WebSocketServer {
     private String heartBeatAddress;
     private final String myServerAddress;
 
-    private String coordinatorAddress = "ws://100.79.134.37:9999"; //proxy to frontend 
+    private String coordinatorAddress;
     private WebSocketClient coordinatorConnection;
 
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
@@ -48,6 +48,7 @@ public class WebServer extends WebSocketServer {
         this.myServerAddress = serverAddress;
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
+        this.coordinatorAddress = "ws://" + System.getenv("COORDINATOR_IP") + ":9999";
         
         
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection, heartBeatAddress, this); //Initialize the HeartbeatManager

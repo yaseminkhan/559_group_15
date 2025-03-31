@@ -15,5 +15,4 @@ EXPOSE 8887
 
 RUN mvn clean package
 
-
 CMD [ "mvn", "exec:java" ]

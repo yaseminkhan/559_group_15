@@ -25,10 +25,10 @@ services:
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
       KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:19092"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://100.79.134.37:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://100.83.215.115:9092"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@100.79.134.37:19092"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@100.83.215.115:19092"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
       KAFKA_LOG_RETENTION_HOURS: "1"
@@ -46,7 +46,8 @@ services:
     ports:
       - "9999:9999"
     environment:
-      PRIMARY_SERVER_IP: 100.102.91.58
+      PRIMARY_SERVER_IP: 100.83.215.115
+      COORDINATOR_IP: 100.83.215.115
     command: >
       mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
     networks:
@@ -67,22 +68,22 @@ services:
       - "5002:5002"
       - "5003:5003"
     environment:
-      TAILSCALE_IP: 100.102.91.58
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
-      COORDINATOR_WS: ws://100.79.134.37:9999
-      BACKUP_SERVER_1_IP: 100.79.134.37
-      BACKUP_SERVER_2_IP: 100.79.134.37
-      BACKUP_SERVER_3_IP: 100.79.134.37
-      PRIMARY_SERVER_IP: 100.102.91.58
-      COORDINATOR_IP: 100.79.134.37
+      TAILSCALE_IP: 100.83.215.115
+      KAFKA_BOOTSTRAP_SERVERS: 100.83.215.115:9092
+      COORDINATOR_WS: ws://100.83.215.115:9999
+      BACKUP_SERVER_1_IP: 100.83.215.115
+      BACKUP_SERVER_2_IP: 100.83.215.115
+      BACKUP_SERVER_3_IP: 100.83.215.115
+      PRIMARY_SERVER_IP: 100.83.215.115
+      COORDINATOR_IP: 100.83.215.115
     command: >
-      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8887 5001 100.79.134.37:6001,100.79.134.37:7001,100.79.134.37:4001 true'"
+      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8887 5001 100.83.215.115:6001,100.83.215.115:7001,100.83.215.115:4001 true'"
     networks:
       - my_network
     deploy:
       placement:
         constraints:
-          - node.labels.role == primary
+          - node.labels.role == main_services
 
   backup_server_1:
     image: server
@@ -95,15 +96,15 @@ services:
       - "6002:6002"
       - "6003:6003"
     environment:
-      TAILSCALE_IP: 100.79.134.37
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
-      COORDINATOR_WS: ws://100.79.134.37:9999
-      BACKUP_SERVER_1_IP: 100.79.134.37
-      BACKUP_SERVER_2_IP: 100.79.134.37
-      BACKUP_SERVER_3_IP: 100.79.134.37
-      PRIMARY_SERVER_IP: 100.102.91.58
+      TAILSCALE_IP: 100.83.215.115
+      KAFKA_BOOTSTRAP_SERVERS: 100.83.215.115:9092
+      COORDINATOR_WS: ws://100.83.215.115:9999
+      BACKUP_SERVER_1_IP: 100.83.215.115
+      BACKUP_SERVER_2_IP: 100.83.215.115
+      BACKUP_SERVER_3_IP: 100.83.215.115
+      PRIMARY_SERVER_IP: 100.83.215.115
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8888 6001 100.102.91.58:5001,100.79.134.37:7001,100.79.134.37:4001 false"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8888 6001 100.83.215.115:5001,100.83.215.115:7001,100.83.215.115:4001 false"
     networks:
       - my_network
     deploy:
@@ -122,15 +123,15 @@ services:
       - "7002:7002"
       - "7003:7003"
     environment:
-      TAILSCALE_IP: 100.79.134.37
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
-      COORDINATOR_WS: ws://100.79.134.37:9999
-      BACKUP_SERVER_1_IP: 100.79.134.37
-      BACKUP_SERVER_2_IP: 100.79.134.37
-      BACKUP_SERVER_3_IP: 100.79.134.37
-      PRIMARY_SERVER_IP: 100.102.91.58
+      TAILSCALE_IP: 100.83.215.115
+      KAFKA_BOOTSTRAP_SERVERS: 100.83.215.115:9092
+      COORDINATOR_WS: ws://100.83.215.115:9999
+      BACKUP_SERVER_1_IP: 100.83.215.115
+      BACKUP_SERVER_2_IP: 100.83.215.115
+      BACKUP_SERVER_3_IP: 100.83.215.115
+      PRIMARY_SERVER_IP: 100.83.215.115
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8889 7001 100.102.91.58:5001,100.79.134.37:6001,100.79.134.37:4001 false"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8889 7001 100.83.215.115:5001,100.83.215.115:6001,100.83.215.115:4001 false"
     networks:
       - my_network
     deploy:
@@ -149,15 +150,15 @@ services:
       - "4002:4002"
       - "4003:4003"
     environment:
-      TAILSCALE_IP: 100.79.134.37
-      KAFKA_BOOTSTRAP_SERVERS: 100.79.134.37:9092
-      COORDINATOR_WS: ws://100.79.134.37:9999
-      BACKUP_SERVER_1_IP: 100.79.134.37
-      BACKUP_SERVER_2_IP: 100.79.134.37
-      BACKUP_SERVER_3_IP: 100.79.134.37
-      PRIMARY_SERVER_IP: 100.102.91.58
+      TAILSCALE_IP: 100.83.215.115
+      KAFKA_BOOTSTRAP_SERVERS: 100.83.215.115:9092
+      COORDINATOR_WS: ws://100.83.215.115:9999
+      BACKUP_SERVER_1_IP: 100.83.215.115
+      BACKUP_SERVER_2_IP: 100.83.215.115
+      BACKUP_SERVER_3_IP: 100.83.215.115
+      PRIMARY_SERVER_IP: 100.83.215.115
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 100.102.91.58:5001,100.79.134.37:6001,100.79.134.37:7001 false"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 100.83.215.115:5001,100.83.215.115:6001,100.83.215.115:7001 false"
     networks:
       - my_network
     deploy:
@@ -172,6 +173,14 @@ services:
     hostname: client_1
     ports:
       - "3000:3000"
+    environment:
+      TAILSCALE_IP: 100.83.215.115
+      KAFKA_BOOTSTRAP_SERVERS: 100.83.215.115:9092
+      COORDINATOR_WS: ws://100.83.215.115:9999
+      BACKUP_SERVER_1_IP: 100.83.215.115
+      BACKUP_SERVER_2_IP: 100.83.215.115
+      BACKUP_SERVER_3_IP: 100.83.215.115
+      PRIMARY_SERVER_IP: 100.83.215.115
     depends_on:
       - primary_server
       - connection_coordinator

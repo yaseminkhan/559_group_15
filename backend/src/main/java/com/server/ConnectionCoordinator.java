@@ -68,6 +68,8 @@ public class ConnectionCoordinator extends WebSocketServer {
     @Override
     public void onStart() {
         System.out.println("ConnectionCoordinator WebSocket server started on port " + getPort());
+        System.out.println("Coordinator Address" + System.getenv("COORDINATOR_IP"));
+        System.out.println("Initial Primary URL: " + currentPrimaryUrl);
     }
 
     public static void main(String[] args) {
