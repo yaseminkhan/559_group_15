@@ -1,7 +1,6 @@
 package com.server;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,8 +33,6 @@ public class Game {
     private List<Event> events;
     private int lastCanvasTime;
 
-    private final List<EventWrapper> eventHistory = Collections.synchronizedList(new ArrayList<>());
-
     /*
      * constructor creates new instance of a game
      */
@@ -51,67 +48,21 @@ public class Game {
         this.wordToDraw = Words.getRandomWord();
         this.timeLeft = 60;
         this.round = 1;
+        // this.canvasHistory = new ArrayList<>();
         this.roundStarted = false;
         events = new ArrayList<>();
         lastCanvasTime = -1;
 
     }
 
-    public synchronized void addEvent(Event event) {
-        String type;
-        if (event instanceof Chat) {
-            type = "CHAT";
-        } else if (event instanceof CanvasUpdate) {
-            type = "CANVAS";
-        } else if (event instanceof CanvasClear) {
-            type = "CLEAR";
-        } else {
-            throw new IllegalArgumentException("Unknown event type: " + event.getClass());
-        }
-    
-        EventWrapper wrapper = new EventWrapper(type, event);
-        eventHistory.add(wrapper);
-    }
-
-    public List<Chat> getChatEvents() {
-        return eventHistory.stream()
-                .filter(e -> "CHAT".equals(e.type))
-                .map(e -> (Chat) e.data)
-                .toList();
-    }
-    
-    public List<CanvasUpdate> getCanvasEvents() {
-        int lastClearIndex = -1;
-    
-        synchronized (eventHistory) {
-            for (int i = eventHistory.size() - 1; i >= 0; i--) {
-                EventWrapper e = eventHistory.get(i);
-                if ("CLEAR".equals(e.type)) {
-                    lastClearIndex = i;
-                    break;
-                }
-            }
-    
-            return eventHistory.subList(lastClearIndex + 1, eventHistory.size()).stream()
-                    .filter(e -> "CANVAS".equals(e.type))
-                    .map(e -> (CanvasUpdate) e.data)
-                    .toList();
-        }
-    }
-
-    public void clearEvents() {
-        synchronized (eventHistory) {
-            eventHistory.clear();
-        }
-    }
-
     public void clearGame() {
         this.gameCode = null;
         players.clear();
         confirmedEndGame.clear();
+        // chatMessages.clear();
         this.drawer = null;
         this.wordToDraw = null;
-        clearEvents(); // clear all events for next game
+        // canvasHistory.clear();
         for (var player : players) {
             player.setGameCode(null);
             player.setWasDrawer(false);
@@ -139,7 +90,9 @@ public class Game {
     }
 
     public void resetForRound() {
-        clearEvents(); // clear events for next round 
+        // chatMessages.clear();
+        events.clear();
+        // clearCanvasHistory();
         for (var player : players)
             player.setAlreadyGuessed(false);
         cancelTimer();
@@ -256,6 +209,9 @@ public class Game {
      */
     public void removePlayer(User player) {
         players.remove(player);
+        // if (player.isDrawer()) {
+        //     nextTurn(); // Auto-assign new drawer
+        // }
     }
 
     public void setGameStarted(boolean started) {
@@ -284,7 +240,7 @@ public class Game {
     }
 
     /* 
-     * Assigns new drawer
+     * Assigns new drawer - will need to change to a different algorithm later 
      */
     public void assignNextDrawer() {
         if (players.isEmpty()) {
@@ -521,14 +477,6 @@ public class Game {
         this.wordToDraw = word;
     }
 
-    /*
-    * Canvas History Functions
-    */
-    public void addCanvasUpdate(CanvasUpdate update) {
-        //canvasHistory.add(update);
-        addEvent(update);
-    }
-  
     public Object getChatMessages() {
         return events.stream()
                 .filter((e) -> {
@@ -572,8 +520,8 @@ public class Game {
         private String color;
         private double width;
         private boolean newStroke;
-
-        public CanvasUpdate() {} // Required for deserialization
+        private int sequenceNo;
+        private String id;
 
         public CanvasUpdate(double x, double y, String color, double width, int sequenceNo, boolean newStroke) {
             this.x = x;
@@ -581,7 +529,8 @@ public class Game {
             this.color = color;
             this.width = width;
             this.newStroke = newStroke;
-            this.sequenceNo = sequenceNo;
+            this.sequenceNo = 0;
+            id = "";
         }
 
         public String getId() {
