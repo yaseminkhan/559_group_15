@@ -37,7 +37,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == kafka
 
   connection_coordinator:
     image: connection_coordinator
@@ -56,7 +56,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == kafka
 
   primary_server:
     image: server
@@ -83,7 +83,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == primary
 
   backup_server_1:
     image: server
@@ -110,7 +110,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == backupo
 
   backup_server_2:
     image: server
@@ -137,7 +137,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == backup
 
   backup_server_3:
     image: server
@@ -164,4 +164,4 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == backup

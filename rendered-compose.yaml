@@ -9,32 +9,35 @@ networks:
 
 services:
   kafka:
-    image: apache/kafka:latest
+    image: bitnami/kafka:latest
     networks:
       - my_network
     volumes:
       - kafka_data:/bitnami/kafka
     ports:
-      - "9092:9092"  # Broker listener for producers/consumers
-      - "19092:19092"  # Controller listener (KRaft mode)
+      - "9092:9092"   # External access for clients
+      - "19092:19092" # Controller (used in KRaft mode)
     environment:
-      KAFKA_ENABLE_KRAFT: "true"
-      KAFKA_NODE_ID: "1"
-      KAFKA_PROCESS_ROLES: "broker,controller"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
-      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:19092"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://100.87.55.102:9092"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@100.87.55.102:19092"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
-      KAFKA_LOG_RETENTION_HOURS: "1"
-      KAFKA_LOG_CLEANUP_POLICY: "delete"
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:19092"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://100.85.115.122:9092,PLAINTEXT://localhost:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@100.85.115.122:19092"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_KRAFT_CLUSTER_ID: "kraft-cluster-01"  # Required for first-time startup
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_CFG_LOG_RETENTION_HOURS: "1"
+      KAFKA_CFG_LOG_CLEANUP_POLICY: "delete"
+      BITNAMI_DEBUG: "true"
     deploy:
       placement:
         constraints:
-          - node.labels.role == mich
+          - node.labels.role == kafka
 
   connection_coordinator:
     image: connection_coordinator
@@ -44,8 +47,8 @@ services:
     ports:
       - "9999:9999"
     environment:
-      PRIMARY_SERVER_IP: 100.87.55.102
-      COORDINATOR_IP: 100.87.55.102
+      PRIMARY_SERVER_IP: 100.78.239.70
+      COORDINATOR_IP: 100.85.115.122
     command: >
       mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
     networks:
@@ -53,7 +56,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == mich
+          - node.labels.role == kafka
 
   primary_server:
     image: server
@@ -66,21 +69,21 @@ services:
       - "5002:5002"
       - "5003:5003"
     environment:
-      TAILSCALE_IP: 100.87.55.102
-      KAFKA_BOOTSTRAP_SERVERS: 100.87.55.102:9092
-      BACKUP_SERVER_1_IP: 100.76.248.111
-      BACKUP_SERVER_2_IP: 100.93.26.78
-      BACKUP_SERVER_3_IP: 100.76.248.111
-      PRIMARY_SERVER_IP: 100.87.55.102
-      COORDINATOR_IP: 100.87.55.102
+      TAILSCALE_IP: 100.78.239.70
+      KAFKA_BOOTSTRAP_SERVERS: 100.85.115.122:9092
+      BACKUP_SERVER_1_IP: 100.83.75.49
+      BACKUP_SERVER_2_IP: 100.83.75.49
+      BACKUP_SERVER_3_IP: 100.83.75.49
+      PRIMARY_SERVER_IP: 100.78.239.70
+      COORDINATOR_IP: 100.85.115.122
     command: >
-      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8887 5001 100.76.248.111:6001,100.93.26.78:7001,100.76.248.111:4001 true'"
+      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8887 5001 100.83.75.49:6001,100.83.75.49:7001,100.83.75.49:4001 true'"
     networks:
       - my_network
     deploy:
       placement:
         constraints:
-          - node.labels.role == mich
+          - node.labels.role == primary
 
   backup_server_1:
     image: server
@@ -93,21 +96,21 @@ services:
       - "6002:6002"
       - "6003:6003"
     environment:
-      TAILSCALE_IP: 100.76.248.111
-      KAFKA_BOOTSTRAP_SERVERS: 100.87.55.102:9092
-      COORDINATOR_IP: 100.87.55.102
-      BACKUP_SERVER_1_IP: 100.76.248.111
-      BACKUP_SERVER_2_IP: 100.93.26.78
-      BACKUP_SERVER_3_IP: 100.76.248.111
-      PRIMARY_SERVER_IP: 100.87.55.102
+      TAILSCALE_IP: 100.83.75.49
+      KAFKA_BOOTSTRAP_SERVERS: 100.85.115.122:9092
+      COORDINATOR_IP: 100.85.115.122
+      BACKUP_SERVER_1_IP: 100.83.75.49
+      BACKUP_SERVER_2_IP: 100.83.75.49
+      BACKUP_SERVER_3_IP: 100.83.75.49
+      PRIMARY_SERVER_IP: 100.78.239.70
     command: >
-      sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8888 6001 100.87.55.102:5001,100.93.26.78:7001,100.76.248.111:4001 false'"
+      sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8888 6001 100.78.239.70:5001,100.83.75.49:7001,100.83.75.49:4001 false'"
     networks:
       - my_network
     deploy:
       placement:
         constraints:
-          - node.labels.role == yas
+          - node.labels.role == backup
 
   backup_server_2:
     image: server
@@ -120,21 +123,21 @@ services:
       - "7002:7002"
       - "7003:7003"
     environment:
-      TAILSCALE_IP: 100.93.26.78
-      KAFKA_BOOTSTRAP_SERVERS: 100.87.55.102:9092
-      COORDINATOR_IP: 100.87.55.102
-      BACKUP_SERVER_1_IP: 100.76.248.111
-      BACKUP_SERVER_2_IP: 100.93.26.78
-      BACKUP_SERVER_3_IP: 100.76.248.111
-      PRIMARY_SERVER_IP: 100.87.55.102
+      TAILSCALE_IP: 100.83.75.49
+      KAFKA_BOOTSTRAP_SERVERS: 100.85.115.122:9092
+      COORDINATOR_IP: 100.85.115.122
+      BACKUP_SERVER_1_IP: 100.83.75.49
+      BACKUP_SERVER_2_IP: 100.83.75.49
+      BACKUP_SERVER_3_IP: 100.83.75.49
+      PRIMARY_SERVER_IP: 100.78.239.70
     command: >
-      sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8889 7001 100.87.55.102:5001,100.76.248.111:6001,100.76.248.111:4001 false'"
+      sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8889 7001 100.78.239.70:5001,100.83.75.49:6001,100.83.75.49:4001 false'"
     networks:
       - my_network
     deploy:
       placement:
         constraints:
-          - node.labels.role == manv
+          - node.labels.role == backup
 
   backup_server_3:
     image: server
@@ -147,18 +150,18 @@ services:
       - "4002:4002"
       - "4003:4003"
     environment:
-      TAILSCALE_IP: 100.76.248.111
-      KAFKA_BOOTSTRAP_SERVERS: 100.87.55.102:9092
-      COORDINATOR_IP: 100.87.55.102
-      BACKUP_SERVER_1_IP: 100.76.248.111
-      BACKUP_SERVER_2_IP: 100.93.26.78
-      BACKUP_SERVER_3_IP: 100.76.248.111
-      PRIMARY_SERVER_IP: 100.87.55.102
+      TAILSCALE_IP: 100.83.75.49
+      KAFKA_BOOTSTRAP_SERVERS: 100.85.115.122:9092
+      COORDINATOR_IP: 100.85.115.122
+      BACKUP_SERVER_1_IP: 100.83.75.49
+      BACKUP_SERVER_2_IP: 100.83.75.49
+      BACKUP_SERVER_3_IP: 100.83.75.49
+      PRIMARY_SERVER_IP: 100.78.239.70
     command: >
-      sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8890 4001 100.87.55.102:5001,100.76.248.111:6001,100.93.26.78:7001 false'"
+      sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8890 4001 100.78.239.70:5001,100.83.75.49:6001,100.83.75.49:7001 false'"
     networks:
       - my_network
     deploy:
       placement:
         constraints:
-          - node.labels.role == yas
+          - node.labels.role == backup
