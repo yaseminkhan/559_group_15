@@ -29,6 +29,8 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<Chat>> chatUpdate = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate = new ConcurrentHashMap<>();
     private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
 
 
@@ -59,7 +61,7 @@ public class WebServer extends WebSocketServer {
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
                 heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
-                activeGames, connectedUsers, temporarilyDisconnectedUsers);
+                activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate);
         if (!allServers.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
             this.heartBeatManager.startHeartbeatSender();
@@ -79,6 +81,16 @@ public class WebServer extends WebSocketServer {
                     System.out.println("Sent full game state");
                 }
             }, 0, 5000); //Send full game every 5 seconds
+
+            // Start sending incremental updates 
+            new Timer().scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    for (String gameCode : activeGames.keySet()) {
+                        replicationManager.sendIncrementalUpdate(gameCode);
+                    }
+                }
+            }, 0, 200); // Send full game every 200 mili-seconds
         }
 
         new Thread(() -> {
@@ -105,6 +117,16 @@ public class WebServer extends WebSocketServer {
                 replicationManager.sendFullGameState();
             }
         }, 0, 5000); // Send full game every 5 seconds
+
+        // Start sending incremental updates 
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                for (String gameCode : activeGames.keySet()) {
+                    replicationManager.sendIncrementalUpdate(gameCode);
+                }
+            }
+        }, 0, 200); // Send full game every 200 mili-seconds
     }
 
     public void demoteToBackup() {
@@ -606,6 +628,11 @@ public class WebServer extends WebSocketServer {
     
         chat = game.addMessage(chat); 
         System.out.println("Handle Chat Request: " + game.getChatEvents());
+        // Update chatUpdate
+        System.out.println("Chat update map updated");
+        synchronized (chatUpdate) {
+            chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(chat);
+        }
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 
@@ -665,9 +692,9 @@ public class WebServer extends WebSocketServer {
                     //broadcastToGame(game, "GAME_ENDED");
 
                     // Send a special message to Kafka to indicate the game has ended
-                    if (isPrimary) {
-                        replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
-                    }
+                    // if (isPrimary) {
+                    //     replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
+                    // }
                 }
             }
         }
@@ -695,6 +722,8 @@ public class WebServer extends WebSocketServer {
             return;
 
         game.resetForRound(); // Reset round state
+        chatUpdate.clear();
+        gameCanvasUpdate.clear();
 
         if (!game.hasAvailableDrawer()) {
             broadcastToGame(game, "GAME_OVER");
@@ -978,6 +1007,13 @@ public class WebServer extends WebSocketServer {
             System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
             
             game.addCanvasUpdate(update);
+
+            // Update gameCanvasUpdate
+            System.out.println("Canvas update map updated.");
+            synchronized (gameCanvasUpdate) {
+                gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
+            }
+
         } catch (Exception e) {
             System.out.println("ERROR: Invalid canvas update format.");
         }
