@@ -41,6 +41,7 @@ services:
     build:
       context: ./backend
     hostname: connection_coordinator
+    network_mode: host
     ports:
       - "9999:9999"
     environment:
@@ -60,6 +61,7 @@ services:
     build:
       context: ./backend
     hostname: primary_server
+    network_mode: host
     ports:
       - "8887:8887"
       - "5001:5001"
@@ -87,6 +89,7 @@ services:
     build:
       context: ./backend
     hostname: backup_server_1
+    network_mode: host
     ports:
       - "8888:8888"
       - "6001:6001"
@@ -116,6 +119,7 @@ services:
     build:
       context: ./backend
     hostname: backup_server_2
+    network_mode: host
     ports:
       - "8889:8889"
       - "7001:7001"
@@ -144,6 +148,7 @@ services:
     build:
       context: ./backend
     hostname: backup_server_3
+    network_mode: host
     ports:
       - "8890:8890"
       - "4001:4001"
