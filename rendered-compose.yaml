@@ -75,7 +75,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == primary
+          - node.labels.role == jin
 
   backup_server_1:
     image: server
