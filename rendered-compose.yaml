@@ -100,6 +100,8 @@ services:
       BACKUP_SERVER_2_IP: 100.93.26.78
       BACKUP_SERVER_3_IP: 100.76.248.111
       PRIMARY_SERVER_IP: 100.83.215.115
+      KAFKA_IP: 100.83.215.115
+
     command: >
       sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8888 6001 100.83.215.115:5001,100.93.26.78:7001,100.76.248.111:4001 false'"
     networks:
@@ -127,6 +129,7 @@ services:
       BACKUP_SERVER_2_IP: 100.93.26.78
       BACKUP_SERVER_3_IP: 100.76.248.111
       PRIMARY_SERVER_IP: 100.83.215.115
+      KAFKA_IP: 100.83.215.115
     command: >
       sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8889 7001 100.83.215.115:5001,100.76.248.111:6001,100.76.248.111:4001 false'"
     networks:
@@ -154,6 +157,7 @@ services:
       BACKUP_SERVER_2_IP: 100.93.26.78
       BACKUP_SERVER_3_IP: 100.76.248.111
       PRIMARY_SERVER_IP: 100.83.215.115
+      KAFKA_IP: 100.83.215.115
     command: >
       sh -c "/wait-for-kafka.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8890 4001 100.83.215.115:5001,100.76.248.111:6001,100.93.26.78:7001 false'"
     networks:
