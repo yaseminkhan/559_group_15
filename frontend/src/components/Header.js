@@ -7,7 +7,7 @@ import { useWebSocket } from "../WebSocketContext"; // Import WebSocket context
 const Header = ({ isChoosingWord, gameCode }) => {
     const [players, setPlayers] = useState([]); // Store players from backend
     const [timeLeft, setTimeLeft] = useState(60);
-    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
+    const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {}; // Get WebSocket context
 
     
     useEffect(() => {
@@ -18,7 +18,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
         }
         // Routine check getgame response
         const handleMessage = (event) => {
-            console.log("WebSocket message:", event.data);
+            //console.log("WebSocket message:", event.data);
             try {
                 const message = JSON.parse(event.data);
 
@@ -43,7 +43,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
         const interval = 200;  // 200ms polling interval.
         const getPlayers = () => {
             if (socket && isConnected) {
-                console.log("requiesting players for game: ", gameCode);
+                console.log("requesting players for game: ", gameCode);
                 socket.send(`/getgame ${gameCode}`);
             }
         }
