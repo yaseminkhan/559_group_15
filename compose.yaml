@@ -107,7 +107,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == backup
 
   backup_server_2:
     image: server
@@ -134,7 +134,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == backup
 
   backup_server_3:
     image: server
@@ -161,4 +161,4 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.role == main_services
+          - node.labels.role == backup
