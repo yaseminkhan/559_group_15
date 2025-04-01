@@ -101,7 +101,7 @@ services:
       BACKUP_SERVER_3_IP: ${BACKUP_SERVER_3_IP}
       PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8888 6001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001 false"
+      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8888 6001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001 false'"
     networks:
       - my_network
     deploy:
@@ -128,7 +128,7 @@ services:
       BACKUP_SERVER_3_IP: ${BACKUP_SERVER_3_IP}
       PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8889 7001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_3_IP}:4001 false"
+      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8889 7001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_3_IP}:4001 false'"
     networks:
       - my_network
     deploy:
@@ -155,7 +155,7 @@ services:
       BACKUP_SERVER_3_IP: ${BACKUP_SERVER_3_IP}
       PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_2_IP}:7001 false"
+      sh -c "/wait-for-backups.sh && mvn exec:java -Dexec.mainClass='com.server.WebServer' -Dexec.args='8890 4001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_1_IP}:6001,${BACKUP_SERVER_2_IP}:7001 false'"
     networks:
       - my_network
     deploy:

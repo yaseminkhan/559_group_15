@@ -161,6 +161,7 @@ public class Game {
                 + timeLeft; // Timing bonus.
     }
 
+    /* 
     public Chat addMessage(Chat message) {
         var user = getUserById(message.id);
 
@@ -199,6 +200,29 @@ public class Game {
         // System.out.println("----------------------------------------------");
         return message;
     }
+        */
+        public Chat addMessage(Chat message) {
+            var user = getUserById(message.id);
+
+            message.text = message.text.trim();  // Ignore leading and trailing whitespace.
+
+            if (!user.getAlreadyGuessed()) {
+                if (message.text.equalsIgnoreCase(wordToDraw)) {
+                    user.setScore(user.getScore() + calcScore());
+                    user.setAlreadyGuessed(true);
+                    message.text = user.getUsername() + " guessed correctly!"; // Text is just modified to say the user guessed correctly.
+                    message.correct = true;
+                }
+                addEvent(message);
+                //chatMessages.add(message); // Messages are only added when someone hasn't yet guessed correctly.
+            }
+            // System.out.println("----------------SCORE BOARD-------------------");
+            // for (var player : players) {
+            //     System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
+            // }
+            // System.out.println("----------------------------------------------");
+            return message;
+        }    
 
     public String getWordToDraw() {
         return wordToDraw;

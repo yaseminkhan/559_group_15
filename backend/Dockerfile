@@ -11,6 +11,9 @@ WORKDIR /usr/local/service
 COPY wait-for-backups.sh /wait-for-backups.sh
 RUN chmod +x /wait-for-backups.sh
 
+COPY wait-for-kafka.sh /wait-for-kafka.sh
+RUN chmod +x /wait-for-kafka.sh
+
 EXPOSE 8887
 
 RUN mvn clean package
