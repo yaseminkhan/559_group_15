@@ -18,7 +18,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
         }
         // Routine check getgame response
         const handleMessage = (event) => {
-            console.log("WebSocket message:", event.data);
+            //console.log("WebSocket message:", event.data);
             try {
                 const message = JSON.parse(event.data);
 

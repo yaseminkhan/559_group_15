@@ -7,9 +7,9 @@ public class LogicalClock {
         return time;
     }
 
-    public synchronized void tick() {
-        time++;
-    }
+    // public synchronized void tick() {
+    //     time++;
+    // }
 
     public synchronized void update(int incomingTimestamp) {
         time = Math.max(time, incomingTimestamp) + 1;

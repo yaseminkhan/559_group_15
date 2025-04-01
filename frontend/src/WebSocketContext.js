@@ -2,7 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useRef } from "r
 
 let logicalClock = 0;
 
-export const tickClock = () => ++logicalClock;
+export const tickClock = () => {
+    const newTime = ++logicalClock;
+    console.trace(`[LAMPORT] tickClock() -> ${newTime}`);
+    return newTime;
+};
 
 export const updateClock = (remoteTime) => {
     logicalClock = Math.max(logicalClock, remoteTime);
@@ -22,46 +26,57 @@ export const WebSocketProvider = ({ children }) => {
     const wasClosedRef = useRef(false);
 
     const queueOrSendEvent = (prefix, eventData) => {
+        const sequenceNumber = tickClock(); // always tick the logical clock
+      
         const messageWithTimestamp = {
-            ...eventData,
-            sequenceNumber: tickClock(),
-            id: localStorage.getItem("userId")
+          ...eventData,
+          sequenceNumber,
+          id: localStorage.getItem("userId"),
         };
 
-        console.log("[DEBUG] Sending clear event payload:", messageWithTimestamp);
-
+        console.log(`[LAMPORT] Preparing message with sequenceNumber: ${sequenceNumber}`);
+      
         const message = prefix + " " + JSON.stringify(messageWithTimestamp);
-
+      
         const ready = socket && socket.readyState === WebSocket.OPEN;
         const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;
-
+      
         if (!closedOrClosing && ready) {
-            console.log("[Sent immediately]:", message);
-            socket.send(message);
+          //console.log("[Sent immediately]:", message);
+          socket.send(message);
         } else {
-            console.log("[Queued]:", message);
-            queue.current.push(message);
+          //console.log("[Queued]:", message);
+          queue.current.push(message);
         }
     };
 
     const handleIncomingMessage = (event) => {
         const message = event.data;
+        console.log("WebSocket message:", message);
         if (message.startsWith("USER_ID:")) {
             const userId = message.split(":")[1];
-            console.log(`Received user ID: ${userId}`);
+            //console.log(`Received user ID: ${userId}`);
             localStorage.setItem("userId", userId);
+            return;
         }
+        if (message.startsWith("LAMPORT:")) {
+            const remoteTime = parseInt(message.split(":")[1], 10);
+            const updated = updateClock(remoteTime);
+            console.log(`[LAMPORT] Received backend clock: ${remoteTime}, Updated local clock: ${updated}`);
+            return;
+        }
+    
     };
 
     const flushQueue = (ws) => {
         if (!queue.current || queue.current.length === 0) return;
 
-        console.log("=============== FLUSHING QUEUE ===============");
+        //console.log("=============== FLUSHING QUEUE ===============");
         queue.current.forEach((msg) => {
-            console.log("[Sending from queue]:", msg);
+            //console.log("[Sending from queue]:", msg);
             ws.send(msg);
         });
-        console.log("===============================================");
+        //console.log("===============================================");
         queue.current = [];
     };
 
@@ -71,21 +86,21 @@ export const WebSocketProvider = ({ children }) => {
         const ws = new WebSocket(serverAddress);
 
         ws.onopen = () => {
-            console.log(`Connected to backend: ${serverAddress}`);
+            //console.log(`Connected to backend: ${serverAddress}`);
             setIsConnected(true);
             setSocket(ws);
             wasClosedRef.current = false;
 
             const storedUserId = localStorage.getItem("userId");
             if (storedUserId) {
-                console.log(`Reconnecting as user: ${storedUserId}`);
+                //console.log(`Reconnecting as user: ${storedUserId}`);
                 ws.send(`/reconnect ${storedUserId}`);
             }
 
             // Wait until WebSocket is fully ready before flushing queue
             const waitForOpen = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
-                    console.log("WebSocket is open! Flushing queue...");
+                    //console.log("WebSocket is open! Flushing queue...");
                     flushQueue(ws);
                     clearInterval(waitForOpen);
                 } else {
@@ -94,7 +109,7 @@ export const WebSocketProvider = ({ children }) => {
             }, 200); // Check every 200ms
         };
 
-        ws.onmessage = handleIncomingMessage;
+        ws.addEventListener("message", handleIncomingMessage);
 
         ws.onerror = (error) => {
             console.error("Game WebSocket error:", error);
@@ -108,7 +123,7 @@ export const WebSocketProvider = ({ children }) => {
         };
 
         return () => {
-            console.log("Cleaning up old socket connection.");
+            //console.log("Cleaning up old socket connection.");
             ws.close();
         };
     }, [serverAddress]);
@@ -118,7 +133,7 @@ export const WebSocketProvider = ({ children }) => {
             const coordinator = new WebSocket("ws://localhost:9999");
 
             coordinator.onopen = () => {
-                console.log("Connected to coordinator.");
+                //console.log("Connected to coordinator.");
                 coordinator.send("GET_LEADER");
             };
 
@@ -128,7 +143,7 @@ export const WebSocketProvider = ({ children }) => {
                     const newAddress = message.split("NEW_LEADER:")[1].trim();
                     const port = newAddress.split(":").pop();
                     const newLeaderAddress = `ws://localhost:${port}`;
-                    console.log("Received new leader update:", newLeaderAddress);
+                    //console.log("Received new leader update:", newLeaderAddress);
                     setServerAddress(newLeaderAddress);
                 }
             };

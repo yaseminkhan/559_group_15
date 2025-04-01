@@ -319,14 +319,6 @@ public class WebServer extends WebSocketServer {
             handleCanvasUpdate(conn, gameCode, json);
 
         } else if (message.startsWith("/clear-canvas")) {
-            // String gameCode = message.split(" ")[1];
-            // Game game = activeGames.get(gameCode);
-            // if (activeGames.get(gameCode) != null) {
-            //     // game.clearCanvasHistory();
-            //     game.addEvent(new CanvasClear());
-            //     broadcastToGame(game, "CANVAS_CLEAR");
-            // }
-
             String json = message.substring("/clear-canvas ".length());
 
             try {
@@ -577,29 +569,41 @@ public class WebServer extends WebSocketServer {
         Gson gson = new Gson();
         List<Chat> chat = game.getChatEvents();
         conn.send("HISTORY: " + gson.toJson(chat));
+        conn.send("LAMPORT: " + game.getLogicalClock().getTime());
     }
-
+    
     public void handleChat(WebSocket conn, String gameCode, String chatData) {
-        var game = activeGames.get(gameCode);
-        var gson = new Gson();
-        var chat = gson.fromJson(chatData, Chat.class);
-        var user = connectedUsers.get(conn);
-        //DEBUGGING ONLY
+        Game game = activeGames.get(gameCode);
+        Gson gson = new Gson();
+    
+        // DEBUG: Raw JSON string from frontend
+        System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
+    
+        Chat chat = gson.fromJson(chatData, Chat.class);
+    
+        // DEBUG: Confirm deserialization
+        System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
+    
+        User user = connectedUsers.get(conn);
         if (user == null) {
             System.out.println("ERROR: User not found for connection.");
             conn.send("ERROR: You are not connected.");
             return;
         }
-        //DEBUGGING END
-
-        // Lamport timestamp logic here:
-        int updatedTime = game.getLogicalClock().getAndUpdate(chat.getSequenceNumber());
+    
+        // Lamport timestamp logic
+        int frontendTime = chat.getSequenceNumber();
+        int updatedTime = game.getLogicalClock().getAndUpdate(frontendTime);
         chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
-
-        System.out.println("[LAMPORT][CHAT] Sender: " + chat.getId() +
-                   ", Frontend TS: " + chat.getSequenceNumber() +
-                   ", Backend TS: " + updatedTime);
-        
+    
+        System.out.println(String.format(
+            "[LAMPORT][CHAT] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+            chat.getId(),
+            frontendTime,
+            updatedTime
+        ));
+        System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
+    
         chat = game.addMessage(chat); 
         System.out.println("Handle Chat Request: " + game.getChatEvents());
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
@@ -618,12 +622,12 @@ public class WebServer extends WebSocketServer {
             // Reset all players scores to 0
             game.resetScores();
             game.setGameStarted(true);
-            System.out.println("  - wordToDraw: " + game.getWordToDraw());
-            System.out.println("  - Time Left: " + game.getTimeLeft());
-            System.out.println("  - Timer Exists: " + (game.getTimer() != null));
-            System.out.println("  - gameStarted: " + game.hasGameStarted());
-            System.out.println("  - gameEnded: " + game.isGameEnded());
-            System.out.println("  - drawer: " + (game.getDrawer() != null ? game.getDrawer().getUsername() : "null"));
+            // System.out.println("  - wordToDraw: " + game.getWordToDraw());
+            // System.out.println("  - Time Left: " + game.getTimeLeft());
+            // System.out.println("  - Timer Exists: " + (game.getTimer() != null));
+            // System.out.println("  - gameStarted: " + game.hasGameStarted());
+            // System.out.println("  - gameEnded: " + game.isGameEnded());
+            // System.out.println("  - drawer: " + (game.getDrawer() != null ? game.getDrawer().getUsername() : "null"));
             
             // Assign a drawer 
             System.out.println("Assign next drawer called\n");
@@ -961,12 +965,17 @@ public class WebServer extends WebSocketServer {
             Gson gson = new Gson();
             Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
 
-            int newSeq = game.getLogicalClock().getAndUpdate(update.getSequenceNumber());
+            int frontendTS = update.getSequenceNumber();
+            int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
             update.setSequenceNumber(newSeq);
 
-            System.out.println("[LAMPORT][CANVAS] Sender: " + update.getId() +
-                   ", Frontend TS: " + update.getSequenceNumber() +
-                   ", Backend TS: " + newSeq);
+            System.out.println(String.format(
+                "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+                update.getId(),
+                frontendTS,
+                newSeq
+            ));
+            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
             
             game.addCanvasUpdate(update);
         } catch (Exception e) {

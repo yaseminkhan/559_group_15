@@ -8,21 +8,20 @@ public class Chat extends Event {
 
     public Chat() {}
 
-    public Chat(String sender, String id, String text, boolean correct, double timestamp) {
+    public Chat(String sender, String id, String text, boolean correct) {
         this.sender = sender;
         this.id = id;
         this.text = text;
         this.correct = correct;
-        this.timestamp = timestamp;
     }
 
-    public Chat(String sender, String id, String text, double timestamp) {
-        this(sender, id, text, false, timestamp);
+    public Chat(String sender, String id, String text) {
+        this(sender, id, text, false);
     }
 
     @Override
     public String toString() {
-        return "\nChat(sender=\"%s\", id=\"%s\", text=\"%s\", correct=%s, timestamp=%f)"
-                .formatted(sender, id, text, correct, timestamp);
+        return "\nChat(sender=\"%s\", id=\"%s\", text=\"%s\", correct=%s)"
+                .formatted(sender, id, text, correct);
     }
 }

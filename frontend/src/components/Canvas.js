@@ -38,7 +38,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
   useEffect(() => {
     if (isConnected) {
-      console.log("[Canvas] WebSocket reconnected — resetting lastPos");
+      //console.log("[Canvas] WebSocket reconnected — resetting lastPos");
       lastPos.current = { x: null, y: null };
     }
   }, [isConnected]);
@@ -64,7 +64,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       width: ctx.lineWidth,
       newStroke: true,
     };
-    console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
+    //console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
     queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
   };
 

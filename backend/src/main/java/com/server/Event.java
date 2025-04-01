@@ -2,7 +2,7 @@ package com.server;
 
 public abstract class Event implements Comparable<Event> {
 
-    protected int sequenceNo;  
+    protected int sequenceNumber;  
     protected String id;      
 
     public Event() {}
@@ -16,15 +16,17 @@ public abstract class Event implements Comparable<Event> {
     }
 
     public int getSequenceNumber() {
-        return sequenceNo;
+        return sequenceNumber;
     }
 
     public void setSequenceNumber(int val) {
-        sequenceNo = val;
+        sequenceNumber = val;
     }
 
     @Override
     public int compareTo(Event e) {
-        return Integer.compare(this.sequenceNo, e.sequenceNo);
+        int cmp = Integer.compare(this.sequenceNumber, e.sequenceNumber);
+        if (cmp != 0) return cmp;
+        return this.id.compareTo(e.id); // tie-breaker using UUID
     }
 }

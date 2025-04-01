@@ -76,6 +76,7 @@ public class Game {
         return eventHistory.stream()
                 .filter(e -> "CHAT".equals(e.type))
                 .map(e -> (Chat) e.data)
+                .sorted()
                 .toList();
     }
     
@@ -167,11 +168,24 @@ public class Game {
 
         if (!user.getAlreadyGuessed()) {
             if (message.text.equalsIgnoreCase(wordToDraw)) {
-                user.setScore(user.getScore() + calcScore());
-                user.setAlreadyGuessed(true);
-                message.text = user.getUsername() + " guessed correctly!"; // Text is just modified to say the user guessed correctly.
+                // === Tie-breaker check ===
+                boolean someoneAlreadyGuessedAtThisTimestamp = eventHistory.stream()
+                    .filter(e -> "CHAT".equals(e.type))
+                    .map(e -> (Chat) e.data)
+                    .filter(c -> c.correct)
+                    .anyMatch(c -> c.getSequenceNumber() < message.getSequenceNumber() ||
+                                  (c.getSequenceNumber() == message.getSequenceNumber() &&
+                                   c.getId().compareTo(message.getId()) < 0));
+    
+                if (!someoneAlreadyGuessedAtThisTimestamp) {
+                    user.setScore(user.getScore() + calcScore());
+                    user.setAlreadyGuessed(true);
+                }
+    
+                message.text = user.getUsername() + " guessed correctly!";
                 message.correct = true;
             }
+    
             message.sender = user.getUsername();
             System.out.println("Message sender: " + message.sender);
             System.out.println("Message: " + message);

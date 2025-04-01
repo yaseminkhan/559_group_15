@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import "../styles/GamePage.css";
-import { useWebSocket } from "../WebSocketContext.js"; // Externally defined WebSocket instance
+import { useWebSocket, tickClock } from "../WebSocketContext.js"; // Externally defined WebSocket instance
 
 function constructChatMessage(sender, text, id) {
   return {
     sender,
     text,
     id,
-    timestamp: performance.now(),
     correct: false,
   };
 }
@@ -65,7 +64,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
     const interval = 200; // 200ms polling interval.
     const getChatHistory = () => {
       if (!socket || !isConnected) return;
-      console.log("is chat coming through");
+      //console.log("is chat coming through");
       socket.send(`/chat-history ${gameCode}`);
     };
 
@@ -76,24 +75,18 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
   // useEffect to attach a keydown listener to the input element
   useEffect(() => {
     handleKeyDown.current = (e) => {
-      // Check for the Enter key and no shift modifier
       if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault(); // Prevent default behavior, like newline insertion
-        if (newMessage.trim() === "") return; // Avoid sending empty messages
-
-        // Construct the chat message
-        const messageToSend = constructChatMessage(alias, newMessage, userId);
-
-        // **Immediately add the message to the UI**
-        setMessages((prevMessages) => [...prevMessages, messageToSend]);
-        // Send the message only if the WebSocket is open
-        // if (!socket || !isConnected) return;
-
-        // Since we're queueing messages, we don't care if the websocket is open or not.
-        console.log("Sent message:", newMessage);
+        e.preventDefault();
+        if (newMessage.trim() === "") return;
+      
+        const messageToSend = {
+          sender: alias,
+          text: newMessage,
+          id: userId,
+          correct: false,
+        };
+      
         queueOrSendEvent(`/chat ${gameCode}`, messageToSend);
-        // socket.send(`/chat ${gameCode} ` + JSON.stringify(messageToSend));
-        // console.log("Sent message:", newMessage);
         setNewMessage("");
       }
     };
