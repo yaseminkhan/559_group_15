@@ -50,7 +50,6 @@ public class WebServer extends WebSocketServer {
         this.heartBeatAddress = currentServer;
         this.coordinatorAddress = "ws://" + System.getenv("COORDINATOR_IP") + ":9999";
         
-        
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection, heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
                 activeGames, connectedUsers, temporarilyDisconnectedUsers);
@@ -503,7 +502,10 @@ public class WebServer extends WebSocketServer {
                 try {
                     if (coordinatorConnection == null || coordinatorConnection.isClosed()) {
                         System.out.println("Attempting to connect to coordinator...");
-    
+                        System.out.println("Before reinit: COORD" + coordinatorAddress);
+                        coordinatorAddress = "ws://" + System.getenv("COORDINATOR_IP") + ":9999";
+                        System.out.println("After reinit: COORD" + coordinatorAddress);
+
                         System.out.println("Attempting WebSocket to: " + coordinatorAddress);
                         coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
                             @Override
