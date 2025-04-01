@@ -2,7 +2,7 @@
 # wait-for-backups.sh
 
 echo "Waiting for backup servers and connection coordinator..."
-echo "KAFKA_IP=$KAKFA_IP"
+echo "KAFKA_IP=$KAFKA_IP"
 echo "COORDINATOR_IP=$COORDINATOR_IP"
 
 until nc -z $KAFKA_IP 9092; do sleep 1; done
