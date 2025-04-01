@@ -10,6 +10,8 @@ networks:
 services:
   kafka:
     image: bitnami/kafka:latest
+    networks:
+      - my_network
     environment:
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
