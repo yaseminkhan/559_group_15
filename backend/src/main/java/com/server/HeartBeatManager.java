@@ -84,7 +84,7 @@ public class HeartBeatManager {
     //Start listening for heartbeats from other servers
     public void startHeartbeatListener(int port) {
         new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(port, 0, InetAddress.getByName("0,0.0.0"))) {
+            try (ServerSocket serverSocket = new ServerSocket(port)) {
                 System.out.println("Listening for messages on port " + port);
                 while (true) {
                     Socket socket = serverSocket.accept();
@@ -223,7 +223,7 @@ public class HeartBeatManager {
         String[] parts = serverAddressRecieve.split(":"); // Split by ":"
         String server = parts[0]; 
         int port = Integer.parseInt(parts[1]);
-        //System.out.println("Server: " + server + "port: " + port);
+        System.out.println("Server: " + server + "port: " + port);
         try (Socket socket = new Socket(server, port);
             OutputStream output = socket.getOutputStream()) {
             output.write(message.getBytes());
