@@ -1,17 +1,26 @@
 #!/bin/bash
 
-COMPOSE_FILE="$1"
 ENV_IN=".env"
 ENV_OUT=".env.generated"
+RENDERED_COMPOSE="compose.yaml"
 
-if [ -z "$COMPOSE_FILE" ]; then
-  echo "[!] Usage: sh bootstrap.sh <compose_file.yaml>"
+if [ "$#" -lt 1 ]; then
+  echo "Usage: sh bootstrap.sh <service yaml files...>"
   exit 1
 fi
 
-echo "[*] Reading local service from: $COMPOSE_FILE"
+# Load .env
+declare -A env_map
+while IFS='=' read -r key value; do
+  key=$(echo "$key" | xargs)
+  value=$(echo "$value" | xargs)
+  if [[ -n "$key" && "$key" != \#* ]]; then
+    export "$key"="$value"
+    env_map[$key]="$value"
+  fi
+done < "$ENV_IN"
 
-# Map docker service name to internal identifier
+# Map docker service name to friendly service type
 map_service_name() {
   case "$1" in
     primary_server) echo "primary" ;;
@@ -24,57 +33,91 @@ map_service_name() {
   esac
 }
 
-# Extract service name from YAML
-LOCAL_SERVICE=$(awk '/services:/ {getline; print $1}' "$COMPOSE_FILE" | sed 's/://')
-INFERRED_SERVICE=$(map_service_name "$LOCAL_SERVICE")
+# Detect which services you intend to run locally
+LOCAL_SERVICES=()
+for yaml in "$@"; do
+  SERVICE_NAMES=$(awk '/services:/,0' "$yaml" | grep -E '^[[:space:]]+[a-zA-Z0-9_-]+:' | sed 's/^[[:space:]]*\(.*\):.*/\1/')
 
-if [ -z "$INFERRED_SERVICE" ]; then
-  echo "[!] Could not map service name '$LOCAL_SERVICE' to a known role"
-  exit 1
-fi
+  for SERVICE_LINE in $SERVICE_NAMES; do
+    SERVICE_ROLE=$(map_service_name "$SERVICE_LINE")
+    if [ -n "$SERVICE_ROLE" ]; then
+      LOCAL_SERVICES+=("$SERVICE_ROLE")
+      echo "[*] Will run $SERVICE_ROLE from $yaml (service name: $SERVICE_LINE)"
+    fi
+  done
+done
 
-echo "[*] Inferred local service: $INFERRED_SERVICE"
-
-# Load all base .env values
-declare -A env_map
-while IFS='=' read -r key value; do
-  key=$(echo "$key" | xargs)
-  value=$(echo "$value" | tr -d '\r' | xargs)
-  if [[ -n "$key" && "$key" != \#* ]]; then
-    env_map["$key"]="$value"
-  fi
-done < "$ENV_IN"
-
-# Resolves IP depending on whether it's local or not
+# Resolve IPs based on intended local services
 resolve_var() {
   local var_name=$1
   local service_name=$2
   local default_ip=${env_map[$var_name]}
 
   if printf '%s\n' "${LOCAL_SERVICES[@]}" | grep -qx "$service_name"; then
-    echo "[*] $service_name is local → $var_name=127.0.0.1" >&2
     echo "$var_name=127.0.0.1"
   else
-    echo "[*] $service_name is remote → $var_name=$default_ip" >&2
     echo "$var_name=$default_ip"
   fi
 }
 
+# Write .env.generated with resolved IPs
 echo "[*] Writing resolved environment to $ENV_OUT..."
 {
-  echo "$(resolve_var PRIMARY_SERVER_IP primary)"
-  echo "$(resolve_var BACKUP_SERVER_1_IP backup_1)"
-  echo "$(resolve_var BACKUP_SERVER_2_IP backup_2)"
-  echo "$(resolve_var BACKUP_SERVER_3_IP backup_3)"
-  echo "$(resolve_var COORDINATOR_IP coordinator)"
+  resolve_var PRIMARY_SERVER_IP primary
+  resolve_var BACKUP_SERVER_1_IP backup_1
+  resolve_var BACKUP_SERVER_2_IP backup_2
+  resolve_var BACKUP_SERVER_3_IP backup_3
+  resolve_var COORDINATOR_IP coordinator
 
   echo "PRIMARY_SERVER_TAILSCALE_IP=${env_map[PRIMARY_SERVER_IP]}"
   echo "BACKUP_SERVER_1_TAILSCALE_IP=${env_map[BACKUP_SERVER_1_IP]}"
   echo "BACKUP_SERVER_2_TAILSCALE_IP=${env_map[BACKUP_SERVER_2_IP]}"
   echo "BACKUP_SERVER_3_TAILSCALE_IP=${env_map[BACKUP_SERVER_3_IP]}"
   echo "COORDINATOR_TAILSCALE_IP=${env_map[COORDINATOR_IP]}"
-  echo "KAFKA_IP=${env_map[KAFKA_IP]}"
+  echo "KAFKA_TAILSCALE_IP=${env_map[KAFKA_IP]}"
+
+  # Determine correct bootstrap IP and port based on locality
+  if printf '%s\n' "${LOCAL_SERVICES[@]}" | grep -qx "kafka"; then
+    echo "KAFKA_IP=127.0.0.1"
+    echo "KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:9092"
+    echo "KAFKA_WAIT_FOR=127.0.0.1:9092"
+  else
+    echo "KAFKA_IP=${env_map[KAFKA_IP]}"
+    echo "KAFKA_BOOTSTRAP_SERVERS=${env_map[KAFKA_IP]}:9093"
+    echo "KAFKA_WAIT_FOR=${env_map[KAFKA_IP]}:9093"
+  fi
 } > "$ENV_OUT"
 
-echo "[*] Done. Use it with:"
-echo "    docker compose -f $COMPOSE_FILE --env-file $ENV_OUT up"
+# Export all resolved variables
+set -a
+source "$ENV_OUT"
+set +a
+
+
+
+# Render all selected compose templates
+echo "[*] Rendering YAMLs..."
+RENDERED_TEMP_FILES=()
+for yaml in "$@"; do
+  base=$(basename "$yaml")
+  rendered="rendered-$base"
+  envsubst < "$yaml" > "$rendered"
+  RENDERED_TEMP_FILES+=("$rendered")
+  echo "[*] Rendered $base → $rendered"
+done
+
+# Combine all rendered YAMLs into a final compose.yaml
+echo "[*] Combining into compose.yaml"
+echo "version: '3.9'" > "$RENDERED_COMPOSE"
+echo "services:" >> "$RENDERED_COMPOSE"
+
+for rendered in "${RENDERED_TEMP_FILES[@]}"; do
+  sed -n '/^  [^[:space:]]/,$p' "$rendered" >> "$RENDERED_COMPOSE"
+  echo >> "$RENDERED_COMPOSE"
+done
+
+# Clean up temporary rendered YAMLs
+rm -f rendered-*.yaml
+
+echo "[*] Final compose.yaml generated! Run with:"
+echo "    docker compose --env-file $ENV_OUT -f $RENDERED_COMPOSE up"

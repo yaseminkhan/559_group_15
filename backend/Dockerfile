@@ -8,6 +8,9 @@ COPY pom.xml /usr/local/service/pom.xml
 COPY src /usr/local/service/src
 WORKDIR /usr/local/service
 
+COPY wait-for.sh /wait-for.sh
+RUN chmod +x /wait-for.sh
+
 EXPOSE 8887
 
 RUN mvn clean package

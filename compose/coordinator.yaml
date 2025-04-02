@@ -1,12 +1,13 @@
 services:
   connection_coordinator:
+    network_mode: host
     image: connection_coordinator
     build:
-      context: ../backend
+      context: ./backend
     ports:
       - "9999:9999"
     environment:
       PRIMARY_SERVER_IP: ${PRIMARY_SERVER_IP}
       COORDINATOR_IP: ${COORDINATOR_IP}
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"
+      sh -c "mvn exec:java -Dexec.mainClass='com.server.ConnectionCoordinator'"
