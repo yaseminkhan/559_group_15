@@ -165,38 +165,19 @@ public class Game {
         var user = getUserById(message.id);
 
         message.text = message.text.trim(); // Ignore leading and trailing whitespace.
+        message.sender = user.getUsername();
 
         if (!user.getAlreadyGuessed()) {
             if (message.text.equalsIgnoreCase(wordToDraw)) {
-                // === Tie-breaker check ===
-                boolean someoneAlreadyGuessedAtThisTimestamp = eventHistory.stream()
-                    .filter(e -> "CHAT".equals(e.type))
-                    .map(e -> (Chat) e.data)
-                    .filter(c -> c.correct)
-                    .anyMatch(c -> c.getSequenceNumber() < message.getSequenceNumber() ||
-                                  (c.getSequenceNumber() == message.getSequenceNumber() &&
-                                   c.getId().compareTo(message.getId()) < 0));
-    
-                if (!someoneAlreadyGuessedAtThisTimestamp) {
-                    user.setScore(user.getScore() + calcScore());
-                    user.setAlreadyGuessed(true);
-                }
-    
+                user.setScore(user.getScore() + calcScore());
+                user.setAlreadyGuessed(true);
                 message.text = user.getUsername() + " guessed correctly!";
                 message.correct = true;
             }
-    
-            message.sender = user.getUsername();
-            System.out.println("Message sender: " + message.sender);
-            System.out.println("Message: " + message);
-            addEvent(message);
-        }
-
-        // System.out.println("----------------SCORE BOARD-------------------");
-        // for (var player : players) {
-        //     System.out.printf("player: %s, score: %d\n", player.getUsername(), player.getScore());
-        // }
-        // System.out.println("----------------------------------------------");
+            addEvent(message); 
+            // System.out.println("Message sender: " + message.sender);
+            // System.out.println("Message: " + message);
+        }    
         return message;
     }
 
