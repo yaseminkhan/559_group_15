@@ -1,59 +1,80 @@
 #!/bin/bash
 
-echo "[*] Exporting environment from .env..."
+COMPOSE_FILE="$1"
+ENV_IN=".env"
+ENV_OUT=".env.generated"
 
-# Load and export .env variables (handles whitespace and ignores comments)
+if [ -z "$COMPOSE_FILE" ]; then
+  echo "[!] Usage: sh bootstrap.sh <compose_file.yaml>"
+  exit 1
+fi
+
+echo "[*] Reading local service from: $COMPOSE_FILE"
+
+# Map docker service name to internal identifier
+map_service_name() {
+  case "$1" in
+    primary_server) echo "primary" ;;
+    backup_server_1) echo "backup_1" ;;
+    backup_server_2) echo "backup_2" ;;
+    backup_server_3) echo "backup_3" ;;
+    connection_coordinator) echo "coordinator" ;;
+    kafka) echo "kafka" ;;
+    *) echo "" ;;
+  esac
+}
+
+# Extract service name from YAML
+LOCAL_SERVICE=$(awk '/services:/ {getline; print $1}' "$COMPOSE_FILE" | sed 's/://')
+INFERRED_SERVICE=$(map_service_name "$LOCAL_SERVICE")
+
+if [ -z "$INFERRED_SERVICE" ]; then
+  echo "[!] Could not map service name '$LOCAL_SERVICE' to a known role"
+  exit 1
+fi
+
+echo "[*] Inferred local service: $INFERRED_SERVICE"
+
+# Load all base .env values
+declare -A env_map
 while IFS='=' read -r key value; do
   key=$(echo "$key" | xargs)
-  value=$(echo "$value" | xargs)
-
-  if [ -n "$key" ] && [ -n "$value" ] && [[ $key != \#* ]]; then
-    export "$key"="$value"
+  value=$(echo "$value" | tr -d '\r' | xargs)
+  if [[ -n "$key" && "$key" != \#* ]]; then
+    env_map["$key"]="$value"
   fi
-done < .env
+done < "$ENV_IN"
 
-# Detect this machine's Tailscale IP
-LOCAL_IP=$(tailscale ip -4 | head -n 1)
+# Resolves IP depending on whether it's local or not
+resolve_var() {
+  local var_name=$1
+  local service_name=$2
+  local default_ip=${env_map[$var_name]}
 
-echo "[*] Detected local Tailscale IP: $LOCAL_IP"
-echo "[*] Replacing matching service IPs with 127.0.0.1 if they match local IP..."
-
-override_if_local() {
-  VAR_NAME=$1
-  CURRENT=${!VAR_NAME}
-
-  if [ "$CURRENT" = "$LOCAL_IP" ]; then
-    echo "[*] $VAR_NAME matches local IP ($CURRENT), setting to 127.0.0.1"
-    export "$VAR_NAME"="127.0.0.1"
+  if printf '%s\n' "${LOCAL_SERVICES[@]}" | grep -qx "$service_name"; then
+    echo "[*] $service_name is local → $var_name=127.0.0.1" >&2
+    echo "$var_name=127.0.0.1"
   else
-    echo "[*] $VAR_NAME is $CURRENT (remote), unchanged"
+    echo "[*] $service_name is remote → $var_name=$default_ip" >&2
+    echo "$var_name=$default_ip"
   fi
 }
 
-# Apply override to known service IP vars
-override_if_local BACKUP_SERVER_1_IP
-override_if_local BACKUP_SERVER_2_IP
-override_if_local BACKUP_SERVER_3_IP
-override_if_local COORDINATOR_IP
-override_if_local PRIMARY_SERVER_IP
+echo "[*] Writing resolved environment to $ENV_OUT..."
+{
+  echo "$(resolve_var PRIMARY_SERVER_IP primary)"
+  echo "$(resolve_var BACKUP_SERVER_1_IP backup_1)"
+  echo "$(resolve_var BACKUP_SERVER_2_IP backup_2)"
+  echo "$(resolve_var BACKUP_SERVER_3_IP backup_3)"
+  echo "$(resolve_var COORDINATOR_IP coordinator)"
 
-echo
-echo "[*] Final resolved environment:"
-echo "  BACKUP_SERVER_1_IP=$BACKUP_SERVER_1_IP"
-echo "  BACKUP_SERVER_2_IP=$BACKUP_SERVER_2_IP"
-echo "  BACKUP_SERVER_3_IP=$BACKUP_SERVER_3_IP"
-echo "  COORDINATOR_IP=$COORDINATOR_IP"
-echo "  PRIMARY_SERVER_IP=$PRIMARY_SERVER_IP"
+  echo "PRIMARY_SERVER_TAILSCALE_IP=${env_map[PRIMARY_SERVER_IP]}"
+  echo "BACKUP_SERVER_1_TAILSCALE_IP=${env_map[BACKUP_SERVER_1_IP]}"
+  echo "BACKUP_SERVER_2_TAILSCALE_IP=${env_map[BACKUP_SERVER_2_IP]}"
+  echo "BACKUP_SERVER_3_TAILSCALE_IP=${env_map[BACKUP_SERVER_3_IP]}"
+  echo "COORDINATOR_TAILSCALE_IP=${env_map[COORDINATOR_IP]}"
+  echo "KAFKA_IP=${env_map[KAFKA_IP]}"
+} > "$ENV_OUT"
 
-# Render templates
-cd compose/ || { echo "[!] Failed to enter compose/ directory"; exit 1; }
-
-echo "[*] Deleting old rendered files..."
-rm -f rendered-*.yaml
-
-echo "[*] Rendering YAML files using envsubst..."
-for file in *.yaml; do
-  rendered_file="rendered-${file}"
-  envsubst < "$file" > "$rendered_file"
-  echo "[*] Rendered $file -> $rendered_file"
-done
+echo "[*] Done. Use it with:"
+echo "    docker compose -f $COMPOSE_FILE --env-file $ENV_OUT up"
