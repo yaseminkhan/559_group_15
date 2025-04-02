@@ -6,7 +6,7 @@ services:
     ports:
       - "9999:9999"
     environment:
-      PRIMARY_SERVER_IP: 100.75.36.115
-      COORDINATOR_IP: 100.75.36.115
+      PRIMARY_SERVER_IP: 127.0.0.1
+      COORDINATOR_IP: 127.0.0.1
     command: >
       mvn exec:java -Dexec.mainClass="com.server.ConnectionCoordinator"

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -83,7 +84,7 @@ public class HeartBeatManager {
     //Start listening for heartbeats from other servers
     public void startHeartbeatListener(int port) {
         new Thread(() -> {
-            try (ServerSocket serverSocket = new ServerSocket(port)) {
+            try (ServerSocket serverSocket = new ServerSocket(port, 0, InetAddress.getByName("0,0.0.0"))) {
                 System.out.println("Listening for messages on port " + port);
                 while (true) {
                     Socket socket = serverSocket.accept();

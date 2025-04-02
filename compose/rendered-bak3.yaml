@@ -1,5 +1,6 @@
 services:
   backup_server_3:
+    network_mode: "host"
     image: server
     build:
       context: ../backend
@@ -9,12 +10,12 @@ services:
       - "4002:4002"
       - "4003:4003"
     environment:
-      TAILSCALE_IP: 100.75.36.115
+      TAILSCALE_IP: 100.85.115.122
       KAFKA_BOOTSTRAP_SERVERS: 100.75.36.115:9092
-      COORDINATOR_IP: 100.75.36.115
-      BACKUP_SERVER_1_IP: 100.75.36.115
-      BACKUP_SERVER_2_IP: 100.75.36.115
-      BACKUP_SERVER_3_IP: 100.75.36.115
-      PRIMARY_SERVER_IP: 100.75.36.115
+      COORDINATOR_IP: 127.0.0.1
+      BACKUP_SERVER_1_IP: 127.0.0.1
+      BACKUP_SERVER_2_IP: 127.0.0.1
+      BACKUP_SERVER_3_IP: 100.85.115.122
+      PRIMARY_SERVER_IP: 127.0.0.1
     command: >
-      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 100.75.36.115:5001,100.75.36.115:6001,100.75.36.115:7001 false"
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 127.0.0.1:5001,127.0.0.1:6001,127.0.0.1:7001 false"
