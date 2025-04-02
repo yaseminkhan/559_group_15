@@ -1,0 +1,20 @@
+services:
+  primary_server:
+    image: server
+    build:
+      context: ../backend
+    ports:
+      - "8887:8887"
+      - "5001:5001"
+      - "5002:5002"
+      - "5003:5003"
+    environment:
+      TAILSCALE_IP: 100.75.36.115
+      KAFKA_BOOTSTRAP_SERVERS: 100.75.36.115:9092
+      BACKUP_SERVER_1_IP: 100.75.36.115
+      BACKUP_SERVER_2_IP: 100.75.36.115
+      BACKUP_SERVER_3_IP: 100.75.36.115
+      PRIMARY_SERVER_IP: 100.75.36.115
+      COORDINATOR_IP: 100.75.36.115
+    command: >
+      sh -c mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8887 5001 100.75.36.115:6001,100.75.36.115:7001,100.75.36.115:4001 true"

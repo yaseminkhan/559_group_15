@@ -1,0 +1,20 @@
+services:
+  backup_server_3:
+    image: server
+    build:
+      context: ../backend
+    ports:
+      - "8890:8890"
+      - "4001:4001"
+      - "4002:4002"
+      - "4003:4003"
+    environment:
+      TAILSCALE_IP: 100.75.36.115
+      KAFKA_BOOTSTRAP_SERVERS: 100.75.36.115:9092
+      COORDINATOR_IP: 100.75.36.115
+      BACKUP_SERVER_1_IP: 100.75.36.115
+      BACKUP_SERVER_2_IP: 100.75.36.115
+      BACKUP_SERVER_3_IP: 100.75.36.115
+      PRIMARY_SERVER_IP: 100.75.36.115
+    command: >
+      mvn exec:java -Dexec.mainClass="com.server.WebServer" -Dexec.args="8890 4001 100.75.36.115:5001,100.75.36.115:6001,100.75.36.115:7001 false"
