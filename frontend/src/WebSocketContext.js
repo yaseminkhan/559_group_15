@@ -142,10 +142,8 @@ export const WebSocketProvider = ({ children }) => {
                 const message = event.data;
                 if (message.startsWith("NEW_LEADER:")) {
                     const newAddress = message.split("NEW_LEADER:")[1].trim();
-                    const port = newAddress.split(":").pop();
-                    const newLeaderAddress = `ws://localhost:${port}`;
-                    //console.log("Received new leader update:", newLeaderAddress);
-                    setServerAddress(newLeaderAddress);
+                    console.log("Received new leader update:", newAddress);
+                    setServerAddress(newAddress);
                 }
             };
 
