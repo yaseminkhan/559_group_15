@@ -72,7 +72,7 @@ public class HeartBeatManager {
             //System.out.println("HEARTBEAT SENT");
             socket.close();
         } catch (SocketTimeoutException ste) {
-            System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 5 seconds.");
+            System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 0.5 seconds.");
         }
          catch (IOException ioe) {
             System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
@@ -142,7 +142,7 @@ public class HeartBeatManager {
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(500); //Send heartbeat every 500ms
+                    Thread.sleep(800); //Send heartbeat every 500ms
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
