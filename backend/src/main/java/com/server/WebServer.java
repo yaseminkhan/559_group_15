@@ -29,7 +29,10 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, Game> activeGames = new ConcurrentHashMap<>();
     //Map to store temporarily disconnected users
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<Chat>> chatUpdate = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate = new ConcurrentHashMap<>();
     private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
+
 
     private final HeartBeatManager heartBeatManager; //HeartbeatManager instance
     private final ReplicationManager replicationManager; //ReplicationManager instance
@@ -43,17 +46,20 @@ public class WebServer extends WebSocketServer {
     public static final Map<Integer, String> serverIdToAddressMap = new HashMap<>();
     public static final Map<String, Integer> serverAddressToIdMap = new HashMap<>();
 
-    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String currentServer) {
+    public WebServer(InetSocketAddress address, boolean isPrimary, String serverAddress, int heartbeatPort,
+            List<String> allServers, List<String> allServersElection, String currentServer) {
         super(address);
         this.myServerAddress = serverAddress;
         this.isPrimary = isPrimary;
         this.heartBeatAddress = currentServer;
         this.coordinatorAddress = "ws://" + System.getenv("COORDINATOR_IP") + ":9999";
-        
-        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection, heartBeatAddress, this); //Initialize the HeartbeatManager
+
+        this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
+                heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
-                activeGames, connectedUsers, temporarilyDisconnectedUsers);
+            activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate);
         System.out.println("DEBUG: DOES PRIMARY : " + allServers.isEmpty());
+
         if (!allServers.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
             this.heartBeatManager.startHeartbeatSender();
@@ -63,7 +69,7 @@ public class WebServer extends WebSocketServer {
             heartBeatManager.getLeaderElectionManager().initializeAsLeader();
             connectToCoordinatorAndAnnounce();
         }
-        
+
         //Set timer to periodically send the full game state to backups
         if (isPrimary) {
             new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -73,6 +79,16 @@ public class WebServer extends WebSocketServer {
                     System.out.println("Sent full game state");
                 }
             }, 0, 5000); //Send full game every 5 seconds
+
+            // Start sending incremental updates 
+            new Timer().scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    for (String gameCode : activeGames.keySet()) {
+                        replicationManager.sendIncrementalUpdate(gameCode);
+                    }
+                }
+            }, 0, 200); // Send full game every 200 mili-seconds
         }
 
         new Thread(() -> {
@@ -88,7 +104,6 @@ public class WebServer extends WebSocketServer {
         }).start();
     }
 
-
     public void promoteToPrimary() {
         this.isPrimary = true;
         replicationManager.switchToPrimary();
@@ -99,7 +114,17 @@ public class WebServer extends WebSocketServer {
             public void run() {
                 replicationManager.sendFullGameState();
             }
-        }, 0, 10000); // Send full game every 10 seconds
+        }, 0, 5000); // Send full game every 5 seconds
+
+        // Start sending incremental updates 
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                for (String gameCode : activeGames.keySet()) {
+                    replicationManager.sendIncrementalUpdate(gameCode);
+                }
+            }
+        }, 0, 200); // Send full game every 200 mili-seconds
     }
 
     public void demoteToBackup() {
@@ -111,7 +136,7 @@ public class WebServer extends WebSocketServer {
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         System.out.println("\n========== onOpen() CALLED ==========");
         System.out.println("Socket opened from: " + conn.getRemoteSocketAddress());
-        
+
         pendingConnections.add(conn); // track as unauthenticated
     }
 
@@ -175,17 +200,6 @@ public class WebServer extends WebSocketServer {
             // Move user to temporarily disconnected list
             temporarilyDisconnectedUsers.put(removedUser.getId(), removedUser);
 
-            // Print users for debugging
-            // System.out.println("Current connected users:");
-            // for (User user : connectedUsers.values()) {
-            //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-            // }
-
-            // System.out.println("Temporarily disconnected users:");
-            // for (User user : temporarilyDisconnectedUsers.values()) {
-            //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-            // }
-            
             // Get the game the user was in
             String gameCode = removedUser.getGameCode();
             if (gameCode != null) {
@@ -200,20 +214,20 @@ public class WebServer extends WebSocketServer {
                             game.removePlayer(removedUser);
                             broadcastGamePlayers(game);
                             System.out.println("User permanently removed from game: " + removedUser.getUsername());
-                            
+
                             game.resetForRound();
                             // Notify players that the drawer has disconnected
                             broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
-                                
+
                                 game.cancelTimer();
 
                                 // Drawer did not reconnect, so select a new drawer            
-                                if(game.getPlayers().size() >= 2){
+                                if (game.getPlayers().size() >= 2) {
                                     System.out.println("Starting new round...");
                                     startNewRound(game);
-                                } else{
+                                } else {
                                     broadcastToGame(game, "GAME_OVER");
                                 }
                             }
@@ -228,14 +242,14 @@ public class WebServer extends WebSocketServer {
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
                                 game.removePlayer(removedUser);
                                 broadcastGamePlayers(game);
-                                if(game.getPlayers().size() < 2){
+                                if (game.getPlayers().size() < 2) {
                                     broadcastToGame(game, "GAME_OVER");
                                 }
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
                             }
                         }
-                    }, 5000); 
+                    }, 5000);
                 }
             }
         }
@@ -246,7 +260,8 @@ public class WebServer extends WebSocketServer {
         //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
 
         //Send data to backups whenever a message is received from the client
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
         if (message.startsWith("/reconnect ")) {
             String userId = message.substring(11).trim();
@@ -298,25 +313,55 @@ public class WebServer extends WebSocketServer {
             String[] parts = message.split(" ", 3);
             String gameCode = parts[1];
             String chatData = parts[2];
+
+            var game = activeGames.get(gameCode);
+            if (game == null) {
+                System.err.println("ERROR: Game not found.");
+                return;
+            }
             handleChat(conn, gameCode, chatData);
         } else if (message.startsWith("/canvas-update ")) {
-            //System.out.println("Canvas Update From: " + conn.getRemoteSocketAddress() + ": " + message);
-            // /canvas-update <gameCode> <json>
             String[] parts = message.split(" ", 3);
+
             if (parts.length < 3) {
                 conn.send("ERROR: Invalid canvas update format.");
                 return;
             }
+
             String gameCode = parts[1];
             String json = parts[2];
+
+            if (activeGames.get(gameCode) == null) {
+                System.err.println("ERROR: Game not found."); // Code repetition.
+                return;
+            }
+
             handleCanvasUpdate(conn, gameCode, json);
 
         } else if (message.startsWith("/clear-canvas")) {
-            String gameCode = message.split(" ")[1];
-            Game game = activeGames.get(gameCode);
-            if (game != null) {
-                game.clearCanvasHistory();
-                broadcastToGame(game, "CANVAS_CLEAR");
+            String json = message.substring("/clear-canvas ".length());
+
+            try {
+                Gson gson = new Gson();
+                CanvasClear clearEvent = gson.fromJson(json, CanvasClear.class);
+                String gameCode = clearEvent.getGameCode();
+                Game game = activeGames.get(gameCode);
+
+                if (game != null) {
+                    int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
+                    clearEvent.setSequenceNumber(updatedClock);
+
+                    System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
+                        ", Frontend TS: " + clearEvent.getSequenceNumber() +
+                        ", Backend TS: " + updatedClock);
+
+                    game.addEvent(clearEvent);
+                    broadcastToGame(game, "CANVAS_CLEAR");
+                }
+
+            } catch (Exception e) {
+                System.out.println("ERROR: Invalid clear canvas format.");
+                e.printStackTrace();
             }
         } else if (message.startsWith("/getcanvas")) {
             String[] parts = message.split(" ");
@@ -330,10 +375,10 @@ public class WebServer extends WebSocketServer {
         } else if (message.startsWith("NEW_LEADER:")) {
             String newLeaderAddress = message.split(":")[1].trim();
             System.out.println("Received new leader update: " + newLeaderAddress);
-    
+
             // Notify the connected client to reconnect
             conn.send("RECONNECT_TO_NEW_LEADER:" + newLeaderAddress);
-            
+
             // Optionally, close the current connection to force reconnection
             conn.close();
         } else {
@@ -381,7 +426,8 @@ public class WebServer extends WebSocketServer {
     public static void main(String[] args) {
         //Run as primary server if no port is indicated
         if (args.length < 3) {
-            System.err.println("Usage: java com.server.WebServer <port> <heart-beatport> <other-servers> <primary boolean>");
+            System.err.println(
+                    "Usage: java com.server.WebServer <port> <heart-beatport> <other-servers> <primary boolean>");
             System.exit(1);
         }
         
@@ -401,7 +447,7 @@ public class WebServer extends WebSocketServer {
         
         String serverName = System.getenv("TAILSCALE_IP"); // This gets the Docker container name
         // Define a mapping from hostnames to integer server IDs
-        
+
         String currentServer = serverName + ":" + heartbeatPort;
         System.out.println("Current Server: " + currentServer);
         System.out.println("Server Name to ID Map: " + serverNameToIdMap);
@@ -426,7 +472,7 @@ public class WebServer extends WebSocketServer {
                 serverAddressToIdMap.put(server, id);
             }
         }
-        
+
         System.out.println("Server Name: " + serverName);
         System.out.println("Server ID: " + serverId);
         System.out.println("isPrimary: " + isPrimary);
@@ -436,7 +482,8 @@ public class WebServer extends WebSocketServer {
         System.out.println("All Servers for leader election: " + allServersElection);
 
         //Create and start WebSocket server
-        WebServer server = new WebServer(new InetSocketAddress("0.0.0.0", port), isPrimary, serverAddress, heartbeatPort, allServers, allServersElection, currentServer);
+        WebServer server = new WebServer(new InetSocketAddress("0.0.0.0", port), isPrimary, serverAddress,
+                heartbeatPort, allServers, allServersElection, currentServer);
         server.start();
         System.out.println("isPrimary: " + args[3]);
         System.out.println("Web Server running on port: " + port);
@@ -445,34 +492,34 @@ public class WebServer extends WebSocketServer {
 
     public void connectToCoordinatorAndAnnounce() {
         // ===== DEBUG PRINTS =====
-         System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
-         System.out.println("Connected users by id from replication manager:");
-         for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
-             User user = entry.getValue();
-             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-         }
+        System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
+        System.out.println("Connected users by id from replication manager:");
+        for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
+            User user = entry.getValue();
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
 
-         System.out.println("Connected Users:");
-         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-             User user = entry.getValue();
-             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-         }
+        System.out.println("Connected Users:");
+        for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
+            User user = entry.getValue();
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
 
-         System.out.println("\nActive Games:");
-         for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
-             System.out.println(" - Game Code: " + entry.getKey());
-             Game game = entry.getValue();
-             for (User player : game.getPlayers()) {
-                 System.out.println("   * Player: " + player.getUsername() + " (ID: " + player.getId() + ")");
-             }
-         }
+        System.out.println("\nActive Games:");
+        for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+            System.out.println(" - Game Code: " + entry.getKey());
+            Game game = entry.getValue();
+            for (User player : game.getPlayers()) {
+                System.out.println("   * Player: " + player.getUsername() + " (ID: " + player.getId() + ")");
+            }
+        }
 
-         System.out.println("\nTemporarily Disconnected Users:");
-         for (User user : temporarilyDisconnectedUsers.values()) {
-             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-         }
-         System.out.println("===== END DEBUG =====\n");
-        
+        System.out.println("\nTemporarily Disconnected Users:");
+        for (User user : temporarilyDisconnectedUsers.values()) {
+            System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
+        }
+        System.out.println("===== END DEBUG =====\n");
+
         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
         replicationManager.stopKafkaConsumer();
 
@@ -514,27 +561,28 @@ public class WebServer extends WebSocketServer {
                                 System.out.println("Connected to coordinator.");
                                 send("NEW_LEADER:" + myServerAddress);
                             }
-    
+
                             @Override
-                            public void onMessage(String message) {}
-    
+                            public void onMessage(String message) {
+                            }
+
                             @Override
                             public void onClose(int code, String reason, boolean remote) {
                                 System.out.println("Coordinator connection closed. Will retry...");
                             }
-    
+
                             @Override
                             public void onError(Exception ex) {
                                 System.err.println("Coordinator WebSocket error: " + ex.getMessage());
                             }
                         };
-    
+
                         coordinatorConnection.connectBlocking();
                     }
-    
+
                     // Sleep and then check again
                     Thread.sleep(5000);
-    
+
                 } catch (Exception e) {
                     System.err.println("Failed to connect to coordinator: " + e.getMessage());
                     try {
@@ -551,27 +599,52 @@ public class WebServer extends WebSocketServer {
     // ======================================================== Game Logic Methods ========================================================
 
     public void handleChatRequest(WebSocket conn, String gameCode) {
-        var game = activeGames.get(gameCode);
-        var gson = new Gson();
-        var chat = game.getChatMessages();
-        // System.out.println(chat);
+        Game game = activeGames.get(gameCode);
+        Gson gson = new Gson();
+        List<Chat> chat = game.getChatEvents();
         conn.send("HISTORY: " + gson.toJson(chat));
+        conn.send("LAMPORT: " + game.getLogicalClock().getTime());
     }
-
+    
     public void handleChat(WebSocket conn, String gameCode, String chatData) {
-        var game = activeGames.get(gameCode);
-        var gson = new Gson();
-        var chat = gson.fromJson(chatData, Chat.class);
-        var user = connectedUsers.get(conn);
-        //DEBUGGING ONLY
+        Game game = activeGames.get(gameCode);
+        Gson gson = new Gson();
+    
+        // DEBUG: Raw JSON string from frontend
+        System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
+    
+        Chat chat = gson.fromJson(chatData, Chat.class);
+    
+        // DEBUG: Confirm deserialization
+        System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
+    
+        User user = connectedUsers.get(conn);
         if (user == null) {
             System.out.println("ERROR: User not found for connection.");
             conn.send("ERROR: You are not connected.");
             return;
         }
-        //DEBUGGING END
-        chat.sender = user.getUsername();
-        chat = game.addMessage(chat); // Make sure to clear data after /new-round.
+    
+        // Lamport timestamp logic
+        int frontendTime = chat.getSequenceNumber();
+        int updatedTime = game.getLogicalClock().getAndUpdate(frontendTime);
+        chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
+    
+        System.out.println(String.format(
+            "[LAMPORT][CHAT] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+            chat.getId(),
+            frontendTime,
+            updatedTime
+        ));
+        System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
+    
+        chat = game.addMessage(chat); 
+        System.out.println("Handle Chat Request: " + game.getChatEvents());
+        // Update chatUpdate
+        System.out.println("Chat update map updated");
+        synchronized (chatUpdate) {
+            chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(chat);
+        }
         broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 
@@ -588,6 +661,13 @@ public class WebServer extends WebSocketServer {
             // Reset all players scores to 0
             game.resetScores();
             game.setGameStarted(true);
+            // System.out.println("  - wordToDraw: " + game.getWordToDraw());
+            // System.out.println("  - Time Left: " + game.getTimeLeft());
+            // System.out.println("  - Timer Exists: " + (game.getTimer() != null));
+            // System.out.println("  - gameStarted: " + game.hasGameStarted());
+            // System.out.println("  - gameEnded: " + game.isGameEnded());
+            // System.out.println("  - drawer: " + (game.getDrawer() != null ? game.getDrawer().getUsername() : "null"));
+            
             // Assign a drawer 
             System.out.println("Assign next drawer called\n");
             game.assignNextDrawer();
@@ -611,18 +691,22 @@ public class WebServer extends WebSocketServer {
                 System.out.println("User " + user.getUsername() + " confirmed end game for " + gameCode);
 
                 // Check if all players have confirmed
-                if (connectedUsers.size() == game.sizeOfPlayersConfirmedEnd()) {
+                if (game.getPlayers().size() == game.sizeOfPlayersConfirmedEnd()) {
+                    // for (User player: game.getPlayers()) {
+                    //     player = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
+                    // }
+
                     game.clearGame();
                     activeGames.remove(gameCode);
                     // connectedUsers.clear(); // causing issues
                     temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
                     //broadcastToGame(game, "GAME_ENDED");
-                    
+
                     // Send a special message to Kafka to indicate the game has ended
-                    if (isPrimary) {
-                        replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
-                    }
+                    // if (isPrimary) {
+                    //     replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
+                    // }
                 }
             }
         }
@@ -630,7 +714,8 @@ public class WebServer extends WebSocketServer {
 
     public void handleDrawerJoined(WebSocket conn, String gameCode) {
 
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
         Game game = activeGames.get(gameCode);
         if (game != null) {
@@ -642,13 +727,17 @@ public class WebServer extends WebSocketServer {
 
     public void startNewRound(Game game) {
 
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
-        if (game == null) return;
+        if (game == null)
+            return;
 
-        game.resetForRound();  // Reset round state
+        game.resetForRound(); // Reset round state
+        chatUpdate.clear();
+        gameCanvasUpdate.clear();
 
-        if (!game.hasAvailableDrawer()) { 
+        if (!game.hasAvailableDrawer()) {
             broadcastToGame(game, "GAME_OVER");
             System.out.println("All rounds complete. Waiting for players to exit.");
             game.endGame();
@@ -668,7 +757,8 @@ public class WebServer extends WebSocketServer {
      */
     public void startRoundTimer(Game game) {
 
-        if (!isPrimary) return;
+        if (!isPrimary)
+            return;
 
         if (game == null)
             return;
@@ -676,15 +766,9 @@ public class WebServer extends WebSocketServer {
         // Cancel the existing timer if it exists
         game.cancelTimer();
 
-        //game.setTimeLeft(60); // Reset timer for new round
-
         if (game.getTimeLeft() <= 0 || game.getTimeLeft() > 60) {
             game.setTimeLeft(60); // Only reset if invalid or uninitialized
         }
-
-        game.clearCanvasHistory();
-
-        // game.setTimeLeft(5); // short timer for testing
 
         // Ensure only one timer runs per game
         Timer roundTimer = new Timer();
@@ -803,12 +887,12 @@ public class WebServer extends WebSocketServer {
 
         for (User player : game.getPlayers()) {
             WebSocket conn = getConnectionByUser(player);
-            
+
             if ((conn != null)) {
                 conn.send(message);
                 System.out.println("Sent player list to: " + player.getUsername());
             } else {
-                if (isPrimary){
+                if (isPrimary) {
                     System.out.println("Could not find connection for " + player.getUsername());
                 }
             }
@@ -890,8 +974,9 @@ public class WebServer extends WebSocketServer {
 
     public void handleWordSelection(WebSocket conn, String gameCode, String word) {
 
-        if (!isPrimary) return;
-        
+        if (!isPrimary)
+            return;
+
         Game game = activeGames.get(gameCode);
         if (game != null) {
             game.setCurrentWord(word);
@@ -920,7 +1005,27 @@ public class WebServer extends WebSocketServer {
         try {
             Gson gson = new Gson();
             Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
+
+            int frontendTS = update.getSequenceNumber();
+            int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
+            update.setSequenceNumber(newSeq);
+
+            System.out.println(String.format(
+                "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+                update.getId(),
+                frontendTS,
+                newSeq
+            ));
+            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
+            
             game.addCanvasUpdate(update);
+
+            // Update gameCanvasUpdate
+            System.out.println("Canvas update map updated.");
+            synchronized (gameCanvasUpdate) {
+                gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
+            }
+
         } catch (Exception e) {
             System.out.println("ERROR: Invalid canvas update format.");
         }
@@ -933,7 +1038,7 @@ public class WebServer extends WebSocketServer {
             return;
         }
 
-        List<Game.CanvasUpdate> entireList = game.getCanvasHistory();
+        List<Game.CanvasUpdate> entireList = game.getCanvasEvents();
 
         if (lastIndex < 0) {
             lastIndex = 0;

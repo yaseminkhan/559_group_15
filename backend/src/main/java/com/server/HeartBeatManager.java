@@ -40,10 +40,6 @@ public class HeartBeatManager {
         this.leaderElectionManager = new LeaderElectionManager(serverAddress, allServersElection, heartBeatAddress, this, webServer);
     }
 
-    // public void setCurrentLeader(String address) {
-    //     leaderElectionManager.setCurrentLeader(address);
-    // }
-
     //Send heartbeats to all peer servers
     public void sendHeartbeatToAllServers() throws NumberFormatException, InterruptedException {
         allHBServers = new ArrayList<>(allServers); //Create a copy to iterate through
