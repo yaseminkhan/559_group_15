@@ -24,6 +24,7 @@ public class LeaderElectionManager {
         "backup_server_1", "ws://backup_server_1:8888",
         "backup_server_2", "ws://backup_server_2:8889",
         "backup_server_3", "ws://backup_server_3:8890",
+        "backup_server_4", "ws://backup_server_4:8891",
         "primary_server", "ws://primary_server:8887"
     );
 

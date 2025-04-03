@@ -389,7 +389,8 @@ public class WebServer extends WebSocketServer {
             System.getenv("BACKUP_SERVER_1_IP") + ":6001", 1,
             System.getenv("BACKUP_SERVER_2_IP") + ":7001", 2,
             System.getenv("BACKUP_SERVER_3_IP") + ":4001", 3,
-            System.getenv("PRIMARY_SERVER_IP") + ":5001", 4
+            System.getenv("BACKUP_SERVER_4_IP") + ":8001", 4,
+            System.getenv("PRIMARY_SERVER_IP") + ":5001", 5
         );
 
         int port = Integer.parseInt(args[0]); //First server port

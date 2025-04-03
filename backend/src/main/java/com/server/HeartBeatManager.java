@@ -28,7 +28,8 @@ public class HeartBeatManager {
         "8887", "5001", // primary
         "8888", "6001", // backup 1
         "8889", "7001", // backup 2
-        "8890", "4001"  // backup 3
+        "8890", "4001",  // backup 3
+        "8891", "8001"  // backup 4
     );
 
 
@@ -142,7 +143,7 @@ public class HeartBeatManager {
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(800); //Send heartbeat every 500ms
+                    Thread.sleep(2000); //Send heartbeat every 500ms
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
