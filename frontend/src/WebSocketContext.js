@@ -87,7 +87,7 @@ export const WebSocketProvider = ({ children }) => {
         const ws = new WebSocket(serverAddress);
 
         ws.onopen = () => {
-            //console.log(`Connected to backend: ${serverAddress}`);
+            console.log(`Connected to backend: ${serverAddress}`);
             setIsConnected(true);
             setSocket(ws);
             wasClosedRef.current = false;
