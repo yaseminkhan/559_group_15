@@ -17,7 +17,7 @@ public class LeaderElectionManager {
     private long electionId = 0;
     private final WebServer webServer;
     private boolean higherId;
-    private final int timeout = 1000; // Timeout for waiting for responses
+    private final int timeout = 2000; // Timeout for waiting for responses
     String myTailscaleIp = System.getenv("TAILSCALE_IP");
 
     private static final Map<String, String> serverNameToAddressMap = Map.of(
