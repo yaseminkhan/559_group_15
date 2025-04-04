@@ -608,44 +608,51 @@ public class WebServer extends WebSocketServer {
     
     public void handleChat(WebSocket conn, String gameCode, String chatData) {
         Game game = activeGames.get(gameCode);
-        Gson gson = new Gson();
-    
-        // DEBUG: Raw JSON string from frontend
-        System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
-    
-        Chat chat = gson.fromJson(chatData, Chat.class);
-    
-        // DEBUG: Confirm deserialization
-        System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
-    
-        User user = connectedUsers.get(conn);
-        if (user == null) {
-            System.out.println("ERROR: User not found for connection.");
-            conn.send("ERROR: You are not connected.");
+
+        if (game == null) {
+            System.err.println("ERROR: Game not found.");
             return;
         }
-    
-        // Lamport timestamp logic
-        int frontendTime = chat.getSequenceNumber();
-        int updatedTime = game.getLogicalClock().getAndUpdate(frontendTime);
-        chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
-    
-        System.out.println(String.format(
-            "[LAMPORT][CHAT] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
-            chat.getId(),
-            frontendTime,
-            updatedTime
-        ));
-        System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
-    
-        chat = game.addMessage(chat); 
-        System.out.println("Handle Chat Request: " + game.getChatEvents());
-        // Update chatUpdate
-        System.out.println("Chat update map updated");
-        synchronized (chatUpdate) {
-            chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(chat);
+
+        synchronized (game) {
+            Gson gson = new Gson();
+            // DEBUG: Raw JSON string from frontend
+            System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
+        
+            Chat chat = gson.fromJson(chatData, Chat.class);
+        
+            // DEBUG: Confirm deserialization
+            System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
+        
+            User user = connectedUsers.get(conn);
+            if (user == null) {
+                System.out.println("ERROR: User not found for connection.");
+                conn.send("ERROR: You are not connected.");
+                return;
+            }
+        
+            // Lamport timestamp logic
+            int frontendTime = chat.getSequenceNumber();
+            int updatedTime = game.getLogicalClock().getAndUpdate(frontendTime);
+            chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
+        
+            System.out.println(String.format(
+                "[LAMPORT][CHAT] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+                chat.getId(),
+                frontendTime,
+                updatedTime
+            ));
+            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
+        
+            chat = game.addMessage(chat); 
+            System.out.println("Handle Chat Request: " + game.getChatEvents());
+            // Update chatUpdate
+            System.out.println("Chat update map updated");
+            synchronized (chatUpdate) {
+                chatUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(chat);
+            }
+            broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
         }
-        broadcastToGame(game, "/chat " + gameCode + " " + gson.toJson(chat));
     }
 
     public void handleStartGame(WebSocket conn, String gameCode, String userId) {
@@ -1002,32 +1009,34 @@ public class WebServer extends WebSocketServer {
             return;
         }
 
-        try {
-            Gson gson = new Gson();
-            Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
+        synchronized (game) {
+            try {
+                Gson gson = new Gson();
+                Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
 
-            int frontendTS = update.getSequenceNumber();
-            int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
-            update.setSequenceNumber(newSeq);
+                int frontendTS = update.getSequenceNumber();
+                int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
+                update.setSequenceNumber(newSeq);
 
-            System.out.println(String.format(
-                "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
-                update.getId(),
-                frontendTS,
-                newSeq
-            ));
-            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
-            
-            game.addCanvasUpdate(update);
+                System.out.println(String.format(
+                    "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+                    update.getId(),
+                    frontendTS,
+                    newSeq
+                ));
+                System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
+                
+                game.addCanvasUpdate(update);
 
-            // Update gameCanvasUpdate
-            System.out.println("Canvas update map updated.");
-            synchronized (gameCanvasUpdate) {
-                gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
+                // Update gameCanvasUpdate
+                System.out.println("Canvas update map updated.");
+                synchronized (gameCanvasUpdate) {
+                    gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
+                }
+
+            } catch (Exception e) {
+                System.out.println("ERROR: Invalid canvas update format.");
             }
-
-        } catch (Exception e) {
-            System.out.println("ERROR: Invalid canvas update format.");
         }
     }
 
