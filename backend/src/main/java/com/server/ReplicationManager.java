@@ -23,6 +23,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.java_websocket.WebSocket;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 public class ReplicationManager {
@@ -75,12 +76,22 @@ public class ReplicationManager {
         if (kafkaProducer != null) {
             System.out.println("Kafka producer is already initialized");
         }
+
+
         Properties producerProps = new Properties();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+        System.out.println("THIS IS ENV : " + System.getenv("KAFKA_BOOTSTRAP_SERVERS"));
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, System.getenv("KAFKA_BOOTSTRAP_SERVERS"));
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         kafkaProducer = new KafkaProducer<>(producerProps);
         System.out.println("Kafka producer initialized for primary server.");
+    }
+
+    private Game deepCopyGame(Game game) {
+        Gson gson = new GsonBuilder()
+            .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
+            .create();
+        return gson.fromJson(gson.toJson(game), Game.class);
     }
 
     private void initializeKafkaConsumer() {
@@ -89,7 +100,8 @@ public class ReplicationManager {
             return;
         }
         Properties consumerProps = new Properties();
-        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+        System.out.println("THIS IS ENV : " + System.getenv("KAFKA_BOOTSTRAP_SERVERS"));
+        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, System.getenv("KAFKA_BOOTSTRAP_SERVERS"));
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); // Unique Group for each server
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
@@ -99,8 +111,12 @@ public class ReplicationManager {
         consumerThread = new Thread(() -> {
             try {
                 while (true) {
+                    if (isPrimary) {
+                        System.out.println("Now primary — exiting Kafka consumer thread.");
+                        break;
+                    }
                     ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
-                    System.out.println("Polling from Kafka");
+                    //System.out.println("Polling from Kafka");
                     for (ConsumerRecord<String, String> record : records) {
                         if (record.topic().equals("game-state")) {
                             updateGameState(record.value());
@@ -160,7 +176,6 @@ public class ReplicationManager {
             }
         }
     }
-
 
     public void sendIncrementalUpdate(String gameCode) {
         if (isPrimary && kafkaProducer != null) {
@@ -250,8 +265,17 @@ public class ReplicationManager {
     // Serialize the game state into a JSON string
     private String serializeGameState() {
         Gson gson = new Gson();
-        Map<String, Object> gameState = new ConcurrentHashMap<>();
-        gameState.put("activeGames", activeGames);
+        Map<String, Object> gameState = new HashMap<>();
+
+        // Create a deep copy of the active games to avoid ConcurrentModificationException
+        Map<String, Game> snapshot = new HashMap<>();
+        synchronized (activeGames) {
+            for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
+                snapshot.put(entry.getKey(), deepCopyGame(entry.getValue()));
+            }
+        }
+        gameState.put("activeGames", snapshot);
+
 
         //Create a map of users by their IDs
         Map<String,User> usersById = new HashMap<>();
@@ -296,6 +320,8 @@ public class ReplicationManager {
             // Apply updates to game
             for (Game.CanvasUpdate update : canvasUpdates) {
                 game.addCanvasUpdate(update);
+
+                System.out.println("Incremental canvas update applied");
             }
 
             // Apply chat updates to game, but check for duplicates based on userId and timestamp
@@ -303,7 +329,7 @@ public class ReplicationManager {
                 boolean messageExists = false;
 
                 // Check if a message from the same user with the same timestamp already exists
-                for (Chat existingChat : game.getChatMessages()) {  
+                for (Chat existingChat : game.getChatEvents()) {  
                     if (existingChat.getId().equals(update.getId()) &&
                         existingChat.getTimestamp() == (update.getTimestamp())) {
                         messageExists = true;
@@ -313,12 +339,11 @@ public class ReplicationManager {
 
                 if (!messageExists) {
                     game.addMessage(update);
+                    System.out.println("Incremental message update applied");
                 } else {
                     System.out.println("Duplicate message ignored: User ID = " + update.getId() + ", Timestamp = " + update.getTimestamp());
                 }
             }
-
-            System.out.println("Incremental update applied to game: " + gameCode);
         } catch (Exception e) {
             System.err.println("No incremental updates to apply");
         }
@@ -329,7 +354,10 @@ public class ReplicationManager {
     private void updateGameState(String gameStateJson) {
         synchronized (gameStateLock) {
             System.out.println("Raw gameStateJson: " + gameStateJson); // Debug log
-            Gson gson = new Gson();
+            // Gson gson = new Gson();
+            Gson gson = new GsonBuilder()
+                .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
+                .create();
             Type type = new TypeToken<Map<String, Object>>() {}.getType();
 
             // Deserialize the JSON string into a map

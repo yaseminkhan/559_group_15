@@ -13,7 +13,7 @@ const GameSetup = () => {
     const navigate = useNavigate();
     const [players, setPlayers] = useState([]);
     const [isHost, setIsHost] = useState(false);
-    const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
+    const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {}; // Get WebSocket context
 
 
     const handleStartGame = () => {

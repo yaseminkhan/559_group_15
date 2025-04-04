@@ -1,19 +1,18 @@
 package com.server;
 
 import java.net.InetSocketAddress;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 public class ConnectionCoordinator extends WebSocketServer {
-    private String currentPrimaryUrl = "ws://primary_server:8887"; // EC2
+    private String currentPrimaryUrl;
     private WebSocket backendConnection;
 
     public ConnectionCoordinator(InetSocketAddress address) {
         super(address);
+        currentPrimaryUrl = System.getenv("PRIMARY_SERVER_IP");
     }
 
     @Override
@@ -67,10 +66,12 @@ public class ConnectionCoordinator extends WebSocketServer {
     @Override
     public void onStart() {
         System.out.println("ConnectionCoordinator WebSocket server started on port " + getPort());
+        System.out.println("Coordinator Address" + System.getenv("COORDINATOR_IP"));
+        System.out.println("Initial Primary URL: " + currentPrimaryUrl);
     }
 
     public static void main(String[] args) {
-        ConnectionCoordinator coordinator = new ConnectionCoordinator(new InetSocketAddress("0.0.0.0", 9999));
+        ConnectionCoordinator coordinator = new ConnectionCoordinator(new InetSocketAddress(9999));
         coordinator.start();
         System.out.println("Coordinator running on port 9999");
     }

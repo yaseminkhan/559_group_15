@@ -13,7 +13,7 @@ const WordSelection = () => {
   const [randomWords, setRandomWords] = useState([]);
   const [drawer, setDrawer] = useState(null); // Stores actual drawer info
   const userId = localStorage.getItem("userId"); // Get user ID
-  const { socket, isConnected } = useWebSocket() || {}; // Get WebSocket context
+  const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {}; // Get WebSocket context
 
   const handleWordSelect = (word) => {
     if (!socket) return;
