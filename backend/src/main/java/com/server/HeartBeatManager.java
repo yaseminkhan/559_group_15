@@ -139,7 +139,7 @@ public class HeartBeatManager {
                     e.printStackTrace();
                 }
                 try {
-                    Thread.sleep(2000); //Send heartbeat every 500ms
+                    Thread.sleep(500); //Send heartbeat every 500ms
                 } catch (InterruptedException ie) {
                     ie.printStackTrace();
                 }
