@@ -57,9 +57,9 @@ public class WebServer extends WebSocketServer {
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
                 heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
+
             activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate);
         System.out.println("DEBUG: DOES PRIMARY : " + allServers.isEmpty());
-
         if (!allServers.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
             this.heartBeatManager.startHeartbeatSender();
@@ -70,6 +70,7 @@ public class WebServer extends WebSocketServer {
             connectToCoordinatorAndAnnounce();
         }
 
+
         //Set timer to periodically send the full game state to backups
         if (isPrimary) {
             new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -79,6 +80,7 @@ public class WebServer extends WebSocketServer {
                     System.out.println("Sent full game state");
                 }
             }, 0, 5000); //Send full game every 5 seconds
+
 
             // Start sending incremental updates 
             new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -614,6 +616,7 @@ public class WebServer extends WebSocketServer {
             return;
         }
 
+
         synchronized (game) {
             Gson gson = new Gson();
             // DEBUG: Raw JSON string from frontend
@@ -739,6 +742,7 @@ public class WebServer extends WebSocketServer {
 
         if (game == null)
             return;
+
 
         game.resetForRound(); // Reset round state
         chatUpdate.clear();
@@ -1008,6 +1012,7 @@ public class WebServer extends WebSocketServer {
             System.out.println("ERROR: Game Not Found: " + gameCode);
             return;
         }
+
 
         synchronized (game) {
             try {

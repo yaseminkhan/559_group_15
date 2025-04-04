@@ -23,6 +23,14 @@ public class Chat extends Event {
         return this.timestamp;
     }
 
+    public String getId() {
+        return this.id;
+    }
+
+    public double getTimestamp() {
+        return timestamp;
+    }
+
     @Override
     public String toString() {
         return "\nChat(sender=\"%s\", id=\"%s\", text=\"%s\", correct=%s)"
