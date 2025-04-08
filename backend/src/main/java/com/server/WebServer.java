@@ -1065,7 +1065,8 @@ public class WebServer extends WebSocketServer {
                 lastIndex = entireList.size();
             }
 
-            List<Game.CanvasUpdate> newStrokes = entireList.subList(lastIndex, entireList.size());
+            // List<Game.CanvasUpdate> newStrokes = entireList.subList(lastIndex, entireList.size());
+            List<Game.CanvasUpdate> newStrokes = new ArrayList<>(entireList.subList(lastIndex, entireList.size()));
             Gson gson = new Gson();
             String newStrokesJson = gson.toJson(newStrokes);
             int newLastIndex = lastIndex + newStrokes.size();
