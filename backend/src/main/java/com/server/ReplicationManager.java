@@ -297,7 +297,7 @@ public class ReplicationManager {
 
             String gameCode = (String) updateData.get("gameCode");
             if (gameCode == null) {
-                System.out.println("ERROR: Invalid incremental update, missing gameCode");
+                //System.out.println("ERROR: Invalid incremental update, missing gameCode");
                 return;
             }
 
@@ -323,7 +323,7 @@ public class ReplicationManager {
             for (Game.CanvasUpdate update : canvasUpdates) {
                 game.addCanvasUpdate(update);
 
-                System.out.println("Incremental canvas update applied");
+                //System.out.println("Incremental canvas update applied");
             }
 
             // Apply chat updates to game, but check for duplicates based on userId and timestamp
@@ -341,7 +341,7 @@ public class ReplicationManager {
 
                 if (!messageExists) {
                     game.addMessage(update);
-                    System.out.println("Incremental message update applied");
+                    //System.out.println("Incremental message update applied");
                 } else {
                     System.out.println("Duplicate message ignored: User ID = " + update.getId() + ", Timestamp = " + update.getTimestamp());
                 }

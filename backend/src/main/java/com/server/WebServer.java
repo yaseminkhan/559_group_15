@@ -353,10 +353,12 @@ public class WebServer extends WebSocketServer {
                     int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
                     clearEvent.setSequenceNumber(updatedClock);
 
+                    /*
                     System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
                         ", Frontend TS: " + clearEvent.getSequenceNumber() +
                         ", Backend TS: " + updatedClock);
 
+                    */
                     game.addEvent(clearEvent);
                     broadcastToGame(game, "CANVAS_CLEAR");
                 }
@@ -622,12 +624,12 @@ public class WebServer extends WebSocketServer {
         synchronized (game) {
             Gson gson = new Gson();
             // DEBUG: Raw JSON string from frontend
-            System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
+            //System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
         
             Chat chat = gson.fromJson(chatData, Chat.class);
         
             // DEBUG: Confirm deserialization
-            System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
+            //System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
         
             User user = connectedUsers.get(conn);
             if (user == null) {
@@ -641,14 +643,16 @@ public class WebServer extends WebSocketServer {
             int updatedTime = game.getLogicalClock().getAndUpdate(frontendTime);
             chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
         
+            /*
             System.out.println(String.format(
                 "[LAMPORT][CHAT] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
                 chat.getId(),
                 frontendTime,
                 updatedTime
             ));
-            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
         
+            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
+            */
             chat = game.addMessage(chat); 
             System.out.println("Handle Chat Request: " + game.getChatEvents());
             // Update chatUpdate
