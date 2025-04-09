@@ -494,10 +494,6 @@ public class Game {
         this.wordToDraw = word;
     }
 
-    public List<Chat> getChatMessages() {
-        return chatMessages;
-    }
-
     /*
     * Canvas History Functions
     */

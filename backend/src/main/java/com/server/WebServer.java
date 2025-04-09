@@ -353,10 +353,12 @@ public class WebServer extends WebSocketServer {
                     int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
                     clearEvent.setSequenceNumber(updatedClock);
 
+                    /*
                     System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
                         ", Frontend TS: " + clearEvent.getSequenceNumber() +
                         ", Backend TS: " + updatedClock);
 
+                    */
                     game.addEvent(clearEvent);
                     broadcastToGame(game, "CANVAS_CLEAR");
                 }
@@ -603,9 +605,11 @@ public class WebServer extends WebSocketServer {
     public void handleChatRequest(WebSocket conn, String gameCode) {
         Game game = activeGames.get(gameCode);
         Gson gson = new Gson();
-        List<Chat> chat = game.getChatEvents();
-        conn.send("HISTORY: " + gson.toJson(chat));
-        conn.send("LAMPORT: " + game.getLogicalClock().getTime());
+        synchronized (game) {
+            List<Chat> chat = game.getChatEvents();
+            conn.send("HISTORY: " + gson.toJson(chat));
+            conn.send("LAMPORT: " + game.getLogicalClock().getTime());
+        }
     }
     
     public void handleChat(WebSocket conn, String gameCode, String chatData) {
@@ -620,12 +624,12 @@ public class WebServer extends WebSocketServer {
         synchronized (game) {
             Gson gson = new Gson();
             // DEBUG: Raw JSON string from frontend
-            System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
+            //System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
         
             Chat chat = gson.fromJson(chatData, Chat.class);
         
             // DEBUG: Confirm deserialization
-            System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
+            //System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
         
             User user = connectedUsers.get(conn);
             if (user == null) {
@@ -639,14 +643,16 @@ public class WebServer extends WebSocketServer {
             int updatedTime = game.getLogicalClock().getAndUpdate(frontendTime);
             chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
         
+            /*
             System.out.println(String.format(
                 "[LAMPORT][CHAT] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
                 chat.getId(),
                 frontendTime,
                 updatedTime
             ));
-            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
         
+            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
+            */
             chat = game.addMessage(chat); 
             System.out.println("Handle Chat Request: " + game.getChatEvents());
             // Update chatUpdate
@@ -1052,23 +1058,26 @@ public class WebServer extends WebSocketServer {
             return;
         }
 
-        List<Game.CanvasUpdate> entireList = game.getCanvasEvents();
+        synchronized (game) {
+            List<Game.CanvasUpdate> entireList = game.getCanvasEvents();
 
-        if (lastIndex < 0) {
-            lastIndex = 0;
+            if (lastIndex < 0) {
+                lastIndex = 0;
+            }
+
+            if (lastIndex > entireList.size()) {
+                lastIndex = entireList.size();
+            }
+
+            // List<Game.CanvasUpdate> newStrokes = entireList.subList(lastIndex, entireList.size());
+            List<Game.CanvasUpdate> newStrokes = new ArrayList<>(entireList.subList(lastIndex, entireList.size()));
+            Gson gson = new Gson();
+            String newStrokesJson = gson.toJson(newStrokes);
+            int newLastIndex = lastIndex + newStrokes.size();
+
+            //System.out.println("Canvas History Requested: " + gameCode + " Last Index: " + lastIndex);
+            conn.send("CANVAS_HISTORY " + newLastIndex + " " + newStrokesJson);
         }
-
-        if (lastIndex > entireList.size()) {
-            lastIndex = entireList.size();
-        }
-
-        List<Game.CanvasUpdate> newStrokes = entireList.subList(lastIndex, entireList.size());
-        Gson gson = new Gson();
-        String newStrokesJson = gson.toJson(newStrokes);
-        int newLastIndex = lastIndex + newStrokes.size();
-
-        //System.out.println("Canvas History Requested: " + gameCode + " Last Index: " + lastIndex);
-        conn.send("CANVAS_HISTORY " + newLastIndex + " " + newStrokesJson);
     }
 
     public ConcurrentHashMap<WebSocket, User> getConnectedUsers() {

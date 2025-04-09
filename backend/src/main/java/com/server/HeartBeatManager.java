@@ -90,7 +90,7 @@ public class HeartBeatManager {
     
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
-                        System.out.println("MESSAGE RECEIVED : " + message);
+                        //System.out.println("MESSAGE RECEIVED : " + message);
                         // Resolve Sender Address
                         String[] parts = message.split(":");
                         // Message format : <sender_ip>:<command>:<message>
@@ -111,7 +111,7 @@ public class HeartBeatManager {
                                 // Change senderAddress to hostaddressIP
                                 //senderAddress = socket.getInetAddress().getHostAddress();
                                 handleIncomingMessage(senderAddress, message);
-                                System.out.println("Message: " + message);
+                                //System.out.println("Message: " + message);
                             } catch (InterruptedException ex) {
                                 System.err.println("Error with handling incoming message from: " + senderAddress);
                             }
