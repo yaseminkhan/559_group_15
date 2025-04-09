@@ -88,10 +88,12 @@ public class ReplicationManager {
     }
 
     private Game deepCopyGame(Game game) {
-        Gson gson = new GsonBuilder()
-            .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
-            .create();
-        return gson.fromJson(gson.toJson(game), Game.class);
+        synchronized (game){
+            Gson gson = new GsonBuilder()
+                .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
+                .create();
+            return gson.fromJson(gson.toJson(game), Game.class);
+        }
     }
 
     private void initializeKafkaConsumer() {
