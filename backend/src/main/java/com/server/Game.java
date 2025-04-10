@@ -45,7 +45,7 @@ public class Game {
         this.drawer = null;
         this.drawerIndex = -1;
         this.wordToDraw = Words.getRandomWord();
-        this.timeLeft = 60;
+        setTimeLeft(60);;
         this.round = 1;
         this.roundStarted = false;
         this.eventHistory = Collections.synchronizedList(new ArrayList<>());
@@ -157,8 +157,7 @@ public class Game {
     }
 
     private int calcScore() {
-        return (1 << (players.size() - getPlayersAlreadyGuessed())) // Position bonus (exponential decay).
-                + timeLeft; // Timing bonus.
+        return (int) (3 * getTimeLeft()) / 2; 
     }
 
     public Chat addMessage(Chat message) {
@@ -241,7 +240,6 @@ public class Game {
      */
     public boolean startGame(User user) {
         if (!players.isEmpty() && user.isHost()) {
-            // resetRoundPoints();
             gameStarted = true;
             round = 1;
             assignNextDrawer();
@@ -361,7 +359,7 @@ public class Game {
             System.out.println("ERROR: No drawer assigned, this should not happen.");
         }
 
-        this.timeLeft = 60;
+        setTimeLeft(60);
     }
 
     /*
@@ -388,7 +386,7 @@ public class Game {
     /*
      * Sets the time left for the round
      */
-    public void setTimeLeft(int time) {
+    public synchronized void setTimeLeft(int time) {
         this.timeLeft = time;
     }
 
@@ -483,7 +481,7 @@ public class Game {
         return this.drawer;
     }
 
-    public int getTimeLeft() {
+    public synchronized int getTimeLeft() {
         return this.timeLeft;
     }
 

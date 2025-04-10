@@ -771,7 +771,7 @@ public class WebServer extends WebSocketServer {
 
     /*
      * game timer handled by server 
-     */
+    */
     public void startRoundTimer(Game game) {
 
         if (!isPrimary)
@@ -794,18 +794,20 @@ public class WebServer extends WebSocketServer {
         roundTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                int timeLeft = game.getTimeLeft();
+                synchronized (game) {
+                    int timeLeft = game.getTimeLeft();
 
-                // Stop timer if all players guessed or timer runs out.
-                if (timeLeft <= 0 || game.allPlayersGuessed()) {
-                    roundTimer.cancel(); // Stop timer
-                    broadcastToGame(game, "ROUND_OVER");
-                    startNewRound(game); // Move to next round
-                    return;
+                    // Stop timer if all players guessed or timer runs out.
+                    if (timeLeft <= 0 || game.allPlayersGuessed()) {
+                        roundTimer.cancel(); // Stop timer
+                        broadcastToGame(game, "ROUND_OVER");
+                        startNewRound(game); // Move to next round
+                        return;
+                    }
+
+                    game.setTimeLeft(timeLeft - 1);
+                    broadcastToGame(game, "TIMER_UPDATE: " + game.getTimeLeft());
                 }
-
-                game.setTimeLeft(timeLeft - 1);
-                broadcastToGame(game, "TIMER_UPDATE: " + game.getTimeLeft());
             }
         }, 0, 1000); // Run every second
     }
