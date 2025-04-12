@@ -109,12 +109,11 @@ public class Game {
 
     public void clearGame() {
         this.gameCode = null;
-        players.clear();
         confirmedEndGame.clear();
         this.drawer = null;
         this.wordToDraw = null;
         clearEvents(); // clear all events for next game
-        for (var player : players) {
+        for (User player : players) {
             player.setGameCode(null);
             player.setWasDrawer(false);
             player.setAlreadyGuessed(false);
@@ -122,6 +121,7 @@ public class Game {
             player.setUsername(null);
             player.setIsHost(false);
         }
+        players.clear();
     }
 
     private int getPlayersAlreadyGuessed() {
