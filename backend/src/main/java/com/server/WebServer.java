@@ -755,14 +755,22 @@ public class WebServer extends WebSocketServer {
             return;
         
         
-       
-        // Clear all canvas and chat updates for this game
-        synchronized (gameCanvasUpdate) {
-            gameCanvasUpdate.remove(game.getGameCode());
-        }
-        synchronized (chatUpdate) {
-            chatUpdate.remove(game.getGameCode());
-        }
+        // String gameCode = game.getGameCode();
+        // if (game.getGameCode() != null) {
+        //     synchronized (gameCanvasUpdate) {
+        //         gameCanvasUpdate.remove(gameCode);
+        //     }
+        //     synchronized (chatUpdate) {
+        //         chatUpdate.remove(gameCode);
+        //     }
+        // }
+        // else {
+        //     gameCanvasUpdate.clear();
+        //     chatUpdate.clear();
+        // }
+
+        gameCanvasUpdate.clear();
+        chatUpdate.clear();
 
         game.resetForRound(); // Reset round state
 
