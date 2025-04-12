@@ -414,6 +414,9 @@ public class ReplicationManager {
                 if (game.getTimeLeft() > 0) { // Only restart the timer if timeLeft is valid
                     webServer.startRoundTimer(game); // Use Game's startRoundTimer method
                 }
+                else{
+                    game.resetForRound();
+                }
             }
             
             System.out.println("Game state deserialized and updated.");

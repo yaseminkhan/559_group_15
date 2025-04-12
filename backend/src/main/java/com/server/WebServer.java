@@ -750,11 +750,18 @@ public class WebServer extends WebSocketServer {
 
         if (game == null)
             return;
-
+        
+        
+       
+        // Clear all canvas and chat updates for this game
+        synchronized (gameCanvasUpdate) {
+            gameCanvasUpdate.remove(game.getGameCode());
+        }
+        synchronized (chatUpdate) {
+            chatUpdate.remove(game.getGameCode());
+        }
 
         game.resetForRound(); // Reset round state
-        chatUpdate.clear();
-        gameCanvasUpdate.clear();
 
         if (!game.hasAvailableDrawer()) {
             broadcastToGame(game, "GAME_OVER");
@@ -1027,15 +1034,19 @@ public class WebServer extends WebSocketServer {
                 Gson gson = new Gson();
                 Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
 
+                // Set the current round number
+                update.setRoundNumber(game.getCurrentRound());
+
                 int frontendTS = update.getSequenceNumber();
                 int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
                 update.setSequenceNumber(newSeq);
 
                 System.out.println(String.format(
-                    "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+                    "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d | Round: %d",
                     update.getId(),
                     frontendTS,
-                    newSeq
+                    newSeq,
+                    game.getCurrentRound()
                 ));
                 System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
                 
@@ -1060,7 +1071,7 @@ public class WebServer extends WebSocketServer {
             return;
         }
 
-        synchronized (game) {
+        synchronized (game) {         
             List<Game.CanvasUpdate> entireList = game.getCanvasEvents();
 
             if (lastIndex < 0) {
