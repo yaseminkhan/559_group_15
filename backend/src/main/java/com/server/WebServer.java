@@ -546,6 +546,8 @@ public class WebServer extends WebSocketServer {
                 startRoundTimer(game);
             } else {
                 System.out.println("No active round to resume for game: " + game.getGameCode());
+                game.resetForRound();
+                System.out.println("Cleared chat and canvas data");
             }
         }
 

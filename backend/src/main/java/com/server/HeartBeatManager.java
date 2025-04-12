@@ -72,7 +72,7 @@ public class HeartBeatManager {
             System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 0.5 seconds.");
         }
          catch (IOException ioe) {
-            System.err.println("Failed to send heartbeat to " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
+            System.err.println("Failed to send heartbeat to server: " + serverIp + " on port: " + port + ". This is the message: " + ioe.getMessage());
         }
         
     }
