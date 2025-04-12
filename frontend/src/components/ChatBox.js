@@ -22,6 +22,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
   const inputRef = useRef(null); // Create a ref for the input element
   const handleMessage = useRef(null); // Function ref.
   const handleKeyDown = useRef(null); // Function ref.
+  const messageContainer = useRef(null);
 
   useEffect(() => {
     handleMessage.current = (e) => {
@@ -78,14 +79,14 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         if (newMessage.trim() === "") return;
-      
+
         const messageToSend = {
           sender: alias,
           text: newMessage,
           id: userId,
           correct: false,
         };
-      
+
         queueOrSendEvent(`/chat ${gameCode}`, messageToSend);
         setNewMessage("");
       }
@@ -100,9 +101,15 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
     }
   }, [newMessage, socket, gameCode, username, handleKeyDown, isConnected]);
 
+  useEffect(() => {
+    if (messageContainer.current)
+      messageContainer.current.scrollTop =
+        messageContainer.current.scrollHeight;
+  }, [messages]);
+
   return (
     <div className="chat-background">
-      <div className="message-container">
+      <div ref={messageContainer} className="message-container">
         {messages.map((msg, index) => (
           <div
             key={index}
