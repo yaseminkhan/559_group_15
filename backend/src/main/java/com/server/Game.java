@@ -45,7 +45,8 @@ public class Game {
         this.drawer = null;
         this.drawerIndex = -1;
         this.wordToDraw = Words.getRandomWord();
-        setTimeLeft(60);;
+        setTimeLeft(60);
+        ;
         this.round = 1;
         this.roundStarted = false;
         this.eventHistory = Collections.synchronizedList(new ArrayList<>());
@@ -63,8 +64,23 @@ public class Game {
         } else {
             throw new IllegalArgumentException("Unknown event type: " + event.getClass());
         }
-    
-        EventWrapper wrapper = new EventWrapper(type, event);
+
+        var wrapper = new EventWrapper(type, event);
+        // {
+        //     var lastEvent = eventHistory.removeLast();
+        //     var conflictingEvents = new ArrayList<EventWrapper>();
+
+        //     conflictingEvents.add(wrapper);
+        //     conflictingEvents.add(lastEvent);
+        //     conflictingEvents.sort(EventWrapper::compareTo);
+
+        //     var x = conflictingEvents.getFirst();
+        //     var y = conflictingEvents.getLast();
+        //     if (x.getSequenceNumber() == y.getSequenceNumber()) {
+        //         y.setSequenceNumber(y.getSequenceNumber() + 1);
+        //     }
+        //     eventHistory.addAll(conflictingEvents);
+        // }
         eventHistory.add(wrapper);
     }
 
@@ -79,10 +95,10 @@ public class Game {
                 .sorted()
                 .toList();
     }
-    
+
     public List<CanvasUpdate> getCanvasEvents() {
         int lastClearIndex = -1;
-    
+
         synchronized (eventHistory) {
             for (int i = eventHistory.size() - 1; i >= 0; i--) {
                 EventWrapper e = eventHistory.get(i);
@@ -91,7 +107,7 @@ public class Game {
                     break;
                 }
             }
-    
+
             return eventHistory.subList(lastClearIndex + 1, eventHistory.size()).stream()
                     .filter(e -> "CANVAS".equals(e.type))
                     .map(e -> (CanvasUpdate) e.data)
@@ -157,7 +173,7 @@ public class Game {
     }
 
     private int calcScore() {
-        return (int) (3 * getTimeLeft()) / 2; 
+        return (int) (3 * getTimeLeft()) / 2;
     }
 
     public Chat addMessage(Chat message) {
@@ -173,10 +189,10 @@ public class Game {
                 message.text = user.getUsername() + " guessed correctly!";
                 message.correct = true;
             }
-            addEvent(message); 
+            addEvent(message);
             // System.out.println("Message sender: " + message.sender);
             // System.out.println("Message: " + message);
-        }    
+        }
         return message;
     }
 
@@ -508,7 +524,8 @@ public class Game {
         private double width;
         private boolean newStroke;
 
-        public CanvasUpdate() {} // Required for deserialization
+        public CanvasUpdate() {
+        } // Required for deserialization
 
         public CanvasUpdate(double x, double y, String color, double width, boolean newStroke) {
             this.x = x;
