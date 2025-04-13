@@ -88,6 +88,7 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
         };
 
         queueOrSendEvent(`/chat ${gameCode}`, messageToSend);
+        setMessages([...messages, messageToSend]);  // Append message to end.
         setNewMessage("");
       }
     };
@@ -102,10 +103,18 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
   }, [newMessage, socket, gameCode, username, handleKeyDown, isConnected]);
 
   useEffect(() => {
-    if (messageContainer.current)
-      messageContainer.current.scrollTop =
-        messageContainer.current.scrollHeight;
+    const container = messageContainer.current;
+    if (!container) return;
+
+    const threshold = 100;
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  
+    if (isNearBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
+  
 
   return (
     <div className="chat-background">
