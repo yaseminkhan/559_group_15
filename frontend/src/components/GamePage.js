@@ -59,6 +59,7 @@ const GamePage = () => {
               setIsDrawer(false);
               setIsChoosingWord(true);
           }
+          window.location.reload(true);
         }
 
         if (event.data.startsWith("GAME_OVER")) {

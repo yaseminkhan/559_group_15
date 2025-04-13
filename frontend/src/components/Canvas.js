@@ -14,6 +14,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
   const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {};
   const gameCode = localStorage.getItem("gameCode");
+  const [historyReceived, setHistoryReceived] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,14 +39,20 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
   useEffect(() => {
     if (isConnected) {
-      //console.log("[Canvas] WebSocket reconnected — resetting lastPos");
+      lastPos.current = { x: null, y: null };
+    }
+
+    if (!isConnected) {
       lastPos.current = { x: null, y: null };
     }
   }, [isConnected]);
 
+
   const startDrawing = (event) => {
     if (!isDrawer) return;
     setDrawing(true);
+
+    lastPos.current = { x: null, y: null };
 
     const { offsetX, offsetY } = event.nativeEvent;
     setLastX(offsetX);
@@ -122,6 +129,8 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       const data = event.data;
 
       if (data.startsWith("CANVAS_HISTORY")) {
+        if (isDrawer && historyReceived) return;
+
         const parts = data.split(" ", 4);
         const newIndex = parseInt(parts[1], 10);
         const prefix = `CANVAS_HISTORY ${parts[1]} `;
@@ -131,7 +140,11 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         strokes.forEach((stroke) => {
           applyDrawing(stroke);
         });
-        setLastIndex(newIndex);
+        setLastIndex(0);
+        
+        if (isDrawer) {
+          setHistoryReceived(true);
+        }
       } else if (data.startsWith("CANVAS_CLEAR") || data.startsWith("ROUND_OVER")) {
         const canvas = canvasRef.current;
         if (!canvas) return; //Adds a null check to stop getContext error.

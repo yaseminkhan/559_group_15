@@ -219,7 +219,7 @@ public class ReplicationManager {
                 if (exception != null) {
                     System.err.println("No updates to send");
                 } else {
-                    System.out.println("Incremental update sent for game: " + gameCode);
+                    //System.out.println("Incremental update sent for game: " + gameCode);
                 }
             });
         }

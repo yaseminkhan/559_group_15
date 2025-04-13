@@ -56,7 +56,7 @@ export const WebSocketProvider = ({ children }) => {
         console.log("WebSocket message:", message);
         if (message.startsWith("USER_ID:")) {
             const userId = message.split(":")[1];
-            //console.log(`Received user ID: ${userId}`);
+            console.log(`Received user ID: ${userId}`);
             localStorage.setItem("userId", userId);
             return;
         }
@@ -94,7 +94,7 @@ export const WebSocketProvider = ({ children }) => {
 
             const storedUserId = localStorage.getItem("userId");
             if (storedUserId) {
-                //console.log(`Reconnecting as user: ${storedUserId}`);
+                console.log(`Reconnecting as user: ${storedUserId}`);
                 ws.send(`/reconnect ${storedUserId}`);
             }
 
@@ -131,7 +131,7 @@ export const WebSocketProvider = ({ children }) => {
 
     useEffect(() => {
         const connectCoordinator = () => {
-            const coordinator = new WebSocket("ws://100.76.248.111:9999");
+            const coordinator = new WebSocket("ws://100.78.239.70:9999");
 
             coordinator.onopen = () => {
                 //console.log("Connected to coordinator.");

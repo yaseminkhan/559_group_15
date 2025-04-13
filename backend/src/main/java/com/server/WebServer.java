@@ -213,6 +213,11 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
+                            if (!temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                // The user has reconnected; do nothing.
+                                System.out.println("Drawer " + removedUser.getUsername() + " has reconnected. Canceling disconnect.");
+                                return;
+                            }
                             game.removePlayer(removedUser);
                             broadcastGamePlayers(game);
                             System.out.println("User permanently removed from game: " + removedUser.getUsername());
@@ -754,7 +759,6 @@ public class WebServer extends WebSocketServer {
         if (game == null)
             return;
         
-        
        
         // Clear all canvas and chat updates for this game
         synchronized (gameCanvasUpdate) {
@@ -1092,7 +1096,7 @@ public class WebServer extends WebSocketServer {
             int newLastIndex = lastIndex + newStrokes.size();
 
             //System.out.println("Canvas History Requested: " + gameCode + " Last Index: " + lastIndex);
-            conn.send("CANVAS_HISTORY " + newLastIndex + " " + newStrokesJson);
+            conn.send("CANVAS_HISTORY " + 0 + " " + newStrokesJson);
         }
     }
 
