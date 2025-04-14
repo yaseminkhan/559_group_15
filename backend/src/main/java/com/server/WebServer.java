@@ -1096,7 +1096,7 @@ public class WebServer extends WebSocketServer {
             int newLastIndex = lastIndex + newStrokes.size();
 
             //System.out.println("Canvas History Requested: " + gameCode + " Last Index: " + lastIndex);
-            conn.send("CANVAS_HISTORY " + 0 + " " + newStrokesJson);
+            conn.send("CANVAS_HISTORY " + newLastIndex + " " + newStrokesJson);
         }
     }
 

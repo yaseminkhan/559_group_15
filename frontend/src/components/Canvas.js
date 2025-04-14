@@ -140,7 +140,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         strokes.forEach((stroke) => {
           applyDrawing(stroke);
         });
-        setLastIndex(0);
+        setLastIndex(newIndex);
         
         if (isDrawer) {
           setHistoryReceived(true);
