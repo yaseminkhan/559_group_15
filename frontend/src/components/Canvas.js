@@ -171,7 +171,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   const applyDrawing = (point) => {
     const ctx = contextRef.current;
 
-    if (point.newStroke) {
+    if (point.newStroke || lastPos.current.x === null || lastPos.current.y === null) {
       lastPos.current = { x: null, y: null };
     }
 
