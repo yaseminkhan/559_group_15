@@ -249,13 +249,15 @@ public class WebServer extends WebSocketServer {
                         @Override
                         public void run() {
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                game.removePlayer(removedUser);
-                                broadcastGamePlayers(game);
-                                if (game.getPlayers().size() < 2) {
-                                    broadcastToGame(game, "GAME_OVER");
-                                    game.clearGame();
-                                    activeGames.remove(gameCode); // Remove game from active games
-                                    temporarilyDisconnectedUsers.clear();
+                                if (activeGames.containsKey(gameCode)) {
+                                    game.removePlayer(removedUser);
+                                    broadcastGamePlayers(game);
+                                    if (game.getPlayers().size() < 2) {
+                                        broadcastToGame(game, "GAME_OVER");
+                                        game.clearGame();
+                                        activeGames.remove(gameCode); // Remove game from active games
+                                        temporarilyDisconnectedUsers.clear();
+                                    }
                                 }
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
