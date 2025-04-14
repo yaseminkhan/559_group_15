@@ -107,6 +107,7 @@ public class ReplicationManager {
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "game-state-consumer-group-" + serverAddress); // Unique Group for each server
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest"); // Start from the latest offset
         kafkaConsumer = new KafkaConsumer<>(consumerProps);
         kafkaConsumer.subscribe(Arrays.asList("game-state", "incremental-updates"));
 
@@ -126,6 +127,7 @@ public class ReplicationManager {
                             processIncrementalUpdate(record.value());
                         }
                     }
+                    kafkaConsumer.commitSync(); // Commit offsets after processing
                 }
             } catch (org.apache.kafka.common.errors.WakeupException e) {
                 System.out.println("Kafka consumer wakeup triggered, shutting down.");
@@ -411,6 +413,9 @@ public class ReplicationManager {
             for (Game game : activeGames.values()) {
                 if (game.getTimeLeft() > 0) { // Only restart the timer if timeLeft is valid
                     webServer.startRoundTimer(game); // Use Game's startRoundTimer method
+                }
+                else{
+                    game.resetForRound();
                 }
             }
             

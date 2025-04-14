@@ -81,9 +81,10 @@ public class Game {
     }
     
     public List<CanvasUpdate> getCanvasEvents() {
-        int lastClearIndex = -1;
+        
     
         synchronized (eventHistory) {
+            int lastClearIndex = -1;
             for (int i = eventHistory.size() - 1; i >= 0; i--) {
                 EventWrapper e = eventHistory.get(i);
                 if ("CLEAR".equals(e.type)) {
@@ -95,6 +96,7 @@ public class Game {
             return eventHistory.subList(lastClearIndex + 1, eventHistory.size()).stream()
                     .filter(e -> "CANVAS".equals(e.type))
                     .map(e -> (CanvasUpdate) e.data)
+                    .filter(update -> update.getRoundNumber() == this.round)
                     .toList();
         }
     }
@@ -107,12 +109,11 @@ public class Game {
 
     public void clearGame() {
         this.gameCode = null;
-        players.clear();
         confirmedEndGame.clear();
         this.drawer = null;
         this.wordToDraw = null;
         clearEvents(); // clear all events for next game
-        for (var player : players) {
+        for (User player : players) {
             player.setGameCode(null);
             player.setWasDrawer(false);
             player.setAlreadyGuessed(false);
@@ -120,6 +121,7 @@ public class Game {
             player.setUsername(null);
             player.setIsHost(false);
         }
+        players.clear();
     }
 
     private int getPlayersAlreadyGuessed() {
@@ -143,6 +145,9 @@ public class Game {
         for (var player : players)
             player.setAlreadyGuessed(false);
         cancelTimer();
+        // Explicitly clear canvas-related data
+        wordToDraw = null;
+        roundStarted = false;
     }
 
     public User getUserById(String id) {
@@ -445,6 +450,8 @@ public class Game {
     public void resetScores() {
         for (User player : players) {
             player.setScore(0);
+            player.setWasDrawer(false);
+            player.removeAsDrawer();
         }
         System.out.println("All player scores have been reset to 0.");
     }
@@ -508,6 +515,7 @@ public class Game {
         private double y;
         private String color;
         private double width;
+        private int roundNumber;
         private boolean newStroke;
 
         public CanvasUpdate() {} // Required for deserialization
@@ -526,6 +534,14 @@ public class Game {
 
         public double getY() {
             return y;
+        }
+
+        public int getRoundNumber() {
+            return roundNumber;
+        }
+    
+        public void setRoundNumber(int roundNumber) {
+            this.roundNumber = roundNumber;
         }
 
         public String getColor() {
