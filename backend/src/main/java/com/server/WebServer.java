@@ -213,6 +213,13 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
+
+                            // temporary solution
+                            if (!temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                // The user has reconnected; do nothing.
+                                System.out.println("Drawer " + removedUser.getUsername() + " has reconnected. Canceling disconnect.");
+                                return;
+                            }
                             game.removePlayer(removedUser);
                             broadcastGamePlayers(game);
                             System.out.println("User permanently removed from game: " + removedUser.getUsername());
