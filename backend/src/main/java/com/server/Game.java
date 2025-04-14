@@ -450,6 +450,8 @@ public class Game {
     public void resetScores() {
         for (User player : players) {
             player.setScore(0);
+            player.setWasDrawer(false);
+            player.removeAsDrawer();
         }
         System.out.println("All player scores have been reset to 0.");
     }
