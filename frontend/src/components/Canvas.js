@@ -141,7 +141,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       const data = event.data;
 
       if (data.startsWith("CANVAS_HISTORY")) {
-        if (isDrawer && historyReceived) return;
+        //if (isDrawer && historyReceived) return;
 
         const parts = data.split(" ", 4);
         const newIndex = parseInt(parts[1], 10);
