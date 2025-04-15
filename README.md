@@ -85,3 +85,10 @@ rm -rf kafka-logs # Run inside Kafka directory
 rm -rf C:\tmp\kafka-logs  # Using non PowerShell
 Remove-Item -Recurse -Force C:\tmp\kafka-logs # Using PowerShell
 ```
+
+# Starting Clients (Frontend)
+Navigate to frontend/ in project directory
+
+```shelll
+npm start
+```
