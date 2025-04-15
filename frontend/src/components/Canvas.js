@@ -182,6 +182,13 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
   const applyDrawing = (point) => {
     const ctx = contextRef.current;
+
+    const prevColor = ctx.strokeStyle;
+    const prevWidth = ctx.lineWidth;
+
+    ctx.strokeStyle = point.color;
+    ctx.lineWidth = point.width;
+
     if (point.strokeIndex !== lastStrokeIndexApplied.current) {
       lastStrokeIndexApplied.current = point.strokeIndex;
       lastPointIndexApplied.current = point.pointIndex;
@@ -206,6 +213,8 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       }
       lastPos.current = { x: point.x, y: point.y };
       lastPointIndexApplied.current = point.pointIndex;
+      ctx.strokeStyle = prevColor;
+      ctx.lineWidth = prevWidth;
     }
   };
 
