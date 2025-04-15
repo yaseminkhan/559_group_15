@@ -213,6 +213,13 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
+
+                            // temporary solution
+                            if (!temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                // The user has reconnected; do nothing.
+                                System.out.println("Drawer " + removedUser.getUsername() + " has reconnected. Canceling disconnect.");
+                                return;
+                            }
                             game.removePlayer(removedUser);
                             broadcastGamePlayers(game);
                             System.out.println("User permanently removed from game: " + removedUser.getUsername());
@@ -242,10 +249,15 @@ public class WebServer extends WebSocketServer {
                         @Override
                         public void run() {
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                game.removePlayer(removedUser);
-                                broadcastGamePlayers(game);
-                                if (game.getPlayers().size() < 2) {
-                                    broadcastToGame(game, "GAME_OVER");
+                                if (activeGames.containsKey(gameCode)) {
+                                    game.removePlayer(removedUser);
+                                    broadcastGamePlayers(game);
+                                    if (game.getPlayers().size() < 2) {
+                                        broadcastToGame(game, "GAME_OVER");
+                                        game.clearGame();
+                                        activeGames.remove(gameCode); // Remove game from active games
+                                        temporarilyDisconnectedUsers.clear();
+                                    }
                                 }
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
@@ -546,6 +558,8 @@ public class WebServer extends WebSocketServer {
                 startRoundTimer(game);
             } else {
                 System.out.println("No active round to resume for game: " + game.getGameCode());
+                game.resetForRound();
+                System.out.println("Cleared chat and canvas data");
             }
         }
 
@@ -748,11 +762,26 @@ public class WebServer extends WebSocketServer {
 
         if (game == null)
             return;
+        
+        
+        // String gameCode = game.getGameCode();
+        // if (game.getGameCode() != null) {
+        //     synchronized (gameCanvasUpdate) {
+        //         gameCanvasUpdate.remove(gameCode);
+        //     }
+        //     synchronized (chatUpdate) {
+        //         chatUpdate.remove(gameCode);
+        //     }
+        // }
+        // else {
+        //     gameCanvasUpdate.clear();
+        //     chatUpdate.clear();
+        // }
 
+        gameCanvasUpdate.clear();
+        chatUpdate.clear();
 
         game.resetForRound(); // Reset round state
-        chatUpdate.clear();
-        gameCanvasUpdate.clear();
 
         if (!game.hasAvailableDrawer()) {
             broadcastToGame(game, "GAME_OVER");
@@ -1027,15 +1056,19 @@ public class WebServer extends WebSocketServer {
                 Gson gson = new Gson();
                 Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
 
+                // Set the current round number
+                update.setRoundNumber(game.getCurrentRound());
+
                 int frontendTS = update.getSequenceNumber();
                 int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
                 update.setSequenceNumber(newSeq);
 
                 System.out.println(String.format(
-                    "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
+                    "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d | Round: %d",
                     update.getId(),
                     frontendTS,
-                    newSeq
+                    newSeq,
+                    game.getCurrentRound()
                 ));
                 System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
                 
@@ -1060,7 +1093,7 @@ public class WebServer extends WebSocketServer {
             return;
         }
 
-        synchronized (game) {
+        synchronized (game) {         
             List<Game.CanvasUpdate> entireList = game.getCanvasEvents();
 
             if (lastIndex < 0) {
