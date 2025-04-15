@@ -12,6 +12,15 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   const [lastY, setLastY] = useState(null);
   const lastPos = useRef({ x: null, y: null });
 
+  // Use a ref to hold the current stroke index. Increment on every new stroke.
+  const currentStrokeIndexRef = useRef(0);
+  // Use a ref to hold the current point index for the current stroke.
+  const currentPointIndexRef = useRef(0);
+  // Track the last applied stroke index (for separating strokes on the receiver)
+  const lastStrokeIndexApplied = useRef(null);
+  // Track the last applied point index in a stroke (for ordering)
+  const lastPointIndexApplied = useRef(null);
+
   const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {};
   const gameCode = localStorage.getItem("gameCode");
   const [historyReceived, setHistoryReceived] = useState(false);
@@ -37,20 +46,15 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     }
   }, [selectedColour]);
 
+  // Reset lastPos on connection status changes.
   useEffect(() => {
-    if (isConnected) {
-      lastPos.current = { x: null, y: null };
-    }
-
-    if (!isConnected) {
-      lastPos.current = { x: null, y: null };
-    }
+    lastPos.current = { x: null, y: null };
   }, [isConnected]);
 
+  // Reset lastPos when the WebSocket reconnects.
   useEffect(() => {
     if (!socket) return;
   
-    // When the websocket connection is opened (or re-opened), reset lastPos.
     const handleOpen = () => {
       console.log("WebSocket reconnected: resetting lastPos");
       lastPos.current = { x: null, y: null };
@@ -60,12 +64,15 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     return () => socket.removeEventListener("open", handleOpen);
   }, [socket]);
 
-
+  // When a new stroke starts, reset the point counter.
   const startDrawing = (event) => {
     if (!isDrawer) return;
     setDrawing(true);
 
-    lastPos.current = { x: null, y: null };
+    // Increment the stroke index for a new stroke.
+    currentStrokeIndexRef.current += 1;
+    // Reset the point index for the new stroke.
+    currentPointIndexRef.current = 0;
 
     const { offsetX, offsetY } = event.nativeEvent;
     setLastX(offsetX);
@@ -73,18 +80,20 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
     const ctx = contextRef.current;
     ctx.beginPath();
+    // Draw the starting dot for the new stroke.
     ctx.arc(offsetX, offsetY, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
 
+    // Send the starting point with strokeIndex and pointIndex (0)
     const pointData = {
       x: offsetX,
       y: offsetY,
       color: ctx.strokeStyle,
       width: ctx.lineWidth,
-      newStroke: true,
+      strokeIndex: currentStrokeIndexRef.current,
+      pointIndex: currentPointIndexRef.current,
     };
-    //console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
     queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
   };
 
@@ -93,7 +102,8 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
     const ctx = contextRef.current;
     const { offsetX, offsetY } = event.nativeEvent;
-
+    
+    // Draw the line on the canvas (from last known coordinates)
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(offsetX, offsetY);
@@ -102,12 +112,16 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     setLastX(offsetX);
     setLastY(offsetY);
 
+    // Increment the point index for this stroke.
+    currentPointIndexRef.current += 1;
+    // Include the current stroke and point indices in the data.
     const pointData = {
       x: offsetX,
       y: offsetY,
       color: ctx.strokeStyle,
       width: ctx.lineWidth,
-      newStroke: false,
+      strokeIndex: currentStrokeIndexRef.current,
+      pointIndex: currentPointIndexRef.current,
     };
     console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
     queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
@@ -124,7 +138,6 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (isConnected) {
-      // socket.send(`/clear-canvas ${gameCode}`);
       queueOrSendEvent("/clear-canvas", { gameCode });
     }
   };
@@ -160,9 +173,9 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         }
       } else if (data.startsWith("CANVAS_CLEAR") || data.startsWith("ROUND_OVER")) {
         const canvas = canvasRef.current;
-        if (!canvas) return; //Adds a null check to stop getContext error.
+        if (!canvas) return;
         const ctx = canvas.getContext("2d");
-        if (!ctx) return; //Adds a null check to stop getContext error.
+        if (!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
     };
@@ -181,34 +194,42 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     return () => clearInterval(intervalId);
   }, [socket, gameCode, lastIndex, isConnected]);
 
+  // Updated applyDrawing that uses both strokeIndex and pointIndex for ordering.
   const applyDrawing = (point) => {
     const ctx = contextRef.current;
-
-    if (point.newStroke || lastPos.current.x === null || lastPos.current.y === null) {
-      lastPos.current = { x: null, y: null };
-    }
-
-    const prevColor = ctx.strokeStyle;
-    const prevWidth = ctx.lineWidth;
-
-    ctx.strokeStyle = point.color;
-    ctx.lineWidth = point.width;
-
-    if (lastPos.current.x != null && lastPos.current.y != null) {
-      ctx.beginPath();
-      ctx.moveTo(lastPos.current.x, lastPos.current.y);
-      ctx.lineTo(point.x, point.y);
-      ctx.stroke();
-    } else {
+    // For a new stroke, or if there is no previous point recorded:
+    if (point.strokeIndex !== lastStrokeIndexApplied.current) {
+      // Start a new stroke: update both stroke and point indices.
+      lastStrokeIndexApplied.current = point.strokeIndex;
+      lastPointIndexApplied.current = point.pointIndex;
+      // Set the starting point without drawing a connecting line.
+      lastPos.current = { x: point.x, y: point.y };
       ctx.beginPath();
       ctx.arc(point.x, point.y, point.width / 2, 0, Math.PI * 2);
       ctx.fillStyle = point.color;
       ctx.fill();
+    } else {
+      // Same stroke: check the ordering using pointIndex.
+      // If the current point's index is exactly one higher than the last applied,
+      // draw a connecting line; otherwise, reinitialize the lastPos.
+      if (lastPointIndexApplied.current !== null &&
+          point.pointIndex === lastPointIndexApplied.current + 1) {
+        ctx.beginPath();
+        ctx.moveTo(lastPos.current.x, lastPos.current.y);
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+      } else {
+        // Not in order—this might happen if points arrive out-of-order.
+        // In that case, simply draw a dot for the new point.
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, point.width / 2, 0, Math.PI * 2);
+        ctx.fillStyle = point.color;
+        ctx.fill();
+      }
+      // Update ordering and last position.
+      lastPos.current = { x: point.x, y: point.y };
+      lastPointIndexApplied.current = point.pointIndex;
     }
-
-    lastPos.current = { x: point.x, y: point.y };
-    ctx.strokeStyle = prevColor;
-    ctx.lineWidth = prevWidth;
   };
 
   return (

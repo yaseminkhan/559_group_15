@@ -1040,7 +1040,10 @@ public class WebServer extends WebSocketServer {
             try {
                 Gson gson = new Gson();
                 Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
-
+                System.out.println("\nUPDATESHIT: " + update.getStrokeId() + "\n");
+                System.out.println("\nPOINT INDEX: " + update.getPointId() + "\n");
+                // Print entire Json
+                System.out.println("\nJSON: " + json + "\n");
                 // Set the current round number
                 update.setRoundNumber(game.getCurrentRound());
 

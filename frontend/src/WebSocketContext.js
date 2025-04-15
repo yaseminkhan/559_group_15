@@ -43,7 +43,7 @@ export const WebSocketProvider = ({ children }) => {
         const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;
       
         if (!closedOrClosing && ready) {
-          //console.log("[Sent immediately]:", message);
+          console.log("[Sent immediately]:", message);
           socket.send(message);
         } else {
           //console.log("[Queued]:", message);
@@ -131,7 +131,7 @@ export const WebSocketProvider = ({ children }) => {
 
     useEffect(() => {
         const connectCoordinator = () => {
-            const coordinator = new WebSocket("ws://100.76.248.111:9999");
+            const coordinator = new WebSocket("ws://100.78.239.70:9999");
 
             coordinator.onopen = () => {
                 //console.log("Connected to coordinator.");
