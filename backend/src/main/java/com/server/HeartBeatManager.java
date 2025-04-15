@@ -3,7 +3,6 @@ package com.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -55,9 +54,7 @@ public class HeartBeatManager {
     
     //Send heartbeats to a specific server
     public void sendHeartbeat(String serverIp, int port) {
-        //System.out.println("Attempting to connect to serverip: " + serverIp + ", port: " + port);
         try {
-            //System .out.println("SEND HEARBEAT: " + serverIp + " on port: " + port);
             Socket socket = new Socket();
             socket.setReuseAddress(true); // Allow address reuse
             socket.connect(new InetSocketAddress(serverIp, port), 500);
@@ -66,7 +63,6 @@ public class HeartBeatManager {
             String[] srcAddress = serverAddress.split("://");
             String message = srcAddress[1] + ":HEARTBEAT"; // Adding tailscale IP to the heartbeat message
             output.write(message.getBytes()); //Send the heartbeat message
-            //System.out.println("HEARTBEAT SENT");
             socket.close();
         } catch (SocketTimeoutException ste) {
             System.err.println("Connection to " + serverIp + " on port " + port + " timed out after 0.5 seconds.");
@@ -90,7 +86,6 @@ public class HeartBeatManager {
     
                     if (bytesRead > 0) {
                         String message = new String(buffer, 0, bytesRead);
-                        //System.out.println("MESSAGE RECEIVED : " + message);
                         // Resolve Sender Address
                         String[] parts = message.split(":");
                         // Message format : <sender_ip>:<command>:<message>
@@ -98,10 +93,8 @@ public class HeartBeatManager {
                         // remove address from message
                         if (parts.length < 4) {
                             message = parts[2];
-                            //System.out.println("Cut Message: " + message);
                         } else if (parts.length == 5) {
                             message = parts[2] + ":" + parts[3] + ":" + parts[4];
-                            //System.out.println("Cut Message: " + message);
                         }
                         // HEARTBEAT or other messages
                         if (message.startsWith("HEARTBEAT")) {
@@ -109,9 +102,7 @@ public class HeartBeatManager {
                         } else {
                             try {
                                 // Change senderAddress to hostaddressIP
-                                //senderAddress = socket.getInetAddress().getHostAddress();
                                 handleIncomingMessage(senderAddress, message);
-                                //System.out.println("Message: " + message);
                             } catch (InterruptedException ex) {
                                 System.err.println("Error with handling incoming message from: " + senderAddress);
                             }
@@ -135,7 +126,6 @@ public class HeartBeatManager {
                 try {
                     sendHeartbeatToAllServers();
                 } catch (NumberFormatException | InterruptedException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
                 try {
@@ -162,20 +152,6 @@ public class HeartBeatManager {
             return true;
         }
         System.out.println("Server address: " + serverAddress);
-        /*
-        if (serverAddress.contains("://")) {
-            // Case 1: "ws://primary_server:8887"
-            String[] parts = serverAddress.split("://"); // Split at "://"
-            String[] hostParts = parts[1].split(":"); // Split at ":"
-            String serverName = hostParts[0]; // Get "primary_server"
-            System.out.println("Server name: " + serverName);
-            cleanHost = serverName;
-            System.out.println("cleanHost: " + cleanHost);
-        } else {
-            // Case 2: "primary_server:5001" (already in correct format)
-            cleanHost = serverAddress;
-        }
-        */
 
         long currentTime = System.currentTimeMillis();
 
@@ -205,7 +181,6 @@ public class HeartBeatManager {
 
         String[] parts = serverAddress.split(":"); // Split by ":"
         serverAddress = parts[0] + ":" + properMap.get(parts[1]); // Get the server address and port
-        //System.out.println("Updated heart beat for server: " + serverAddress + ": " + time);
         lastHeartbeats.put(serverAddress, time);
         
     }
@@ -215,15 +190,12 @@ public class HeartBeatManager {
     }
 
     public void sendMessage(String serverAddressRecieve, String message) {
-        // System.out.println("Server Address in sendMessage: " + serverAddressRecieve);
         String[] parts = serverAddressRecieve.split(":"); // Split by ":"
         String server = parts[0]; 
         int port = Integer.parseInt(parts[1]);
-        //System.out.println("Server: " + server + "port: " + port);
         try (Socket socket = new Socket(server, port);
             OutputStream output = socket.getOutputStream()) {
             output.write(message.getBytes());
-            // System.out.println("Sent message to " + server + " on port: " + port + " Message: " + message);
         } catch (IOException ioe) {
             System.err.println("Failed to send message to " + server + ": " + ioe.getMessage());
         } catch (Exception e) {
@@ -242,7 +214,6 @@ public class HeartBeatManager {
             leaderElectionManager.handleBullyMessage(senderAddress, electionId);
         } else if (message.startsWith("LEADER")) {
             System.out.println("HANDLING LEADER!!!!");
-            //String newLeader = message.split(":")[1];
             leaderElectionManager.handleLeaderMessage(senderAddress);
         } else if (message.startsWith("GET_LEADER")) {
             System.out.println("HANDLING GET LEADER!!!!");

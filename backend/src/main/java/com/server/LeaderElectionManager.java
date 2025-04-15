@@ -189,10 +189,6 @@ public class LeaderElectionManager {
         this.currentLeader = leaderAddress;
         this.running = false; // Stop the election
         System.out.println("Leader elected: " + leaderAddress);
-
-        // Demote this server to backup; maybe need this in the future. do not delete
-        // webServer.setIsPrimary(false);
-        // webServer.demoteToBackup(); // Start Kafka consumer
     }
 
     public void handleBullyMessage(String senderAddress, long receivedElectionId) {

@@ -48,9 +48,7 @@ public class User {
      */
     private String setIcon() {
         List<String> availableEmojis = new ArrayList<>();    
-        
-        // Check which emojis have not been used yet
-        
+              
         for (String emoji : EMOJIS) {
             if (!usedEmojis.contains(emoji)) {
                 availableEmojis.add(emoji);
@@ -175,7 +173,7 @@ public class User {
         if (this == o) return true;
         if (!(o instanceof User)) return false;
         User other = (User) o;
-        return this.id.equals(other.id); // assuming id is unique
+        return this.id.equals(other.id); 
     }
 
     @Override

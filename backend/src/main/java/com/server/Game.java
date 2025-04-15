@@ -15,7 +15,7 @@ import com.google.gson.Gson;
  * Game instance
  */
 public class Game {
-    private static final int MAX_PLAYERS = 8; // max players set to 8 for now 
+    private static final int MAX_PLAYERS = 8; // max players set to 8
 
     private String gameCode;
     private List<User> players;
@@ -27,7 +27,7 @@ public class Game {
     private boolean gameEnded;
     private int drawerIndex;
     private int timeLeft;
-    private transient Timer roundTimer; // Transient so Gson ignores it wben seri
+    private transient Timer roundTimer; // Transient so Gson ignores it wben serializing 
     private boolean roundStarted;
 
     private List<EventWrapper> eventHistory;
@@ -180,8 +180,6 @@ public class Game {
                 message.correct = true;
             }
             addEvent(message); 
-            // System.out.println("Message sender: " + message.sender);
-            // System.out.println("Message: " + message);
         }    
         return message;
     }
@@ -246,7 +244,6 @@ public class Game {
      */
     public boolean startGame(User user) {
         if (!players.isEmpty() && user.isHost()) {
-            // resetRoundPoints();
             gameStarted = true;
             round = 1;
             assignNextDrawer();
@@ -296,11 +293,6 @@ public class Game {
                     drawer = potentialDrawer;
                     drawer.setDrawer();
                     drawer.setWasDrawer(true);
-
-                    System.out.println("\n==========================================\n");
-                    System.out.println("New drawer assigned: " + drawer.getUsername());
-                    System.out.println("==========================================\n");
-
                     wordToDraw = selectRandomWord();
                     return;
                 }
@@ -320,8 +312,6 @@ public class Game {
         }
 
         for (User player : players) {
-            //System.out.println(player.getUsername() + " - wasDrawer: " + player.wasDrawer() + ", isDrawer: " + player.isDrawer());
-
             if (!player.wasDrawer()) {
                 return true;
             }

@@ -121,7 +121,6 @@ export const WebSocketProvider = ({ children }) => {
         };
 
         return () => {
-            //console.log("Cleaning up old socket connection.");
             ws.close();
         };
     }, [serverAddress]);
