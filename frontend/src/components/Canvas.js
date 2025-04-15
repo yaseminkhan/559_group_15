@@ -134,9 +134,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         setLastIndex(newIndex);
       } else if (data.startsWith("CANVAS_CLEAR") || data.startsWith("ROUND_OVER")) {
         const canvas = canvasRef.current;
-        if (!canvas) return; //Adds a null check to stop getContext error.
         const ctx = canvas.getContext("2d");
-        if (!ctx) return; //Adds a null check to stop getContext error.
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
     };

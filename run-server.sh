@@ -35,7 +35,7 @@ case "$ROLE" in
   backup1)
     mvn exec:java \
       -Dexec.mainClass="com.server.WebServer" \
-      -Dexec.args="8892 6001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001,${BACKUP_SERVER_4_IP}:8001 false"
+      -Dexec.args="8888 6001 ${PRIMARY_SERVER_IP}:5001,${BACKUP_SERVER_2_IP}:7001,${BACKUP_SERVER_3_IP}:4001,${BACKUP_SERVER_4_IP}:8001 false"
     ;;
 
   backup2)
