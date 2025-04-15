@@ -47,6 +47,19 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     }
   }, [isConnected]);
 
+  useEffect(() => {
+    if (!socket) return;
+  
+    // When the websocket connection is opened (or re-opened), reset lastPos.
+    const handleOpen = () => {
+      console.log("WebSocket reconnected: resetting lastPos");
+      lastPos.current = { x: null, y: null };
+    };
+  
+    socket.addEventListener("open", handleOpen);
+    return () => socket.removeEventListener("open", handleOpen);
+  }, [socket]);
+
 
   const startDrawing = (event) => {
     if (!isDrawer) return;
