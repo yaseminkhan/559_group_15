@@ -213,29 +213,27 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            if (!temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                // The user has reconnected; do nothing.
-                                System.out.println("Drawer " + removedUser.getUsername() + " has reconnected. Canceling disconnect.");
-                                return;
-                            }
-                            game.removePlayer(removedUser);
-                            broadcastGamePlayers(game);
-                            System.out.println("User permanently removed from game: " + removedUser.getUsername());
-
-                            game.resetForRound();
-                            // Notify players that the drawer has disconnected
-                            broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                temporarilyDisconnectedUsers.remove(removedUser.getId());
+                            
+                                game.removePlayer(removedUser);
+                                broadcastGamePlayers(game);
+                                System.out.println("User permanently removed from game: " + removedUser.getUsername());
 
-                                game.cancelTimer();
+                                game.resetForRound();
+                                // Notify players that the drawer has disconnected
+                                broadcastToGame(game, "DRAWER_DISCONNECTED");
+                                if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                    temporarilyDisconnectedUsers.remove(removedUser.getId());
 
-                                // Drawer did not reconnect, so select a new drawer            
-                                if (game.getPlayers().size() >= 2) {
-                                    System.out.println("Starting new round...");
-                                    startNewRound(game);
-                                } else {
-                                    broadcastToGame(game, "GAME_OVER");
+                                    game.cancelTimer();
+
+                                    // Drawer did not reconnect, so select a new drawer            
+                                    if (game.getPlayers().size() >= 2) {
+                                        System.out.println("Starting new round...");
+                                        startNewRound(game);
+                                    } else {
+                                        broadcastToGame(game, "GAME_OVER");
+                                    }
                                 }
                             }
                         }
