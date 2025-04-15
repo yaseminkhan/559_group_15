@@ -245,13 +245,15 @@ public class WebServer extends WebSocketServer {
                         @Override
                         public void run() {
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                game.removePlayer(removedUser);
-                                broadcastGamePlayers(game);
-                                if (game.getPlayers().size() < 2) {
-                                    broadcastToGame(game, "GAME_OVER");
-                                    game.clearGame();
-                                    activeGames.remove(gameCode); // Remove game from active games
-                                    temporarilyDisconnectedUsers.clear();
+                                if (activeGames.containsKey(gameCode)) {
+                                    game.removePlayer(removedUser);
+                                    broadcastGamePlayers(game);
+                                    if (game.getPlayers().size() < 2) {
+                                        broadcastToGame(game, "GAME_OVER");
+                                        game.clearGame();
+                                        activeGames.remove(gameCode); // Remove game from active games
+                                        temporarilyDisconnectedUsers.clear();
+                                    }
                                 }
                                 System.out.println("User permanently removed from game: " + removedUser.getUsername());
                                 temporarilyDisconnectedUsers.remove(removedUser.getId());
@@ -757,14 +759,25 @@ public class WebServer extends WebSocketServer {
         if (game == null)
             return;
         
-       
-        // Clear all canvas and chat updates for this game
-        synchronized (gameCanvasUpdate) {
-            gameCanvasUpdate.remove(game.getGameCode());
-        }
-        synchronized (chatUpdate) {
-            chatUpdate.remove(game.getGameCode());
-        }
+
+        
+        // String gameCode = game.getGameCode();
+        // if (game.getGameCode() != null) {
+        //     synchronized (gameCanvasUpdate) {
+        //         gameCanvasUpdate.remove(gameCode);
+        //     }
+        //     synchronized (chatUpdate) {
+        //         chatUpdate.remove(gameCode);
+        //     }
+        // }
+        // else {
+        //     gameCanvasUpdate.clear();
+        //     chatUpdate.clear();
+        // }
+
+        gameCanvasUpdate.clear();
+        chatUpdate.clear();
+
 
         game.resetForRound(); // Reset round state
 
