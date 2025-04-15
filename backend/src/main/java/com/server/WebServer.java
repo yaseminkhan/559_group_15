@@ -213,31 +213,27 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
-
-                            // temporary solution
-                            if (!temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                // The user has reconnected; do nothing.
-                                System.out.println("Drawer " + removedUser.getUsername() + " has reconnected. Canceling disconnect.");
-                                return;
-                            }
-                            game.removePlayer(removedUser);
-                            broadcastGamePlayers(game);
-                            System.out.println("User permanently removed from game: " + removedUser.getUsername());
-
-                            game.resetForRound();
-                            // Notify players that the drawer has disconnected
-                            broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                temporarilyDisconnectedUsers.remove(removedUser.getId());
+                            
+                                game.removePlayer(removedUser);
+                                broadcastGamePlayers(game);
+                                System.out.println("User permanently removed from game: " + removedUser.getUsername());
 
-                                game.cancelTimer();
+                                game.resetForRound();
+                                // Notify players that the drawer has disconnected
+                                broadcastToGame(game, "DRAWER_DISCONNECTED");
+                                if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                    temporarilyDisconnectedUsers.remove(removedUser.getId());
 
-                                // Drawer did not reconnect, so select a new drawer            
-                                if (game.getPlayers().size() >= 2) {
-                                    System.out.println("Starting new round...");
-                                    startNewRound(game);
-                                } else {
-                                    broadcastToGame(game, "GAME_OVER");
+                                    game.cancelTimer();
+
+                                    // Drawer did not reconnect, so select a new drawer            
+                                    if (game.getPlayers().size() >= 2) {
+                                        System.out.println("Starting new round...");
+                                        startNewRound(game);
+                                    } else {
+                                        broadcastToGame(game, "GAME_OVER");
+                                    }
                                 }
                             }
                         }
@@ -763,6 +759,7 @@ public class WebServer extends WebSocketServer {
         if (game == null)
             return;
         
+
         
         // String gameCode = game.getGameCode();
         // if (game.getGameCode() != null) {
@@ -780,6 +777,7 @@ public class WebServer extends WebSocketServer {
 
         gameCanvasUpdate.clear();
         chatUpdate.clear();
+
 
         game.resetForRound(); // Reset round state
 
@@ -1053,7 +1051,10 @@ public class WebServer extends WebSocketServer {
             try {
                 Gson gson = new Gson();
                 Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
-
+                System.out.println("\nUPDATESHIT: " + update.getStrokeId() + "\n");
+                System.out.println("\nPOINT INDEX: " + update.getPointId() + "\n");
+                // Print entire Json
+                System.out.println("\nJSON: " + json + "\n");
                 // Set the current round number
                 update.setRoundNumber(game.getCurrentRound());
 
