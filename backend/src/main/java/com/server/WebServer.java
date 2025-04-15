@@ -359,21 +359,23 @@ public class WebServer extends WebSocketServer {
                 Game game = activeGames.get(gameCode);
 
                 if (game != null) {
-                    int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
-                    clearEvent.setSequenceNumber(updatedClock);
+                    synchronized(game){
+                        int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
+                        clearEvent.setSequenceNumber(updatedClock);
 
-                    /*
-                    System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
-                        ", Frontend TS: " + clearEvent.getSequenceNumber() +
-                        ", Backend TS: " + updatedClock);
+                        /*
+                        System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
+                            ", Frontend TS: " + clearEvent.getSequenceNumber() +
+                            ", Backend TS: " + updatedClock);
 
-                    */
-                    game.addEvent(clearEvent);
-                    synchronized (gameCanvasClearUpdate) {
-                        gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(clearEvent);
-                        System.out.println("Canvas clear update added to the map to be sent");
+                        */
+                        game.addEvent(clearEvent);
+                        synchronized (gameCanvasClearUpdate) {
+                            gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(clearEvent);
+                            System.out.println("Canvas clear update added to the map to be sent");
+                        }
+                        broadcastToGame(game, "CANVAS_CLEAR");
                     }
-                    broadcastToGame(game, "CANVAS_CLEAR");
                 }
 
             } catch (Exception e) {
