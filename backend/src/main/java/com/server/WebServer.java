@@ -372,7 +372,7 @@ public class WebServer extends WebSocketServer {
                         game.addEvent(clearEvent);
                         synchronized (gameCanvasClearUpdate) {
                             gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(clearEvent);
-                            System.out.println("Canvas clear update added to the map to be sent");
+                            //System.out.println("Canvas clear update added to the map to be sent");
                         }
                         broadcastToGame(game, "CANVAS_CLEAR");
                     }
@@ -1059,10 +1059,10 @@ public class WebServer extends WebSocketServer {
             try {
                 Gson gson = new Gson();
                 Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
-                System.out.println("\nUPDATESHIT: " + update.getStrokeId() + "\n");
-                System.out.println("\nPOINT INDEX: " + update.getPointId() + "\n");
+                //System.out.println("\nUPDATESHIT: " + update.getStrokeId() + "\n");
+                //System.out.println("\nPOINT INDEX: " + update.getPointId() + "\n");
                 // Print entire Json
-                System.out.println("\nJSON: " + json + "\n");
+                //System.out.println("\nJSON: " + json + "\n");
                 // Set the current round number
                 update.setRoundNumber(game.getCurrentRound());
 
@@ -1070,6 +1070,7 @@ public class WebServer extends WebSocketServer {
                 int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
                 update.setSequenceNumber(newSeq);
 
+                /* 
                 System.out.println(String.format(
                     "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d | Round: %d",
                     update.getId(),
@@ -1079,10 +1080,11 @@ public class WebServer extends WebSocketServer {
                 ));
                 System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
                 
+                */
                 game.addCanvasUpdate(update);
 
                 // Update gameCanvasUpdate
-                System.out.println("Canvas update map updated.");
+                //System.out.println("Canvas update map updated.");
                 synchronized (gameCanvasUpdate) {
                     gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
                 }
