@@ -215,7 +215,6 @@ public class ReplicationManager {
                 gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>());
                 synchronized (gameCanvasClearUpdate.get(gameCode)) {
                     updateData.put("canvasClearUpdates", new ArrayList<>(gameCanvasClearUpdate.get(gameCode)));
-                    System.out.println("Canvas clear update being sent");
                 }
             }
 
@@ -346,7 +345,7 @@ public class ReplicationManager {
 
             for (CanvasClear clearUpdate : canvasClearUpdates) {
                 game.addEvent(clearUpdate);
-                System.out.println("Applying canvas clear update received");
+                //System.out.println("Applying canvas clear update received");
             }
 
             // Apply chat updates to game, but check for duplicates based on userId and timestamp
@@ -378,7 +377,7 @@ public class ReplicationManager {
     // Update the game state (secondary servers only)
     private void updateGameState(String gameStateJson) {
         synchronized (gameStateLock) {
-            System.out.println("Raw gameStateJson: " + gameStateJson); // Debug log
+            //System.out.println("Raw gameStateJson: " + gameStateJson); // Debug log
             // Gson gson = new Gson();
             Gson gson = new GsonBuilder()
                 .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
