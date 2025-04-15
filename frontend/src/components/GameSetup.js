@@ -35,8 +35,6 @@ const GameSetup = () => {
         }
 
         const handleMessage = (event) => {
-            console.log("\n========== WebSocket MESSAGE RECEIVED ==========");
-            console.log("Raw Data:", event.data);
         
             try {
                 if (typeof event.data === "string" && event.data.startsWith("GAME_STARTED: ")) {
@@ -45,7 +43,6 @@ const GameSetup = () => {
                     const userId = localStorage.getItem("userId");
         
                     if (firstDrawer === userId) {
-                        console.log("You are the first drawer. Navigating to word selection page.");
                         localStorage.setItem("isDrawer", true);
                         navigate(`/wordselection/${gameCode}`); 
                     } else {

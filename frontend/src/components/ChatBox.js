@@ -64,7 +64,6 @@ const ChatBox = ({ isDrawer, wordToDraw }) => {
     const interval = 200; // 200ms polling interval.
     const getChatHistory = () => {
       if (!socket || !isConnected) return;
-      //console.log("is chat coming through");
       socket.send(`/chat-history ${gameCode}`);
     };
 

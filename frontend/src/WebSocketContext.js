@@ -46,7 +46,6 @@ export const WebSocketProvider = ({ children }) => {
           console.log("[Sent immediately]:", message);
           socket.send(message);
         } else {
-          //console.log("[Queued]:", message);
           queue.current.push(message);
         }
     };
@@ -69,15 +68,13 @@ export const WebSocketProvider = ({ children }) => {
     
     };
 
+    // flush queue when socket reconnected 
     const flushQueue = (ws) => {
         if (!queue.current || queue.current.length === 0) return;
 
-        //console.log("=============== FLUSHING QUEUE ===============");
         queue.current.forEach((msg) => {
-            //console.log("[Sending from queue]:", msg);
             ws.send(msg);
         });
-        //console.log("===============================================");
         queue.current = [];
     };
 
@@ -134,7 +131,6 @@ export const WebSocketProvider = ({ children }) => {
             const coordinator = new WebSocket("ws://100.76.248.111:9999");
 
             coordinator.onopen = () => {
-                //console.log("Connected to coordinator.");
                 coordinator.send("GET_LEADER");
             };
 
