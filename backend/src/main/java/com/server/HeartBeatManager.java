@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class HeartBeatManager {
     private final String serverAddress;
-    private final int heartbeatPort; //Port for heartbeat communication
     private final List<String> allServers; //List of all server addresses
     private List<String> allHBServers; //List of all server addresses
     private long lastHeartbeatTime = System.currentTimeMillis(); //Timestamp of last received heartbeat
@@ -34,7 +33,6 @@ public class HeartBeatManager {
 
     public HeartBeatManager(String serverAddress, int heartbeatPort, List<String> allServers, List<String> allServersElection, String heartBeatAddress, WebServer webServer) {
         this.serverAddress = serverAddress;
-        this.heartbeatPort = heartbeatPort;
         this.allServers = allServers;
         this.leaderElectionManager = new LeaderElectionManager(serverAddress, allServersElection, heartBeatAddress, this, webServer);
     }

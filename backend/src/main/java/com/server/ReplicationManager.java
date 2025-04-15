@@ -1,6 +1,5 @@
 package com.server;
 
-import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -418,14 +417,6 @@ public class ReplicationManager {
             }
             
             System.out.println("Game state deserialized and updated.");
-        }
-    }
-
-    //Reset consumer offsets by committing the offsets to the latest position
-    private void resetKafkaConsumerOffsets(String gameCode) {
-        if (kafkaConsumer != null) {
-            kafkaConsumer.seekToEnd(kafkaConsumer.assignment());
-            System.out.println("Kafka consumer offsets reset for game: " + gameCode);
         }
     }
 
