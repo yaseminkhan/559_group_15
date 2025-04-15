@@ -31,6 +31,7 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, List<Chat>> chatUpdate = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<CanvasClear>> gameCanvasClearUpdate = new ConcurrentHashMap<>();
     private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
 
 
@@ -58,7 +59,7 @@ public class WebServer extends WebSocketServer {
                 heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
 
-            activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate);
+            activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate, gameCanvasClearUpdate);
         System.out.println("DEBUG: DOES PRIMARY : " + allServers.isEmpty());
         if (!allServers.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
@@ -368,6 +369,10 @@ public class WebServer extends WebSocketServer {
 
                     */
                     game.addEvent(clearEvent);
+                    synchronized (gameCanvasClearUpdate) {
+                        gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(clearEvent);
+                        System.out.println("Canvas clear update added to the map to be sent");
+                    }
                     broadcastToGame(game, "CANVAS_CLEAR");
                 }
 
@@ -777,6 +782,7 @@ public class WebServer extends WebSocketServer {
 
         gameCanvasUpdate.clear();
         chatUpdate.clear();
+        gameCanvasClearUpdate.clear();
 
 
         game.resetForRound(); // Reset round state
