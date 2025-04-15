@@ -38,6 +38,7 @@ public class ReplicationManager {
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers;
     private final ConcurrentHashMap<String, List<Chat>> chatUpdate;
     private final ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate;
+    private final ConcurrentHashMap<String, List<CanvasClear>> gameCanvasClearUpdate;
     private OutputStream backupIncrOutput;
     private OutputStream backupFullGameOutput;
     private KafkaProducer<String, String> kafkaProducer;
@@ -50,7 +51,8 @@ public class ReplicationManager {
                              ConcurrentHashMap<WebSocket, User> connectedUsers,
                              ConcurrentHashMap<String, User> temporarilyDisconnectedUsers,
                              ConcurrentHashMap<String, List<Chat>> chatUpdate,
-                             ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate) {
+                             ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate,
+                             ConcurrentHashMap<String, List<CanvasClear>> gameCanvasClearUpdate) {
         this.webServer = webServer;
         this.isPrimary = isPrimary;
         this.serverAddress = serverAddress;
@@ -61,6 +63,7 @@ public class ReplicationManager {
         this.temporarilyDisconnectedUsers = temporarilyDisconnectedUsers;
         this.chatUpdate = chatUpdate;
         this.gameCanvasUpdate = gameCanvasUpdate;
+        this.gameCanvasClearUpdate = gameCanvasClearUpdate;
 
         for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
             this.connectedUsersById.put(entry.getValue().getId(), entry.getValue());
@@ -208,6 +211,13 @@ public class ReplicationManager {
                 }
             }
 
+            synchronized (gameCanvasClearUpdate) {
+                gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>());
+                synchronized (gameCanvasClearUpdate.get(gameCode)) {
+                    updateData.put("canvasClearUpdates", new ArrayList<>(gameCanvasClearUpdate.get(gameCode)));
+                    System.out.println("Canvas clear update being sent");
+                }
+            }
 
             // Serialize to JSON
             Gson gson = new Gson();
@@ -219,7 +229,7 @@ public class ReplicationManager {
                 if (exception != null) {
                     System.err.println("No updates to send");
                 } else {
-                    System.out.println("Incremental update sent for game: " + gameCode);
+                    //System.out.println("Incremental update sent for game: " + gameCode);
                 }
             });
         }
@@ -321,11 +331,22 @@ public class ReplicationManager {
                 new TypeToken<List<Chat>>() {}.getType()
             );
 
+            // Deserialize canvas clear updates
+            List<CanvasClear> canvasClearUpdates = gson.fromJson(
+                gson.toJson(updateData.get("canvasClearUpdates")),
+                new TypeToken<List<CanvasClear>>() {}.getType()
+            );
+
             // Apply updates to game
             for (Game.CanvasUpdate update : canvasUpdates) {
                 game.addCanvasUpdate(update);
 
                 //System.out.println("Incremental canvas update applied");
+            }
+
+            for (CanvasClear clearUpdate : canvasClearUpdates) {
+                game.addEvent(clearUpdate);
+                System.out.println("Applying canvas clear update received");
             }
 
             // Apply chat updates to game, but check for duplicates based on userId and timestamp

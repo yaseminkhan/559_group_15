@@ -31,6 +31,7 @@ public class WebServer extends WebSocketServer {
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, List<Chat>> chatUpdate = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<CanvasClear>> gameCanvasClearUpdate = new ConcurrentHashMap<>();
     private final Set<WebSocket> pendingConnections = ConcurrentHashMap.newKeySet();
 
 
@@ -58,7 +59,7 @@ public class WebServer extends WebSocketServer {
                 heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
 
-            activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate);
+            activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate, gameCanvasClearUpdate);
         System.out.println("DEBUG: DOES PRIMARY : " + allServers.isEmpty());
         if (!allServers.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
@@ -213,31 +214,27 @@ public class WebServer extends WebSocketServer {
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
-
-                            // temporary solution
-                            if (!temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                // The user has reconnected; do nothing.
-                                System.out.println("Drawer " + removedUser.getUsername() + " has reconnected. Canceling disconnect.");
-                                return;
-                            }
-                            game.removePlayer(removedUser);
-                            broadcastGamePlayers(game);
-                            System.out.println("User permanently removed from game: " + removedUser.getUsername());
-
-                            game.resetForRound();
-                            // Notify players that the drawer has disconnected
-                            broadcastToGame(game, "DRAWER_DISCONNECTED");
                             if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
-                                temporarilyDisconnectedUsers.remove(removedUser.getId());
+                            
+                                game.removePlayer(removedUser);
+                                broadcastGamePlayers(game);
+                                System.out.println("User permanently removed from game: " + removedUser.getUsername());
 
-                                game.cancelTimer();
+                                game.resetForRound();
+                                // Notify players that the drawer has disconnected
+                                broadcastToGame(game, "DRAWER_DISCONNECTED");
+                                if (temporarilyDisconnectedUsers.containsKey(removedUser.getId())) {
+                                    temporarilyDisconnectedUsers.remove(removedUser.getId());
 
-                                // Drawer did not reconnect, so select a new drawer            
-                                if (game.getPlayers().size() >= 2) {
-                                    System.out.println("Starting new round...");
-                                    startNewRound(game);
-                                } else {
-                                    broadcastToGame(game, "GAME_OVER");
+                                    game.cancelTimer();
+
+                                    // Drawer did not reconnect, so select a new drawer            
+                                    if (game.getPlayers().size() >= 2) {
+                                        System.out.println("Starting new round...");
+                                        startNewRound(game);
+                                    } else {
+                                        broadcastToGame(game, "GAME_OVER");
+                                    }
                                 }
                             }
                         }
@@ -362,17 +359,23 @@ public class WebServer extends WebSocketServer {
                 Game game = activeGames.get(gameCode);
 
                 if (game != null) {
-                    int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
-                    clearEvent.setSequenceNumber(updatedClock);
+                    synchronized(game){
+                        int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
+                        clearEvent.setSequenceNumber(updatedClock);
 
-                    /*
-                    System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
-                        ", Frontend TS: " + clearEvent.getSequenceNumber() +
-                        ", Backend TS: " + updatedClock);
+                        /*
+                        System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
+                            ", Frontend TS: " + clearEvent.getSequenceNumber() +
+                            ", Backend TS: " + updatedClock);
 
-                    */
-                    game.addEvent(clearEvent);
-                    broadcastToGame(game, "CANVAS_CLEAR");
+                        */
+                        game.addEvent(clearEvent);
+                        synchronized (gameCanvasClearUpdate) {
+                            gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(clearEvent);
+                            System.out.println("Canvas clear update added to the map to be sent");
+                        }
+                        broadcastToGame(game, "CANVAS_CLEAR");
+                    }
                 }
 
             } catch (Exception e) {
@@ -763,6 +766,7 @@ public class WebServer extends WebSocketServer {
         if (game == null)
             return;
         
+
         
         // String gameCode = game.getGameCode();
         // if (game.getGameCode() != null) {
@@ -780,6 +784,8 @@ public class WebServer extends WebSocketServer {
 
         gameCanvasUpdate.clear();
         chatUpdate.clear();
+        gameCanvasClearUpdate.clear();
+
 
         game.resetForRound(); // Reset round state
 
@@ -1053,7 +1059,10 @@ public class WebServer extends WebSocketServer {
             try {
                 Gson gson = new Gson();
                 Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
-
+                System.out.println("\nUPDATESHIT: " + update.getStrokeId() + "\n");
+                System.out.println("\nPOINT INDEX: " + update.getPointId() + "\n");
+                // Print entire Json
+                System.out.println("\nJSON: " + json + "\n");
                 // Set the current round number
                 update.setRoundNumber(game.getCurrentRound());
 

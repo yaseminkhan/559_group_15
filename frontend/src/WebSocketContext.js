@@ -43,7 +43,7 @@ export const WebSocketProvider = ({ children }) => {
         const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;
       
         if (!closedOrClosing && ready) {
-          //console.log("[Sent immediately]:", message);
+          console.log("[Sent immediately]:", message);
           socket.send(message);
         } else {
           //console.log("[Queued]:", message);
@@ -56,7 +56,7 @@ export const WebSocketProvider = ({ children }) => {
         console.log("WebSocket message:", message);
         if (message.startsWith("USER_ID:")) {
             const userId = message.split(":")[1];
-            //console.log(`Received user ID: ${userId}`);
+            console.log(`Received user ID: ${userId}`);
             localStorage.setItem("userId", userId);
             return;
         }
@@ -94,7 +94,7 @@ export const WebSocketProvider = ({ children }) => {
 
             const storedUserId = localStorage.getItem("userId");
             if (storedUserId) {
-                //console.log(`Reconnecting as user: ${storedUserId}`);
+                console.log(`Reconnecting as user: ${storedUserId}`);
                 ws.send(`/reconnect ${storedUserId}`);
             }
 
