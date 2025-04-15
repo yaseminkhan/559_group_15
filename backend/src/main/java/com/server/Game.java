@@ -450,6 +450,8 @@ public class Game {
     public void resetScores() {
         for (User player : players) {
             player.setScore(0);
+            player.setWasDrawer(false);
+            player.removeAsDrawer();
         }
         System.out.println("All player scores have been reset to 0.");
     }
@@ -514,16 +516,18 @@ public class Game {
         private String color;
         private double width;
         private int roundNumber;
-        private boolean newStroke;
+        private int strokeIndex;
+        private int pointIndex;
 
         public CanvasUpdate() {} // Required for deserialization
 
-        public CanvasUpdate(double x, double y, String color, double width, boolean newStroke) {
+        public CanvasUpdate(double x, double y, String color, double width, int strokeIndex, int pointIndex) {
             this.x = x;
             this.y = y;
             this.color = color;
             this.width = width;
-            this.newStroke = newStroke;
+            this.strokeIndex = strokeIndex;
+            this.pointIndex = pointIndex;
         }
 
         public double getX() {
@@ -550,8 +554,12 @@ public class Game {
             return width;
         }
 
-        public boolean getNewStroke() {
-            return newStroke;
+        public int getStrokeId() {
+            return strokeIndex;
+        }
+
+        public int getPointId() {
+            return pointIndex;
         }
     }
 }

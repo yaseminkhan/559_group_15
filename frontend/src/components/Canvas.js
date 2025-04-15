@@ -12,6 +12,11 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   const [lastY, setLastY] = useState(null);
   const lastPos = useRef({ x: null, y: null });
 
+  const currentStrokeIndexRef = useRef(0);
+  const currentPointIndexRef = useRef(0);
+  const lastStrokeIndexApplied = useRef(null);
+  const lastPointIndexApplied = useRef(null);
+
   const { socket, isConnected, queueOrSendEvent } = useWebSocket() || {};
   const gameCode = localStorage.getItem("gameCode");
   const [historyReceived, setHistoryReceived] = useState(false);
@@ -38,19 +43,12 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   }, [selectedColour]);
 
   useEffect(() => {
-    if (isConnected) {
-      lastPos.current = { x: null, y: null };
-    }
-
-    if (!isConnected) {
-      lastPos.current = { x: null, y: null };
-    }
+    lastPos.current = { x: null, y: null };
   }, [isConnected]);
 
   useEffect(() => {
     if (!socket) return;
   
-    // When the websocket connection is opened (or re-opened), reset lastPos.
     const handleOpen = () => {
       console.log("WebSocket reconnected: resetting lastPos");
       lastPos.current = { x: null, y: null };
@@ -60,12 +58,12 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     return () => socket.removeEventListener("open", handleOpen);
   }, [socket]);
 
-
   const startDrawing = (event) => {
     if (!isDrawer) return;
     setDrawing(true);
 
-    lastPos.current = { x: null, y: null };
+    currentStrokeIndexRef.current += 1;
+    currentPointIndexRef.current = 0;
 
     const { offsetX, offsetY } = event.nativeEvent;
     setLastX(offsetX);
@@ -82,9 +80,9 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
       y: offsetY,
       color: ctx.strokeStyle,
       width: ctx.lineWidth,
-      newStroke: true,
+      strokeIndex: currentStrokeIndexRef.current,
+      pointIndex: currentPointIndexRef.current,
     };
-    //console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
     queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
   };
 
@@ -93,7 +91,7 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
 
     const ctx = contextRef.current;
     const { offsetX, offsetY } = event.nativeEvent;
-
+    
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(offsetX, offsetY);
@@ -102,12 +100,14 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     setLastX(offsetX);
     setLastY(offsetY);
 
+    currentPointIndexRef.current += 1;
     const pointData = {
       x: offsetX,
       y: offsetY,
       color: ctx.strokeStyle,
       width: ctx.lineWidth,
-      newStroke: false,
+      strokeIndex: currentStrokeIndexRef.current,
+      pointIndex: currentPointIndexRef.current,
     };
     console.log("Sending event:", `/canvas-update ${gameCode}`, pointData);
     queueOrSendEvent(`/canvas-update ${gameCode}`, pointData);
@@ -124,7 +124,6 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (isConnected) {
-      // socket.send(`/clear-canvas ${gameCode}`);
       queueOrSendEvent("/clear-canvas", { gameCode });
     }
   };
@@ -160,9 +159,9 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
         }
       } else if (data.startsWith("CANVAS_CLEAR") || data.startsWith("ROUND_OVER")) {
         const canvas = canvasRef.current;
-        if (!canvas) return; //Adds a null check to stop getContext error.
+        if (!canvas) return;
         const ctx = canvas.getContext("2d");
-        if (!ctx) return; //Adds a null check to stop getContext error.
+        if (!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
     };
@@ -184,31 +183,39 @@ const Canvas = ({ selectedColour, isDrawer, clearCanvasRef }) => {
   const applyDrawing = (point) => {
     const ctx = contextRef.current;
 
-    if (point.newStroke || lastPos.current.x === null || lastPos.current.y === null) {
-      lastPos.current = { x: null, y: null };
-    }
-
     const prevColor = ctx.strokeStyle;
     const prevWidth = ctx.lineWidth;
 
     ctx.strokeStyle = point.color;
     ctx.lineWidth = point.width;
 
-    if (lastPos.current.x != null && lastPos.current.y != null) {
-      ctx.beginPath();
-      ctx.moveTo(lastPos.current.x, lastPos.current.y);
-      ctx.lineTo(point.x, point.y);
-      ctx.stroke();
-    } else {
+    if (point.strokeIndex !== lastStrokeIndexApplied.current) {
+      lastStrokeIndexApplied.current = point.strokeIndex;
+      lastPointIndexApplied.current = point.pointIndex;
+      lastPos.current = { x: point.x, y: point.y };
       ctx.beginPath();
       ctx.arc(point.x, point.y, point.width / 2, 0, Math.PI * 2);
       ctx.fillStyle = point.color;
       ctx.fill();
-    }
+    } else {
+      if (lastPointIndexApplied.current !== null &&
+          point.pointIndex === lastPointIndexApplied.current + 1) {
+        ctx.beginPath();
+        ctx.moveTo(lastPos.current.x, lastPos.current.y);
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+      } else {
 
-    lastPos.current = { x: point.x, y: point.y };
-    ctx.strokeStyle = prevColor;
-    ctx.lineWidth = prevWidth;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, point.width / 2, 0, Math.PI * 2);
+        ctx.fillStyle = point.color;
+        ctx.fill();
+      }
+      lastPos.current = { x: point.x, y: point.y };
+      lastPointIndexApplied.current = point.pointIndex;
+      ctx.strokeStyle = prevColor;
+      ctx.lineWidth = prevWidth;
+    }
   };
 
   return (

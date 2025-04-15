@@ -43,7 +43,7 @@ export const WebSocketProvider = ({ children }) => {
         const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;
       
         if (!closedOrClosing && ready) {
-          //console.log("[Sent immediately]:", message);
+          console.log("[Sent immediately]:", message);
           socket.send(message);
         } else {
           //console.log("[Queued]:", message);

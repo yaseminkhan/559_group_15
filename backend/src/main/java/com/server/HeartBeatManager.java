@@ -26,7 +26,7 @@ public class HeartBeatManager {
 
     private static final Map<String, String> properMap = Map.of(
         "8887", "5001", // primary
-        "8888", "6001", // backup 1
+        "8892", "6001", // backup 1
         "8889", "7001", // backup 2
         "8890", "4001",  // backup 3
         "8891", "8001"  // backup 4
