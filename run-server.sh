@@ -2,7 +2,7 @@
 export $(grep -v '^#' .env | xargs)
 
 ##
-# 2) Enter the backend directory (adjust path if needed)
+# 2) Enter the backend directory (adjust path as needed)
 ##
 cd backend || {
   echo "Error: Cannot cd into backend. Modify the path if your backend is elsewhere."
