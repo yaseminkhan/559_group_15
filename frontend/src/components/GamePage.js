@@ -36,7 +36,6 @@ const GamePage = () => {
         }
 
         if (event.data.startsWith("DRAWER_DISCONNECTED")) {
-          //console.log("Drawer disconnected during the game.");
           alert("The drawer disconnected! A new drawer will be selected soon...");
         }
 
@@ -44,8 +43,6 @@ const GamePage = () => {
           const roundInfo = event.data.split(" ");
           const newRound = parseInt(roundInfo[1]);
           const newDrawerId = roundInfo[3];
-
-          //console.log(`Starting Round ${newRound}, New Drawer: ${newDrawerId}`);
 
           if (userId === newDrawerId) {
               localStorage.setItem("isDrawer", true);

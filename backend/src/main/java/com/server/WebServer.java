@@ -96,7 +96,6 @@ public class WebServer extends WebSocketServer {
 
         new Thread(() -> {
             while (true) {
-                //System.out.println("Check leader status");
                 try {
                     heartBeatManager.leaderStatus();
                     Thread.sleep(1000); //check leader status every second
@@ -268,8 +267,6 @@ public class WebServer extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-        //System.out.println("Received message from " + conn.getRemoteSocketAddress() + ": " + message);
-
         //Send data to backups whenever a message is received from the client
         if (!isPrimary)
             return;
@@ -363,16 +360,9 @@ public class WebServer extends WebSocketServer {
                         int updatedClock = game.getLogicalClock().getAndUpdate(clearEvent.getSequenceNumber());
                         clearEvent.setSequenceNumber(updatedClock);
 
-                        /*
-                        System.out.println("[LAMPORT][CLEAR] Sender: " + clearEvent.getId() +
-                            ", Frontend TS: " + clearEvent.getSequenceNumber() +
-                            ", Backend TS: " + updatedClock);
-
-                        */
                         game.addEvent(clearEvent);
                         synchronized (gameCanvasClearUpdate) {
                             gameCanvasClearUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(clearEvent);
-                            //System.out.println("Canvas clear update added to the map to be sent");
                         }
                         broadcastToGame(game, "CANVAS_CLEAR");
                     }
@@ -397,8 +387,6 @@ public class WebServer extends WebSocketServer {
 
             // Notify the connected client to reconnect
             conn.send("RECONNECT_TO_NEW_LEADER:" + newLeaderAddress);
-
-            // Optionally, close the current connection to force reconnection
             conn.close();
         } else {
             conn.send("Unknown command.");
@@ -510,8 +498,6 @@ public class WebServer extends WebSocketServer {
     }
 
     public void connectToCoordinatorAndAnnounce() {
-        // ===== DEBUG PRINTS =====
-        System.out.println("\n===== DEBUG: Starting connectToCoordinatorAndAnnounce =====");
         System.out.println("Connected users by id from replication manager:");
         for (Map.Entry<String, User> entry : replicationManager.getConnectedUsersById().entrySet()) {
             User user = entry.getValue();
@@ -537,22 +523,10 @@ public class WebServer extends WebSocketServer {
         for (User user : temporarilyDisconnectedUsers.values()) {
             System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
         }
-        System.out.println("===== END DEBUG =====\n");
 
         temporarilyDisconnectedUsers.putAll(replicationManager.getConnectedUsersById());
         replicationManager.stopKafkaConsumer();
 
-        System.out.println("\n--- RESUMING ANY INCOMPLETE ROUNDS ---");
-        for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
-            Game game = entry.getValue();
-            System.out.println("Checking game: " + entry.getKey());
-            System.out.println("  - wordToDraw: " + game.getWordToDraw());
-            System.out.println("  - Time Left: " + game.getTimeLeft());
-            System.out.println("  - Timer Exists: " + (game.getTimer() != null));
-            System.out.println("  - gameStarted: " + game.hasGameStarted());
-            System.out.println("  - gameEnded: " + game.isGameEnded());
-            System.out.println("  - drawer: " + (game.getDrawer() != null ? game.getDrawer().getUsername() : "null"));
-        }
 
         System.out.println("Promoted to primary. Checking if any game rounds need to be resumed...");
         for (Game game : activeGames.values()) {
@@ -570,12 +544,8 @@ public class WebServer extends WebSocketServer {
             while (true) {
                 try {
                     if (coordinatorConnection == null || coordinatorConnection.isClosed()) {
-                        System.out.println("Attempting to connect to coordinator...");
-                        System.out.println("Before reinit: COORD" + coordinatorAddress);
                         coordinatorAddress = "ws://" + System.getenv("COORDINATOR_IP") + ":9999";
-                        System.out.println("After reinit: COORD" + coordinatorAddress);
 
-                        System.out.println("Attempting WebSocket to: " + coordinatorAddress);
                         coordinatorConnection = new WebSocketClient(new URI(coordinatorAddress)) {
                             @Override
                             public void onOpen(ServerHandshake handshake) {
@@ -640,14 +610,7 @@ public class WebServer extends WebSocketServer {
 
         synchronized (game) {
             Gson gson = new Gson();
-            // DEBUG: Raw JSON string from frontend
-            //System.out.println("[LAMPORT DEBUG] Raw chat JSON: " + chatData);
-        
             Chat chat = gson.fromJson(chatData, Chat.class);
-        
-            // DEBUG: Confirm deserialization
-            //System.out.println("[LAMPORT DEBUG] Deserialized Chat object: " + gson.toJson(chat));
-        
             User user = connectedUsers.get(conn);
             if (user == null) {
                 System.out.println("ERROR: User not found for connection.");
@@ -660,16 +623,6 @@ public class WebServer extends WebSocketServer {
             int updatedTime = game.getLogicalClock().getAndUpdate(frontendTime);
             chat.setSequenceNumber(updatedTime); // apply server-finalized timestamp
         
-            /*
-            System.out.println(String.format(
-                "[LAMPORT][CHAT] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d",
-                chat.getId(),
-                frontendTime,
-                updatedTime
-            ));
-        
-            System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
-            */
             chat = game.addMessage(chat); 
             System.out.println("Handle Chat Request: " + game.getChatEvents());
             // Update chatUpdate
@@ -694,12 +647,6 @@ public class WebServer extends WebSocketServer {
             // Reset all players scores to 0
             game.resetScores();
             game.setGameStarted(true);
-            // System.out.println("  - wordToDraw: " + game.getWordToDraw());
-            // System.out.println("  - Time Left: " + game.getTimeLeft());
-            // System.out.println("  - Timer Exists: " + (game.getTimer() != null));
-            // System.out.println("  - gameStarted: " + game.hasGameStarted());
-            // System.out.println("  - gameEnded: " + game.isGameEnded());
-            // System.out.println("  - drawer: " + (game.getDrawer() != null ? game.getDrawer().getUsername() : "null"));
             
             // Assign a drawer 
             System.out.println("Assign next drawer called\n");
@@ -725,21 +672,10 @@ public class WebServer extends WebSocketServer {
 
                 // Check if all players have confirmed
                 if (game.getPlayers().size() == game.sizeOfPlayersConfirmedEnd()) {
-                    // for (User player: game.getPlayers()) {
-                    //     player = new User("Guest_" + conn.getRemoteSocketAddress().getPort());
-                    // }
-
                     game.clearGame();
                     activeGames.remove(gameCode);
-                    // connectedUsers.clear(); // causing issues
                     temporarilyDisconnectedUsers.clear();
                     System.out.println("Game " + gameCode + " has ended and been removed.");
-                    //broadcastToGame(game, "GAME_ENDED");
-
-                    // Send a special message to Kafka to indicate the game has ended
-                    // if (isPrimary) {
-                    //     replicationManager.sendIncrementalUpdate("/game-ended " + gameCode);
-                    // }
                 }
             }
         }
@@ -759,28 +695,11 @@ public class WebServer extends WebSocketServer {
     }
 
     public void startNewRound(Game game) {
-
         if (!isPrimary)
             return;
 
         if (game == null)
             return;
-        
-
-        
-        // String gameCode = game.getGameCode();
-        // if (game.getGameCode() != null) {
-        //     synchronized (gameCanvasUpdate) {
-        //         gameCanvasUpdate.remove(gameCode);
-        //     }
-        //     synchronized (chatUpdate) {
-        //         chatUpdate.remove(gameCode);
-        //     }
-        // }
-        // else {
-        //     gameCanvasUpdate.clear();
-        //     chatUpdate.clear();
-        // }
 
         gameCanvasUpdate.clear();
         chatUpdate.clear();
@@ -846,7 +765,6 @@ public class WebServer extends WebSocketServer {
     }
 
     public void handleGetGame(WebSocket conn, String gameCode) {
-        //System.out.println("Fetching game data for code: " + gameCode);
         Game game = activeGames.get(gameCode);
 
         if (game == null) {
@@ -904,20 +822,10 @@ public class WebServer extends WebSocketServer {
 
     public void broadcastToGame(Game game, String message) {
         if (game != null) {
-            // System.out.println("game:" + game);
             for (User player : game.getPlayers()) {
-                // System.out.println("players user:" + player);
-                // System.out.println("Connected Users:");
-                // for (Map.Entry<WebSocket, User> entry : connectedUsers.entrySet()) {
-                //     User user = entry.getValue();
-                //     System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
-                // }
                 WebSocket conn = getConnectionByUser(player);
                 if (conn != null) {
                     conn.send(message);
-                    if (!message.startsWith("TIMER_UPDATE")) {
-                        //System.out.println("Broadcast to: " + player.getUsername() + " Message: " + message);
-                    }
                 } else {
                     if (isPrimary) {
                         System.out.println("Could not find connection for " + player.getUsername());
@@ -931,8 +839,6 @@ public class WebServer extends WebSocketServer {
         String playersJson = game.getPlayersJson();
         String message = new Gson().toJson(Map.of("type", "GAME_PLAYERS", "data", playersJson));
 
-        System.out.println("\nBroadcasting updated player list for game: " + game.getGameCode());
-        System.out.println("Players in game:");
         for (User player : game.getPlayers()) {
             System.out.println(" - " + player.getUsername() + " (ID: " + player.getId() + ")");
         }
@@ -942,7 +848,6 @@ public class WebServer extends WebSocketServer {
 
             if ((conn != null)) {
                 conn.send(message);
-                System.out.println("Sent player list to: " + player.getUsername());
             } else {
                 if (isPrimary) {
                     System.out.println("Could not find connection for " + player.getUsername());
@@ -1017,10 +922,6 @@ public class WebServer extends WebSocketServer {
     public void handleGetWords(WebSocket conn, String gameCode) {
         List<String> randomWords = Words.getRandomWordChoices();
         String jsonResponse = new Gson().toJson(Map.of("type", "WORDS", "data", randomWords));
-        System.out.println("\n========== Sending Words ==========");
-        System.out.println("Game Code: " + gameCode);
-        System.out.println("Generated Words: " + randomWords);
-        System.out.println("JSON Sent: " + jsonResponse);
         conn.send(jsonResponse);
     }
 
@@ -1036,7 +937,6 @@ public class WebServer extends WebSocketServer {
             // Notify all players that the word has been selected
             String message = "WORD_SELECTED: " + word;
             broadcastToGame(game, message);
-            System.out.println("Word selected: " + word + ". Starting round...");
             game.setRoundStarted(true);
         }
 
@@ -1059,32 +959,15 @@ public class WebServer extends WebSocketServer {
             try {
                 Gson gson = new Gson();
                 Game.CanvasUpdate update = gson.fromJson(json, Game.CanvasUpdate.class);
-                //System.out.println("\nUPDATESHIT: " + update.getStrokeId() + "\n");
-                //System.out.println("\nPOINT INDEX: " + update.getPointId() + "\n");
-                // Print entire Json
-                //System.out.println("\nJSON: " + json + "\n");
                 // Set the current round number
                 update.setRoundNumber(game.getCurrentRound());
 
                 int frontendTS = update.getSequenceNumber();
                 int newSeq = game.getLogicalClock().getAndUpdate(frontendTS);
                 update.setSequenceNumber(newSeq);
-
-                /* 
-                System.out.println(String.format(
-                    "[LAMPORT][CANVAS] User ID: %s | Frontend TS: %d | Assigned Backend TS: %d | Round: %d",
-                    update.getId(),
-                    frontendTS,
-                    newSeq,
-                    game.getCurrentRound()
-                ));
-                System.out.println("[LAMPORT] Backend clock now: " + game.getLogicalClock().getTime());
-                
-                */
                 game.addCanvasUpdate(update);
 
                 // Update gameCanvasUpdate
-                //System.out.println("Canvas update map updated.");
                 synchronized (gameCanvasUpdate) {
                     gameCanvasUpdate.computeIfAbsent(gameCode, k -> new ArrayList<>()).add(update);
                 }
@@ -1119,7 +1002,6 @@ public class WebServer extends WebSocketServer {
             String newStrokesJson = gson.toJson(newStrokes);
             int newLastIndex = lastIndex + newStrokes.size();
 
-            //System.out.println("Canvas History Requested: " + gameCode + " Last Index: " + lastIndex);
             conn.send("CANVAS_HISTORY " + newLastIndex + " " + newStrokesJson);
         }
     }

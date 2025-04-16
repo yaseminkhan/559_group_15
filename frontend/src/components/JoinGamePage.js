@@ -18,10 +18,6 @@ const JoinGamePage = () => {
     useEffect(() => {
         if (!socket) return; 
 
-        // Duplicate Logic in WebSocketContext
-        //socket.onopen = () => console.log("Connected to server!");
-        // PLEASE RELY ON WEB SOCKET CONTEXT TO HANDLE CONNECTION STATUS
-
         if (isConnected) {
             console.log("Connected to server!");
         }

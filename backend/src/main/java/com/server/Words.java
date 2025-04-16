@@ -9,7 +9,6 @@ import java.util.Queue;
 import java.util.Random;
 
 public class Words {
-    // note: implementation only works with one word entries
     private static final List<String> words = Arrays.asList(
         "Sun", "Tree", "House", "Cat", "Dog", "Fish", "Car", "Balloon", "Book", "Moon",
         "Airplane", "Elephant", "Bicycle", "Rainbow", "Guitar", "Pumpkin", "Turtle", 

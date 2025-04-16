@@ -67,7 +67,7 @@ const WordSelection = () => {
                     // Ensure we use `username` not `name`
                     setDrawer({
                         avatar: currentPlayer.icon || "❓",
-                        username: currentPlayer.username || "Unknown", // FIX HERE
+                        username: currentPlayer.username || "Unknown", 
                         score: currentPlayer.score !== undefined ? currentPlayer.score : "No score data",
                     });
                 } else {
@@ -111,7 +111,7 @@ const WordSelection = () => {
           <div className="ws_player_card">
             <span className="wordselect-avatar">{drawer.avatar}</span>  
             <div>
-              <div className="ws_username">{drawer.username}</div> {/* FIXED */}
+              <div className="ws_username">{drawer.username}</div> 
               <div className="ws_points">{drawer.score} points</div> 
             </div>
           </div>

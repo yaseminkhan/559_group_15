@@ -17,8 +17,6 @@ const ColourPalette = ({ selectedColour, setSelectedColour, clearCanvas }) => {
   const handleColourClick = (colour) => {
     if (colour === "white") {
       clearCanvas();
-      // This is obv a work around, but it's a quick fix for now
-      // socket.send(`/clear-canvas ${gameCode}`);
       queueOrSendEvent("/clear-canvas", { gameCode });
     } else {
       setSelectedColour(colour);

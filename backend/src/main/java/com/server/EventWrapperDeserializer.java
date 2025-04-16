@@ -19,7 +19,7 @@ public class EventWrapperDeserializer implements JsonDeserializer<EventWrapper> 
                 data = context.deserialize(dataElement, Game.CanvasUpdate.class);
                 break;
             case "CLEAR":
-                data = context.deserialize(dataElement, CanvasClear.class); // <--- Add this line
+                data = context.deserialize(dataElement, CanvasClear.class); 
                 break;
             default:
                 throw new JsonParseException("Unknown event type: " + type);

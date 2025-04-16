@@ -18,7 +18,6 @@ const Header = ({ isChoosingWord, gameCode }) => {
         }
         // Routine check getgame response
         const handleMessage = (event) => {
-            //console.log("WebSocket message:", event.data);
             try {
                 const message = JSON.parse(event.data);
 
@@ -27,7 +26,7 @@ const Header = ({ isChoosingWord, gameCode }) => {
                     setPlayers(JSON.parse(message.data)); // Update players
                 }
             } catch (error) {
-                //console.error("Error parsing WebSocket message:", error);
+                console.error("Error parsing WebSocket message:", error);
             }
         };
 
@@ -58,7 +57,6 @@ const Header = ({ isChoosingWord, gameCode }) => {
       const handleMessage = (event) => {
           if (event.data.startsWith("TIMER_UPDATE:")) {
               const newTime = parseInt(event.data.split(": ")[1]);
-              console.log("Updating timer in header to:", newTime);
               setTimeLeft(newTime);
           }
       };

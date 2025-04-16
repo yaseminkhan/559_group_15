@@ -1,7 +1,7 @@
 package com.server;
 
 public class EventWrapper {
-    public String type; // e.g., "CHAT", "CANVAS"
+    public String type; // e.g., "CHAT", "CANVAS", "CLEAR"
     public Event data;
 
     // No-arg constructor needed for deserialization

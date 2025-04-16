@@ -112,7 +112,6 @@ const WelcomePage = () => {
                 className="wel_input-box"
                 value={username}
                 onChange={handleUsername}
-                // maxLength={15} //Enforcing character limit at HTML level
             />
             {/* Vanishing Error Message */}
             {charLimitError && <div className="wel_error-popup">{charLimitError}</div>}

@@ -1,6 +1,5 @@
 package com.server;
 
-import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -31,16 +30,12 @@ public class ReplicationManager {
     private final WebServer webServer;
     private boolean isPrimary;
     private final String serverAddress;
-    private final List<String> allServers;
-    private final int heartbeatPort;
     private final ConcurrentHashMap<String, Game> activeGames;
     private final ConcurrentHashMap<String, User> connectedUsersById;
     private final ConcurrentHashMap<String, User> temporarilyDisconnectedUsers;
     private final ConcurrentHashMap<String, List<Chat>> chatUpdate;
     private final ConcurrentHashMap<String, List<Game.CanvasUpdate>> gameCanvasUpdate;
     private final ConcurrentHashMap<String, List<CanvasClear>> gameCanvasClearUpdate;
-    private OutputStream backupIncrOutput;
-    private OutputStream backupFullGameOutput;
     private KafkaProducer<String, String> kafkaProducer;
     private KafkaConsumer<String, String> kafkaConsumer;
     private final Object gameStateLock = new Object();
@@ -56,8 +51,6 @@ public class ReplicationManager {
         this.webServer = webServer;
         this.isPrimary = isPrimary;
         this.serverAddress = serverAddress;
-        this.heartbeatPort = heartbeatPort;
-        this.allServers = allServers;
         this.activeGames = activeGames;
         this.connectedUsersById = new ConcurrentHashMap<>(); //Wrapper map since ReplicationManager does not have a websocket
         this.temporarilyDisconnectedUsers = temporarilyDisconnectedUsers;
@@ -122,7 +115,6 @@ public class ReplicationManager {
                         break;
                     }
                     ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(200));
-                    //System.out.println("Polling from Kafka");
                     for (ConsumerRecord<String, String> record : records) {
                         if (record.topic().equals("game-state")) {
                             updateGameState(record.value());
@@ -228,7 +220,7 @@ public class ReplicationManager {
                 if (exception != null) {
                     System.err.println("No updates to send");
                 } else {
-                    //System.out.println("Incremental update sent for game: " + gameCode);
+                    System.out.println("Incremental update sent for game: " + gameCode);
                 }
             });
         }
@@ -241,9 +233,6 @@ public class ReplicationManager {
         if (isPrimary && kafkaProducer != null) {
             String gameState = serializeGameState();
             ProducerRecord<String, String> record = new ProducerRecord<>("game-state", gameState);
-             // ===== DEBUG PRINTS =====
-            System.out.println("\n===== DEBUG: PRIMARY SENDING GAME STATE =====");
-            System.out.println("Connected Users:");
             for (Map.Entry<String, User> entry : connectedUsersById.entrySet()) {
                 User user = entry.getValue();
                 System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
@@ -308,7 +297,6 @@ public class ReplicationManager {
 
             String gameCode = (String) updateData.get("gameCode");
             if (gameCode == null) {
-                //System.out.println("ERROR: Invalid incremental update, missing gameCode");
                 return;
             }
 
@@ -339,13 +327,10 @@ public class ReplicationManager {
             // Apply updates to game
             for (Game.CanvasUpdate update : canvasUpdates) {
                 game.addCanvasUpdate(update);
-
-                //System.out.println("Incremental canvas update applied");
             }
 
             for (CanvasClear clearUpdate : canvasClearUpdates) {
                 game.addEvent(clearUpdate);
-                //System.out.println("Applying canvas clear update received");
             }
 
             // Apply chat updates to game, but check for duplicates based on userId and timestamp
@@ -363,7 +348,6 @@ public class ReplicationManager {
 
                 if (!messageExists) {
                     game.addMessage(update);
-                    //System.out.println("Incremental message update applied");
                 } else {
                     System.out.println("Duplicate message ignored: User ID = " + update.getId() + ", Timestamp = " + update.getTimestamp());
                 }
@@ -377,7 +361,6 @@ public class ReplicationManager {
     // Update the game state (secondary servers only)
     private void updateGameState(String gameStateJson) {
         synchronized (gameStateLock) {
-            //System.out.println("Raw gameStateJson: " + gameStateJson); // Debug log
             // Gson gson = new Gson();
             Gson gson = new GsonBuilder()
                 .registerTypeAdapter(EventWrapper.class, new EventWrapperDeserializer())
@@ -389,7 +372,6 @@ public class ReplicationManager {
 
             // Clear the existing game state
             activeGames.clear();
-            // connectedUsersById.clear();
             temporarilyDisconnectedUsers.clear();
 
             // Deserialize and update the active games
@@ -406,14 +388,11 @@ public class ReplicationManager {
             Map<String, User> deserializedDisconnectedUsers = gson.fromJson(gson.toJson(gameState.get("temporarilyDisconnectedUsers")), new TypeToken<Map<String, User>>() {}.getType());
             temporarilyDisconnectedUsers.putAll(deserializedDisconnectedUsers);
             
-            System.out.println("\n===== DEBUG: BACKUP RECEIVED GAME STATE =====");
-            System.out.println("Connected Users:");
             for (Map.Entry<String, User> entry : connectedUsersById.entrySet()) {
                 User user = entry.getValue();
                 System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
             }
 
-            System.out.println("\nActive Games:");
             for (Map.Entry<String, Game> entry : activeGames.entrySet()) {
                 System.out.println(" - Game Code: " + entry.getKey());
                 Game game = entry.getValue();
@@ -422,11 +401,9 @@ public class ReplicationManager {
                 }
             }
 
-            System.out.println("\nTemporarily Disconnected Users:");
             for (User user : temporarilyDisconnectedUsers.values()) {
                 System.out.println(" - " + user.getUsername() + " (ID: " + user.getId() + ")");
             }
-            System.out.println("===== END BACKUP DEBUG =====\n");
 
 
             // // Restart timers for all active games
@@ -440,14 +417,6 @@ public class ReplicationManager {
             }
             
             System.out.println("Game state deserialized and updated.");
-        }
-    }
-
-    //Reset consumer offsets by committing the offsets to the latest position
-    private void resetKafkaConsumerOffsets(String gameCode) {
-        if (kafkaConsumer != null) {
-            kafkaConsumer.seekToEnd(kafkaConsumer.assignment());
-            System.out.println("Kafka consumer offsets reset for game: " + gameCode);
         }
     }
 
