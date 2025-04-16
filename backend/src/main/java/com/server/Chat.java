@@ -12,12 +12,12 @@ public class Chat extends Event {
     // Constructor with all fields
     public Chat(String sender, String id, String text, boolean correct) {
         this.sender = sender;
-        this.id = id;             // Inherited from Event: typically user ID
+        this.id = id;          
         this.text = text;
         this.correct = correct;
     }
 
-    // Constructor for normal chat messages (not marked correct)
+    // Constructor for normal chat messages 
     public Chat(String sender, String id, String text) {
         this(sender, id, text, false);
     }
@@ -32,7 +32,7 @@ public class Chat extends Event {
         return this.id;
     }
 
-    // For logging or debugging purposes
+    // For logging or debugging 
     @Override
     public String toString() {
         return "\nChat(sender=\"%s\", id=\"%s\", text=\"%s\", correct=%s)"
