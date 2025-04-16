@@ -34,8 +34,6 @@ export const WebSocketProvider = ({ children }) => {
           sequenceNumber,
           id: localStorage.getItem("userId"),
         };
-
-        console.log(`[LAMPORT] Preparing message with sequenceNumber: ${sequenceNumber}`);
       
         const message = prefix + " " + JSON.stringify(messageWithTimestamp);
       
@@ -43,7 +41,6 @@ export const WebSocketProvider = ({ children }) => {
         const closedOrClosing = !socket || socket.readyState >= WebSocket.CLOSING;
       
         if (!closedOrClosing && ready) {
-          console.log("[Sent immediately]:", message);
           socket.send(message);
         } else {
           queue.current.push(message);
@@ -52,7 +49,6 @@ export const WebSocketProvider = ({ children }) => {
 
     const handleIncomingMessage = (event) => {
         const message = event.data;
-        console.log("WebSocket message:", message);
         if (message.startsWith("USER_ID:")) {
             const userId = message.split(":")[1];
             console.log(`Received user ID: ${userId}`);
@@ -62,7 +58,6 @@ export const WebSocketProvider = ({ children }) => {
         if (message.startsWith("LAMPORT:")) {
             const remoteTime = parseInt(message.split(":")[1], 10);
             const updated = updateClock(remoteTime);
-            console.log(`[LAMPORT] Received backend clock: ${remoteTime}, Updated local clock: ${updated}`);
             return;
         }
     
@@ -98,7 +93,6 @@ export const WebSocketProvider = ({ children }) => {
             // Wait until WebSocket is fully ready before flushing queue
             const waitForOpen = setInterval(() => {
                 if (ws.readyState === WebSocket.OPEN) {
-                    //console.log("WebSocket is open! Flushing queue...");
                     flushQueue(ws);
                     clearInterval(waitForOpen);
                 } else {
