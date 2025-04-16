@@ -58,9 +58,7 @@ public class WebServer extends WebSocketServer {
         this.heartBeatManager = new HeartBeatManager(serverAddress, heartbeatPort, allServers, allServersElection,
                 heartBeatAddress, this); //Initialize the HeartbeatManager
         this.replicationManager = new ReplicationManager(this, isPrimary, serverAddress, heartbeatPort, allServers,
-
             activeGames, connectedUsers, temporarilyDisconnectedUsers, chatUpdate, gameCanvasUpdate, gameCanvasClearUpdate);
-        System.out.println("DEBUG: DOES PRIMARY : " + allServers.isEmpty());
         if (!allServers.isEmpty()) {
             this.heartBeatManager.startHeartbeatListener(heartbeatPort);
             this.heartBeatManager.startHeartbeatSender();
@@ -996,7 +994,6 @@ public class WebServer extends WebSocketServer {
                 lastIndex = entireList.size();
             }
 
-            // List<Game.CanvasUpdate> newStrokes = entireList.subList(lastIndex, entireList.size());
             List<Game.CanvasUpdate> newStrokes = new ArrayList<>(entireList.subList(lastIndex, entireList.size()));
             Gson gson = new Gson();
             String newStrokesJson = gson.toJson(newStrokes);

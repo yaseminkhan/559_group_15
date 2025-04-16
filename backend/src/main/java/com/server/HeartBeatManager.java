@@ -43,7 +43,6 @@ public class HeartBeatManager {
         for (String server : allHBServers) {
             String[] serverInfo = server.split(":");
             int otherServerHBPort = Integer.parseInt(serverInfo[1]);
-            //System.out.println("sending heartbeat to server: " + serverInfo[0] + " on port: " + otherServerHBPort);
             sendHeartbeat(serverInfo[0], otherServerHBPort);
             
         }
@@ -149,7 +148,6 @@ public class HeartBeatManager {
         if (serverAddress == null) {
             return true;
         }
-        System.out.println("Server address: " + serverAddress);
 
         long currentTime = System.currentTimeMillis();
 
@@ -162,14 +160,12 @@ public class HeartBeatManager {
         long diff = currentTime - lastHeartbeat;
 
         boolean alive = diff < HEARTBEAT_TIMEOUT;
-        System.out.println("Alive: " + alive + " HEARTBEAT timeout: " + HEARTBEAT_TIMEOUT);
         if (!alive) {
             System.out.println("Server " + serverAddress + " is considered dead. Removing from lastHeartbeats.");
             lastHeartbeats.remove(serverAddress);
             allServers.remove(serverAddress);
         }
 
-        System.out.println("Checking if " + serverAddress + " is alive: " + alive);
         return alive;
     }
 
@@ -203,18 +199,14 @@ public class HeartBeatManager {
 
     public void handleIncomingMessage(String senderAddress, String message) throws InterruptedException {
         if (message.startsWith("ELECTION")) {
-            System.out.println("HANDLING ELECTION!!!!");
             long electionId = Long.parseLong(message.split(":", 2)[1]);
             leaderElectionManager.handleElectionMessage(senderAddress, electionId);
         } else if (message.startsWith("BULLY")) {
-            System.out.println("HANDLING BULLY!!!!");
             long electionId = Long.parseLong(message.split(":", 2)[1]);
             leaderElectionManager.handleBullyMessage(senderAddress, electionId);
         } else if (message.startsWith("LEADER")) {
-            System.out.println("HANDLING LEADER!!!!");
             leaderElectionManager.handleLeaderMessage(senderAddress);
         } else if (message.startsWith("GET_LEADER")) {
-            System.out.println("HANDLING GET LEADER!!!!");
             leaderElectionManager.handleGetLeaderMessage(senderAddress);
         }
 

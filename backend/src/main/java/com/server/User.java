@@ -25,7 +25,7 @@ public class User {
     private int score;
     private boolean isDrawer;
     private boolean isHost;
-    private boolean alreadyGuessed; // Guessed correctly.
+    private boolean alreadyGuessed; // Guessed correctly
     private String gameCode;
     private boolean wasDrawer; // indiactes if user has already had a turn as a drawer 
 
@@ -67,37 +67,26 @@ public class User {
         return selectedEmoji;
     }
 
-    /*
-     * Check if the user has already guessed correctly.
-     */
+    // === Getters and Setters ===
+
     public boolean getAlreadyGuessed() {
         return alreadyGuessed;
     }
 
-    /*
-     * Set the alreadyGuessed value.
-     */
     public void setAlreadyGuessed(boolean val) {
         alreadyGuessed = val;
     }
 
-    /*
-     * Set user score.
-     */
     public void setScore(int value) {
         if (value < 0)
             throw new IllegalArgumentException("Can't assign negative score to player");
         score = value;
     }
 
-    /*
-     * sets username
-     */
     public void setUsername(String username) {
         this.username = username;
     }
 
-    // functions to return information about users 
     public String getId() {
         return id;
     }
@@ -134,14 +123,10 @@ public class User {
         return gameCode;
     }
 
-    // functions to modify users points and assign a drawer 
     public void setDrawer() {
         this.isDrawer = true;
     }
 
-    /*
-     * when drawer is removed 
-     */
     public void removeAsDrawer() {
         this.isDrawer = false;
     }
@@ -168,6 +153,9 @@ public class User {
         return username + " (" + icon + ")" + (isDrawer ? " [DRAWER]" : "");
     }
 
+    /**
+     * Users are considered equal if they share the same unique ID.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -176,6 +164,9 @@ public class User {
         return this.id.equals(other.id); 
     }
 
+    /**
+     * Hash code based on the unique user ID.
+     */
     @Override
     public int hashCode() {
         return id.hashCode();

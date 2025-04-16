@@ -1,12 +1,14 @@
 package com.server;
 
+// Abstract base class for all event types (e.g., chat messages, canvas updates)
 public abstract class Event implements Comparable<Event> {
 
-    protected int sequenceNumber;  
-    protected String id;      
+    protected int sequenceNumber;  // Lamport timestamp for ordering events
+    protected String id;           // Sender ID for tie-breaking
 
     public Event() {}
 
+    // Getter and setter for the event sender or event ID
     public String getId() {
         return id;
     }
@@ -15,6 +17,7 @@ public abstract class Event implements Comparable<Event> {
         id = val;
     }
 
+    // Getter and setter for the Lamport sequence number
     public int getSequenceNumber() {
         return sequenceNumber;
     }
@@ -23,10 +26,11 @@ public abstract class Event implements Comparable<Event> {
         sequenceNumber = val;
     }
 
+    // Define ordering of events: first by sequence number, then by ID 
     @Override
     public int compareTo(Event e) {
         int cmp = Integer.compare(this.sequenceNumber, e.sequenceNumber);
         if (cmp != 0) return cmp;
-        return this.id.compareTo(e.id); // tie-breaker using UUID
+        return this.id.compareTo(e.id); // Ensures consistent order even if timestamps match
     }
 }
